@@ -212,7 +212,6 @@ func PreviewModelPricingConversion(name string, draft PricingValues) (*ModelPric
 				}
 			}
 			var cycle bool
-			upstream := name
 			visited := map[string]bool{name: true}
 			for {
 				mapped, exists := mapping[upstream]
