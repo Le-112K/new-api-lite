@@ -355,40 +355,11 @@ func validateModelPricing(name string, values, previous PricingValues) error {
 			if _, err := billingexpr.CompileFromCache(expression); err != nil {
 				return fmt.Errorf("model %s: %w", name, err)
 			}
-			// An unchanged expression a sole provider has been charging with keeps
-			// its price after the plugin narrows its usage profile; relay checks
-			// shared models against each profile, so their prices must follow it.
 			unchanged := previous[key] == expression
-			var err error
-			if plugins := generation.PluginsByModel(name); len(plugins) > 0 {
-				for _, plugin := range plugins {
-					_, overridden := variants[plugin.Meta.Key]
-					_, wasOverridden := previousVariants[plugin.Meta.Key]
-					if overridden || (unchanged && !wasOverridden && len(plugins) == 1) {
-						continue
-					}
-					schema, _ := plugin.Meta.UsageForModel(name)
-					if err = billing_setting.SmokeTestTaskExpr(expression, schema); err != nil {
-						return fmt.Errorf("model %s: plugin %s: %w", name, plugin.Meta.Key, err)
-					}
+			if !unchanged || len(billingexpr.UsedUsageKeys(expression)) == 0 {
+				if err := billing_setting.SmokeTestExpr(expression); err != nil {
+					return fmt.Errorf("model %s: %w", name, err)
 				}
-			} else if target, resolved := ResolveTaskModelAlias(generation, name); resolved {
-				if plugin, ok := generation.Get(target.PluginKey); ok {
-					if !unchanged || generation.SharedModel(target.Declared) {
-						schema, _ := plugin.Meta.UsageForModel(target.Declared)
-						err = billing_setting.SmokeTestTaskExpr(expression, schema)
-					}
-				} else {
-					err = billing_setting.SmokeTestExpr(expression)
-				}
-			} else if !unchanged || len(billingexpr.UsedUsageKeys(expression)) == 0 {
-				err = billing_setting.SmokeTestExpr(expression)
-			}
-			// With no remaining plugin, an unchanged stored usage expression has
-			// no schema to test. Preserve it so removing stale overrides or saving
-			// other model prices does not become impossible.
-			if err != nil {
-				return fmt.Errorf("model %s: %w", name, err)
 			}
 			continue
 		}

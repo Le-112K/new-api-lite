@@ -212,7 +212,23 @@ func PreviewModelPricingConversion(name string, draft PricingValues) (*ModelPric
 				}
 			}
 			var cycle bool
-			upstream, cycle = followChannelModelMapping(mapping, name)
+			upstream := name
+			visited := map[string]bool{name: true}
+			for {
+				mapped, exists := mapping[upstream]
+				if !exists || mapped == "" {
+					break
+				}
+				if visited[mapped] {
+					if mapped == upstream {
+						break
+					}
+					cycle = true
+					break
+				}
+				visited[mapped] = true
+				upstream = mapped
+			}
 			if cycle {
 				return &ModelPricingConversion{UnsupportedReason: "The model routing configuration could not be verified."}, nil
 			}
