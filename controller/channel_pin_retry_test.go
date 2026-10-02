@@ -51,31 +51,6 @@ func TestShouldRetryHonorsPinRetryMode(t *testing.T) {
 	assert.Equal(t, service.PolicyDecision{Action: "stop", Reason: "pinned_channel", Source: "channel_constraint"}, service.DecideRelayRetry(token, openaiErr, 1), "token pin suppresses retry")
 }
 
-func TestShouldRetryTaskRelayHonorsPinRetryMode(t *testing.T) {
-	taskErr := &dto.TaskError{StatusCode: http.StatusInternalServerError}
-
-	c := newPinRetryContext()
-	assert.Equal(t, "retry", decideTaskRetry(c, taskErr, 1).Action)
-
-	origin := newPinRetryContext()
-	service.GetChannelConstraints(origin).AddPin(dto.ChannelPin{
-		ChannelId: 2,
-		Source:    dto.PinSourceOriginTask,
-		Rank:      dto.PinRankOriginTask,
-		RetryMode: dto.PinRetrySameChannel,
-	})
-	assert.Equal(t, "retry", decideTaskRetry(origin, taskErr, 1).Action)
-
-	token := newPinRetryContext()
-	service.GetChannelConstraints(token).AddPin(dto.ChannelPin{
-		ChannelId: 1,
-		Source:    dto.PinSourceToken,
-		Rank:      dto.PinRankToken,
-		RetryMode: dto.PinRetrySingleAttempt,
-	})
-	assert.Equal(t, service.PolicyDecision{Action: "stop", Reason: "pinned_channel", Source: "channel_constraint"}, decideTaskRetry(token, taskErr, 1))
-}
-
 func TestSameChannelPinsMergeToStricterRetryMode(t *testing.T) {
 	c := newPinRetryContext()
 	constraints := service.GetChannelConstraints(c)

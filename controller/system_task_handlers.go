@@ -140,7 +140,7 @@ type asyncTaskPollHandler struct{}
 func (asyncTaskPollHandler) Type() string { return model.SystemTaskTypeAsyncTaskPoll }
 
 func (asyncTaskPollHandler) Enabled() bool {
-	return constant.UpdateTask && model.HasUnfinishedSyncTasks()
+	return false
 }
 
 func (asyncTaskPollHandler) Interval() time.Duration { return 15 * time.Second }
@@ -148,8 +148,7 @@ func (asyncTaskPollHandler) Interval() time.Duration { return 15 * time.Second }
 func (asyncTaskPollHandler) NewPayload() any { return nil }
 
 func (asyncTaskPollHandler) Run(ctx context.Context, task *model.SystemTask, runnerID string) {
-	summary := service.RunTaskPollingOnce(ctx, service.NewSystemTaskProgressReporter(task, runnerID))
-	finishSystemTaskHandler(task, runnerID, model.SystemTaskStatusSucceeded, summary, nil)
+	finishSystemTaskHandler(task, runnerID, model.SystemTaskStatusSucceeded, nil, nil)
 }
 
 func finishSystemTaskHandler(task *model.SystemTask, runnerID string, status model.SystemTaskStatus, result any, runErr error) {

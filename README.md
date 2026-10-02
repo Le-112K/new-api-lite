@@ -2,9 +2,9 @@
 
 ![new-api](/web/public/logo.png)
 
-# New API
+# new-api二开项目
 
-**An AI gateway for models, applications, and agents**
+**精简版 AI 网关 — 移除任务插件系统，保留核心对话/计费/渠道调度**
 
 <p align="center">
   <a href="./README.zh_CN.md">简体中文</a> |

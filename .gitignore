@@ -27,6 +27,9 @@ tiktoken_cache
 .claude
 .cursor
 
+# WorkBuddy
+.workbuddy/
+
 electron/node_modules
 electron/dist
 /data/

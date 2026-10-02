@@ -16,21 +16,16 @@ func SetRouter(router *gin.Engine, assets WebAssets) {
 	SetApiRouter(router)
 	SetDashboardRouter(router)
 	SetRelayRouter(router)
-	SetTaskPluginProtocolRouter(router)
-	SetVideoRouter(router)
-	SetTaskRouter(router)
-	pluginDispatcher := SetPluginRouter(router)
 	frontendBaseUrl := os.Getenv("FRONTEND_BASE_URL")
 	if common.IsMasterNode && frontendBaseUrl != "" {
 		frontendBaseUrl = ""
 		common.SysLog("FRONTEND_BASE_URL is ignored on master node")
 	}
 	if frontendBaseUrl == "" {
-		SetWebRouter(router, assets, pluginDispatcher)
+		SetWebRouter(router, assets)
 	} else {
 		frontendBaseUrl = strings.TrimSuffix(frontendBaseUrl, "/")
 		router.NoRoute(
-			pluginDispatcher,
 			middleware.RouteTag("web"),
 			middleware.AccessTokenAudit(),
 			func(c *gin.Context) {

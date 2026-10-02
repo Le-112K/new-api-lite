@@ -264,60 +264,12 @@ func GetModelPricingSnapshot(names []string) (*ModelPricingSnapshot, error) {
 	}
 	sort.Strings(names)
 	result := &ModelPricingSnapshot{Entries: make([]ModelPricingEntry, 0, len(names)), Options: make(map[string]string), EmptyVersion: ModelPricingVersion(PricingValues{})}
-	generation := jsplugin.DefaultRegistry.Generation()
 	for _, name := range names {
 		configured := modelPricingValues(values, name)
 		entry := ModelPricingEntry{ModelName: name, Version: ModelPricingVersion(configured), Configured: configured,
 			ModelPricingDescription: ModelPricingDescription{Effective: effectiveModelPricing(values, name)}}
 		entry.CacheWriteMode = ResolveCacheWriteMode(name, configured)
 		entry.BillingDetails = ResolveLegacyBillingDetails(name, entry.Effective, configured)
-		if plugin, ok := generation.GetByModel(name); ok {
-			entry.UsageSchema, _ = plugin.Meta.UsageForModel(name)
-		} else if target, ok := ResolveTaskModelAlias(generation, name); ok {
-			if plugin, ok := generation.Get(target.PluginKey); ok {
-				entry.UsageSchema, _ = plugin.Meta.UsageForModel(target.Declared)
-			}
-		}
-		plugins := generation.PluginsByModel(name)
-		configuredVariants, _ := configured[billing_setting.PluginBillingExprOption].(map[string]any)
-		if len(plugins) >= 2 || len(configuredVariants) > 0 {
-			keys := make(map[string]bool, len(plugins)+len(configuredVariants))
-			for _, plugin := range plugins {
-				keys[plugin.Meta.Key] = true
-			}
-			for key := range configuredVariants {
-				keys[key] = true
-			}
-			for _, key := range slices.Sorted(maps.Keys(keys)) {
-				configuredValue, overridden := configuredVariants[key]
-				configuredExpr, _ := configuredValue.(string)
-				plugin, exists := generation.Get(key)
-				if !exists || !slices.Contains(plugin.Meta.Models, name) {
-					variant := ModelPricingPluginVariant{
-						PluginKey: key, PluginName: key, Configured: configuredExpr,
-						UsageSchema: map[string]jsplugin.UsageFieldSchema{}, Stale: true,
-					}
-					if exists {
-						variant.PluginName, variant.Icon = plugin.Meta.Name, plugin.Meta.Icon
-					}
-					entry.PluginVariants = append(entry.PluginVariants, variant)
-					continue
-				}
-				schema, examples := plugin.Meta.UsageForModel(name)
-				if schema == nil {
-					schema = map[string]jsplugin.UsageFieldSchema{}
-				}
-				expression := configuredExpr
-				if !overridden && entry.Effective["billing_setting.billing_mode"] == billing_setting.BillingModeTieredExpr {
-					expression, _ = entry.Effective["billing_setting.billing_expr"].(string)
-				}
-				entry.PluginVariants = append(entry.PluginVariants, ModelPricingPluginVariant{
-					PluginKey: plugin.Meta.Key, PluginName: plugin.Meta.Name, Icon: plugin.Meta.Icon,
-					UsageSchema: schema, UsageExamples: examples, Configured: configuredExpr, Effective: expression,
-					Compatible: billing_setting.TaskExprCompatible(expression, schema),
-				})
-			}
-		}
 		result.Entries = append(result.Entries, entry)
 	}
 	// Preserve the existing settings editor's full-map interface. Built-in
@@ -364,7 +316,6 @@ func validateModelPricing(name string, values, previous PricingValues) error {
 	if strings.TrimSpace(name) == "" {
 		return errors.New("model name is required")
 	}
-	generation := jsplugin.DefaultRegistry.Generation()
 	previousVariants, _ := previous[billing_setting.PluginBillingExprOption].(map[string]any)
 	variants := map[string]any{}
 	if value, exists := values[billing_setting.PluginBillingExprOption]; exists {
@@ -378,22 +329,7 @@ func validateModelPricing(name string, values, previous PricingValues) error {
 			if !ok || strings.TrimSpace(expression) == "" {
 				return fmt.Errorf("model %s: plugin %s: billing expression is required", name, key)
 			}
-			plugin, exists := generation.Get(key)
-			declared := exists && slices.Contains(plugin.Meta.Models, name)
-			// An unchanged override stays saveable after its plugin disappears or
-			// stops declaring the model. A sole provider also keeps it after
-			// narrowing its usage profile; relay checks shared models against
-			// each profile, so their prices must follow it.
-			if previousVariants[key] == expression && (!declared || !generation.SharedModel(name)) {
-				continue
-			}
-			if !declared {
-				return fmt.Errorf("model %s: plugin %s does not declare this model", name, key)
-			}
-			schema, _ := plugin.Meta.UsageForModel(name)
-			if err := billing_setting.SmokeTestTaskExpr(expression, schema); err != nil {
-				return fmt.Errorf("model %s: plugin %s: %w", name, key, err)
-			}
+			_ = previousVariants[key] // 二开精简：task plugin 已移除，跳过 plugin 验证
 		}
 	}
 	for key, value := range values {

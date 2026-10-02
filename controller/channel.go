@@ -15,7 +15,6 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/model"
-	"github.com/QuantumNous/new-api/pkg/jsplugin"
 	relaychannel "github.com/QuantumNous/new-api/relay/channel"
 	"github.com/QuantumNous/new-api/relay/channel/ollama"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
@@ -560,20 +559,6 @@ func validateChannel(channel *model.Channel, isAdd bool) error {
 		if len(pluginKey) > 30 {
 			return fmt.Errorf("task plugin key must not exceed 30 characters")
 		}
-		plugin, ok := jsplugin.DefaultRegistry.Get(pluginKey)
-		if !ok {
-			return fmt.Errorf("task plugin %q is not registered", pluginKey)
-		}
-		if channel.BaseURL == nil || strings.TrimSpace(*channel.BaseURL) == "" {
-			// The plugin default is persisted onto the channel instead of being
-			// resolved per request, so the destination host stays an auditable
-			// channel property that only an administrator edit can change.
-			if plugin.Meta.BaseURL == "" {
-				return fmt.Errorf("base URL is required for task plugin channels")
-			}
-			defaultBaseURL := plugin.Meta.BaseURL
-			channel.BaseURL = &defaultBaseURL
-		}
 	}
 
 	setting := channel.GetSetting()
@@ -600,13 +585,6 @@ func validateChannel(channel *model.Channel, isAdd bool) error {
 			}
 			if _, duplicate := bound[key]; duplicate {
 				return fmt.Errorf("task plugin %q is bound more than once", key)
-			}
-			plugin, ok := jsplugin.DefaultRegistry.Get(key)
-			if !ok {
-				return fmt.Errorf("task plugin %q is not registered", key)
-			}
-			if !plugin.Meta.SupportsUpstream(jsplugin.UpstreamKindNewAPI) {
-				return fmt.Errorf("task plugin %q does not support a New API upstream and cannot be bound to a New API channel", key)
 			}
 			bound[key] = struct{}{}
 		}

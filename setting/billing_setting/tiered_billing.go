@@ -89,7 +89,7 @@ func PluginBillingExprKey(pluginKey, model string) string {
 
 func SplitPluginBillingExprKey(key string) (plugin, model string, ok bool) {
 	plugin, model, ok = strings.Cut(key, "::")
-	if !ok || !jsplugin.ValidPluginKey(plugin) || strings.TrimSpace(model) == "" {
+	if !ok || strings.TrimSpace(model) == "" {
 		return "", "", false
 	}
 	return plugin, model, true

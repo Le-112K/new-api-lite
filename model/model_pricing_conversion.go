@@ -9,7 +9,6 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/pkg/jsplugin"
 	"github.com/QuantumNous/new-api/setting/billing_setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
@@ -170,14 +169,6 @@ func PreviewModelPricingConversion(name string, draft PricingValues) (*ModelPric
 	}
 	if preview.BillingDetails.ConflictingAudioPrices {
 		return &ModelPricingConversion{UnsupportedReason: "Gemini and OpenAI audio prices differ for this model. Use separate billing model names to convert them."}, nil
-	}
-
-	generation := jsplugin.DefaultRegistry.Generation()
-	if _, task := generation.GetByModel(name); task {
-		return &ModelPricingConversion{UnsupportedReason: "Task pricing must be converted manually using the task usage schema."}, nil
-	}
-	if _, task := ResolveTaskModelAlias(generation, name); task {
-		return &ModelPricingConversion{UnsupportedReason: "Task pricing must be converted manually using the task usage schema."}, nil
 	}
 
 	// Inspect non-secret routing metadata so aliases cannot disguise a special

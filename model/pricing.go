@@ -325,7 +325,6 @@ func updatePricing() {
 	}
 
 	pricingMap = make([]Pricing, 0)
-	pluginGeneration := jsplugin.DefaultRegistry.Generation()
 	for model, groups := range modelGroupsMap {
 		pricing := Pricing{
 			ModelName:              model,
@@ -375,55 +374,6 @@ func updatePricing() {
 			if expr, ok := billing_setting.GetBillingExpr(model); ok && strings.TrimSpace(expr) != "" {
 				pricing.BillingMode = billingMode
 				pricing.BillingExpr = expr
-			}
-		} else if target, resolved := ResolveTaskModelAlias(pluginGeneration, model); resolved && target.Declared != "" {
-			if tailMode := billing_setting.GetBillingMode(target.Declared); tailMode == "tiered_expr" {
-				if expr, ok := billing_setting.GetBillingExpr(target.Declared); ok && strings.TrimSpace(expr) != "" {
-					pricing.BillingMode = tailMode
-					pricing.BillingExpr = expr
-				}
-			}
-		}
-		usageModel := model
-		plugin, ok := pluginGeneration.GetByModel(model)
-		if !ok {
-			if target, resolved := ResolveTaskModelAlias(pluginGeneration, model); resolved {
-				plugin, ok = pluginGeneration.Get(target.PluginKey)
-				usageModel = target.Declared
-			}
-		}
-		if ok && plugin != nil {
-			usageSchema, usageExamples := plugin.Meta.UsageForModel(usageModel)
-			pricing.BillingUsageSchema = jsplugin.CloneUsageSchema(usageSchema)
-			pricing.BillingUsageExamples = jsplugin.CloneUsageExamples(usageExamples)
-		}
-		providers := pluginGeneration.PluginsByModel(model)
-		hasProviderOverride := false
-		for _, provider := range providers {
-			if _, configured := billing_setting.GetPluginBillingExpr(provider.Meta.Key, model); configured {
-				hasProviderOverride = true
-				break
-			}
-		}
-		if hasProviderOverride || (len(providers) >= 2 && pricing.BillingMode == billing_setting.BillingModeTieredExpr) {
-			for _, provider := range providers {
-				schema, examples := provider.Meta.UsageForModel(model)
-				if schema == nil {
-					schema = map[string]jsplugin.UsageFieldSchema{}
-				}
-				expression, hasExpression := billing_setting.ResolveTaskBillingExpr(provider.Meta.Key, model, "")
-				mode := billing_setting.BillingModeRatio
-				if hasExpression || billing_setting.GetBillingMode(model) == billing_setting.BillingModeTieredExpr {
-					mode = billing_setting.BillingModeTieredExpr
-				}
-				if mode == billing_setting.BillingModeTieredExpr && !billing_setting.TaskExprCompatible(expression, schema) {
-					expression = ""
-				}
-				pricing.BillingPluginVariants = append(pricing.BillingPluginVariants, PricingPluginVariant{
-					PluginKey: provider.Meta.Key, PluginName: provider.Meta.Name, Icon: provider.Meta.Icon,
-					BillingExpr: expression, BillingMode: mode,
-					BillingUsageSchema: jsplugin.CloneUsageSchema(schema), BillingUsageExamples: jsplugin.CloneUsageExamples(examples),
-				})
 			}
 		}
 		pricingMap = append(pricingMap, pricing)

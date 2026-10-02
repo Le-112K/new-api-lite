@@ -15,7 +15,6 @@ import (
 	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
-	"github.com/QuantumNous/new-api/pkg/jsplugin"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
@@ -134,23 +133,6 @@ func Distribute() func(c *gin.Context) {
 // The response tells the caller the model is plugin-claimed without naming the
 // plugin; the candidate plugin keys go to the server log under the request id.
 func noAvailableChannelMessage(c *gin.Context, group, modelName string) string {
-	value, exists := c.Get(jsplugin.ContextKeyPinnedPlugin)
-	pinned, ok := value.(jsplugin.PinnedPlugin)
-	if exists && ok && pinned.Plugin != nil {
-		keys := []string{pinned.Plugin.Meta.Key}
-		if value, exists := c.Get(jsplugin.ContextKeyPinnedEndpoint); exists {
-			if endpoint, ok := value.(jsplugin.PinnedEndpoint); ok && len(endpoint.Candidates) > 0 {
-				keys = nil
-				for _, candidate := range endpoint.Candidates {
-					if candidate.Plugin != nil {
-						keys = append(keys, candidate.Plugin.Meta.Key)
-					}
-				}
-			}
-		}
-		logger.LogWarn(c, "task_plugin subsystem=distribution event=no_available_channel group=%q model=%q plugins=%q reason=no_eligible_channel", group, modelName, strings.Join(keys, ","))
-		return i18n.T(c, i18n.MsgDistributorNoAvailableChannelTaskPlugin, map[string]any{"Group": group, "Model": modelName})
-	}
 	return i18n.T(c, i18n.MsgDistributorNoAvailableChannel, map[string]any{"Group": group, "Model": modelName})
 }
 
@@ -158,69 +140,13 @@ func channelMatchesExpectedTaskPlugin(c *gin.Context, channel *model.Channel, ex
 	if channel == nil {
 		return false
 	}
-	if c != nil {
-		if _, matched := pinnedEndpointCandidateForChannel(c, channel, expected); matched {
-			return true
-		}
-	}
 	if expected == "" {
 		return channel.Type != constant.ChannelTypeTaskPlugin
 	}
 	if channel.Type == constant.ChannelTypeTaskPlugin || channel.Type == constant.ChannelTypeNewAPI {
 		return channel.GetSetting().BindsTaskPlugin(expected)
 	}
-
-	if c == nil {
-		return false
-	}
-	value, exists := c.Get(jsplugin.ContextKeyPinnedPlugin)
-	pinned, ok := value.(jsplugin.PinnedPlugin)
-	if !exists || !ok || pinned.Generation == nil || pinned.Plugin == nil || pinned.Plugin.Meta.Key != expected {
-		return false
-	}
-	plugin, ok := pinned.Generation.GetByChannelType(channel.Type)
-	return ok && plugin == pinned.Plugin
-}
-
-func pinnedEndpointCandidateForChannel(c *gin.Context, channel *model.Channel, expected string) (jsplugin.ProtocolBinding, bool) {
-	if c == nil || channel == nil || expected == "" {
-		return jsplugin.ProtocolBinding{}, false
-	}
-	value, exists := c.Get(jsplugin.ContextKeyPinnedEndpoint)
-	pinned, ok := value.(jsplugin.PinnedEndpoint)
-	if !exists || !ok || pinned.Generation == nil || pinned.Plugin == nil {
-		return jsplugin.ProtocolBinding{}, false
-	}
-	candidates := pinned.Candidates
-	if len(candidates) == 0 {
-		candidates = []jsplugin.ProtocolBinding{{Plugin: pinned.Plugin, Protocol: pinned.Protocol, Operation: pinned.Operation, Model: pinned.Model}}
-	}
-	expectedOwned := false
-	selected := jsplugin.ProtocolBinding{}
-	setting := channel.GetSetting()
-	for _, candidate := range candidates {
-		if candidate.Plugin == nil {
-			continue
-		}
-		if candidate.Plugin.Meta.Key == expected {
-			expectedOwned = true
-		}
-		if channel.Type == constant.ChannelTypeTaskPlugin || channel.Type == constant.ChannelTypeNewAPI {
-			// A New API channel may bind several candidates. The first bound
-			// candidate in generation order executes, so the billing provider
-			// depends only on the channel and the request, never on which
-			// channels an earlier retry attempt happened to try.
-			if selected.Plugin == nil && setting.BindsTaskPlugin(candidate.Plugin.Meta.Key) {
-				selected = candidate
-			}
-			continue
-		}
-		plugin, indexed := pinned.Generation.GetByChannelType(channel.Type)
-		if indexed && plugin == candidate.Plugin {
-			selected = candidate
-		}
-	}
-	return selected, expectedOwned && selected.Plugin != nil
+	return false
 }
 
 // getModelFromRequest 从请求中读取模型信息
@@ -559,31 +485,6 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 			types.ErrorCodeGetChannelFailed,
 			types.ErrOptionWithSkipRetry(),
 		)
-	}
-	if candidate, matched := pinnedEndpointCandidateForChannel(c, channel, expectedPlugin); matched {
-		if value, exists := c.Get(jsplugin.ContextKeyPinnedEndpoint); exists {
-			if pinned, ok := value.(jsplugin.PinnedEndpoint); ok && candidate.Plugin != nil && candidate.Plugin != pinned.Plugin {
-				previousPlugin := pinned.Plugin.Meta.Key
-				pinned.Plugin = candidate.Plugin
-				pinned.Protocol = candidate.Protocol
-				pinned.Operation = candidate.Operation
-				c.Set(jsplugin.ContextKeyPinnedEndpoint, pinned)
-				c.Set(jsplugin.ContextKeyPinnedPlugin, jsplugin.PinnedPlugin{Generation: pinned.Generation, Plugin: candidate.Plugin})
-				c.Set("expected_task_plugin_key", candidate.Plugin.Meta.Key)
-				c.Set("task_plugin_key", candidate.Plugin.Meta.Key)
-				c.Set("platform", candidate.Plugin.Meta.Key)
-				logger.LogDebug(
-					c,
-					"task_plugin subsystem=endpoint event=provider_selected generation=%d previous_plugin=%q plugin=%q model=%q channel_id=%d channel_type=%d",
-					pinned.Generation.Number,
-					previousPlugin,
-					candidate.Plugin.Meta.Key,
-					modelName,
-					channel.Id,
-					channel.Type,
-				)
-			}
-		}
 	}
 	common.SetContextKey(c, constant.ContextKeyChannelId, channel.Id)
 	common.SetContextKey(c, constant.ContextKeyChannelName, channel.Name)

@@ -18,7 +18,6 @@ func RouteTag(tag string) gin.HandlerFunc {
 }
 
 func SetUpLogger(server *gin.Engine) {
-	server.Use(redactTaskArtifactAccessQuery())
 	server.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
 		var requestID string
 		if param.Keys != nil {

@@ -207,21 +207,6 @@ func initConstantEnv() {
 	// 不改变后台轮询或结算生命周期。
 	constant.TaskPluginProtocolTimeoutSeconds = GetEnvOrDefault("TASK_PLUGIN_PROTOCOL_TIMEOUT_SECONDS", 600)
 	constant.TaskPluginProtocolTickMilliseconds = GetEnvOrDefault("TASK_PLUGIN_PROTOCOL_TICK_MILLISECONDS", 2000)
-	constant.TaskPluginProtocolTickJitterMilliseconds = GetEnvOrDefault("TASK_PLUGIN_PROTOCOL_TICK_JITTER_MILLISECONDS", 500)
-	constant.TaskPluginProtocolHeartbeatSeconds = GetEnvOrDefault("TASK_PLUGIN_PROTOCOL_HEARTBEAT_SECONDS", 15)
-
-	soraPatchStr := GetEnvOrDefaultString("TASK_PRICE_PATCH", "")
-	if soraPatchStr != "" {
-		var taskPricePatches []string
-		soraPatches := strings.SplitSeq(soraPatchStr, ",")
-		for patch := range soraPatches {
-			trimmedPatch := strings.TrimSpace(patch)
-			if trimmedPatch != "" {
-				taskPricePatches = append(taskPricePatches, trimmedPatch)
-			}
-		}
-		constant.TaskPricePatches = taskPricePatches
-	}
 
 	// Initialize trusted redirect domains for URL validation
 	trustedDomainsStr := GetEnvOrDefaultString("TRUSTED_REDIRECT_DOMAINS", "")

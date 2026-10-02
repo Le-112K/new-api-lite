@@ -116,9 +116,8 @@ func SetRelayRouter(router *gin.Engine) {
 			controller.Relay(c, types.RelayFormatOpenAIAlphaSearch)
 		})
 
-		// image related routes. /images/generations and /images/edits are
-		// host protocol endpoints (openai_image) registered by
-		// SetTaskPluginProtocolRouter; unclaimed models fall back to Relay.
+	// image related routes. /images/generations and /images/edits are
+	// host protocol endpoints (openai_image); unclaimed models fall back to Relay.
 		httpRouter.POST("/edits", func(c *gin.Context) {
 			controller.Relay(c, types.RelayFormatOpenAIImage)
 		})
