@@ -1,5 +1,11 @@
 package constant
 
+// Task action constants (preserved from removed task plugin system)
+const (
+	TaskActionTextToVideo  = "text_to_video"
+	TaskActionImageToVideo = "image_to_video"
+)
+
 var StreamingTimeout int
 var DifyDebug bool
 var MaxFileDownloadMB int
