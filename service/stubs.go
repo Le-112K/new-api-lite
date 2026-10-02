@@ -10,7 +10,7 @@ import (
 // resolveTokenKey returns the API key string for a token ID.
 // Originally part of the task plugin system, now simplified to use cache directly.
 func resolveTokenKey(_ context.Context, tokenId int, _ string) string {
-	token, err := model.GetCacheToken(tokenId)
+	token, err := model.GetTokenById(tokenId)
 	if err != nil || token == nil {
 		return ""
 	}
