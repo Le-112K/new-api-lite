@@ -13,7 +13,6 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	taskdto "github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/i18n"
-	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relaykit/dto"
@@ -450,24 +449,10 @@ func TokenModelLimitAllows(limit map[string]bool, model string) bool {
 	return limit[ratio_setting.RoutingMatchModelName(model)]
 }
 
-// 修复 #4834: GET /v1/video/generations/:task_id && /v1/video/:task_id 此前不解析 model，
-// 当 token 启用「可用模型限制」时，下游 modelLimitEnable 校验会因
-// modelRequest.Model 为空而误报 "This token has no access to model"。
-// 从已存储的任务记录中回填 OriginModelName 即可让校验走在正确的模型上。
-func getTaskOriginModelName(c *gin.Context) string {
-	if !common.GetContextKeyBool(c, constant.ContextKeyTokenModelLimitEnabled) {
-		return ""
-	}
-
-	taskId := c.Param("task_id")
-	if taskId == "" {
-		return ""
-	}
-
-	userId := c.GetInt("id")
-	if task, exist, err := model.GetByTaskId(userId, taskId); err == nil && exist && task != nil {
-		return task.Properties.OriginModelName
-	}
+// Stub: task plugin system removed in 二开精简.
+// Original behavior: resolved OriginModelName from stored task record for
+// token model-limit validation. Returns empty (no task lookup available).
+func getTaskOriginModelName(_ *gin.Context) string {
 	return ""
 }
 
@@ -582,4 +567,12 @@ func extractModelNameFromGeminiPath(path string) string {
 
 	// 返回模型名部分
 	return path[startIndex : startIndex+colonIndex]
+}
+
+// Stub: task plugin system removed in 二开精简
+const contextKeyTaskPluginEndpointModel = "task_plugin_endpoint_model"
+
+// logTaskPluginChannelDecision is a no-op stub (task plugin system removed).
+func logTaskPluginChannelDecision(_ *gin.Context, _ *model.Channel, _ string, _ string, _ string) {
+	// no-op
 }
