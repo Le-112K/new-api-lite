@@ -43,8 +43,7 @@ func TestJSONColumnValuersReturnString(t *testing.T) {
 // 空值仍返回 nil,保持列的 NULL 语义。
 func TestJSONColumnValuersZeroValueIsNil(t *testing.T) {
 	for name, valuer := range map[string]driver.Valuer{
-		"ChannelInfo": ChannelInfo{},
-		"JSONValue":   JSONValue(nil),
+		"JSONValue": JSONValue(nil),
 	} {
 		t.Run(name, func(t *testing.T) {
 			value, err := valuer.Value()

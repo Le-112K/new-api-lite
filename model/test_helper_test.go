@@ -1,10 +1,83 @@
 package model
 
 import (
+	"os"
 	"testing"
 
+	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/dto"
+	"github.com/glebarez/sqlite"
+	"gorm.io/gorm"
 )
+
+// TestMain 为 model 包测试准备一个内存 SQLite 库。
+// 原先挂在被删除的任务插件测试文件里，这里补回来，否则所有用到 DB 的用例会 nil panic。
+func TestMain(m *testing.M) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		panic("failed to open test db: " + err.Error())
+	}
+	DB = db
+	LOG_DB = db
+
+	common.SetDatabaseTypes(common.DatabaseTypeSQLite, common.DatabaseTypeSQLite)
+	common.RedisEnabled = false
+	common.BatchUpdateEnabled = false
+	common.LogConsumeEnabled = true
+	initCol()
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic("failed to get sql.DB: " + err.Error())
+	}
+	sqlDB.SetMaxOpenConns(1)
+
+	// 与 model/main.go 的迁移清单保持一致，只少了已移除的 Task。
+	if err := db.AutoMigrate(
+		&Channel{},
+		&Token{},
+		&User{},
+		&UserSession{},
+		&AuthFlow{},
+		&ExternalIdentityClaim{},
+		&PasskeyCredential{},
+		&Option{},
+		&LoginEncryptionKey{},
+		&Redemption{},
+		&Ability{},
+		&Log{},
+		&Midjourney{},
+		&TopUp{},
+		&QuotaData{},
+		&Model{},
+		&Vendor{},
+		&PrefillGroup{},
+		&Setup{},
+		&TwoFA{},
+		&TwoFABackupCode{},
+		&Checkin{},
+		&SubscriptionOrder{},
+		&UserSubscription{},
+		&SubscriptionPreConsumeRecord{},
+		&CustomOAuthProvider{},
+		&UserOAuthBinding{},
+		&PerfMetric{},
+		&SystemInstance{},
+		&SystemTask{},
+		&SystemTaskLock{},
+		&CasbinRule{},
+		&AuthzRole{},
+		&UserAccessToken{},
+	); err != nil {
+		panic("failed to migrate: " + err.Error())
+	}
+	// SQLite 下 subscription_plans 由专用函数建表，见 model/main.go。
+	if err := ensureSubscriptionPlanTableSQLite(); err != nil {
+		panic("failed to migrate subscription_plans: " + err.Error())
+	}
+
+	os.Exit(m.Run())
+}
 
 // identityFilters builds a task-plugin-identity channel filter for tests.
 func identityFilters(key string, channelTypes []int) []dto.ChannelFilter {
@@ -16,7 +89,6 @@ func identityFilters(key string, channelTypes []int) []dto.ChannelFilter {
 }
 
 // truncateTables registers a cleanup that wipes the core tables after each test.
-// It replaces the helper previously shipped with the removed task-plugin tests.
 func truncateTables(t *testing.T) {
 	t.Helper()
 	t.Cleanup(func() {

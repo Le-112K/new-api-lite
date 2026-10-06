@@ -189,21 +189,6 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	"DELETE /api/system-info/stale-instances":      accessTokenScopeRule("ops:write"),
 	"DELETE /api/system-info/instances/:node_name": accessTokenScopeRule("ops:write"),
 
-	// router/api-router.go: /api/plugin/task
-	"GET /api/plugin/task":                           accessTokenScopeRule("plugin:read"),
-	"POST /api/plugin/task":                          accessTokenScopeRule("plugin:write"),
-	"PUT /api/plugin/task":                           accessTokenScopeRule("plugin:write"),
-	"GET /api/plugin/task/runtime/status":            accessTokenScopeRule("plugin:read"),
-	"GET /api/plugin/task/marketplace/sources":       accessTokenScopeRule("plugin:read"),
-	"PUT /api/plugin/task/marketplace/sources":       accessTokenScopeRule("plugin:write"),
-	"GET /api/plugin/task/:key":                      accessTokenScopeRule("plugin:read"),
-	"GET /api/plugin/task/:key/icon":                 accessTokenScopeRule("plugin:read"),
-	"GET /api/plugin/task/:key/versions":             accessTokenScopeRule("plugin:read"),
-	"POST /api/plugin/task/:key/activate":            accessTokenScopeRule("plugin:write"),
-	"POST /api/plugin/task/:key/status":              accessTokenScopeRule("plugin:write"),
-	"POST /api/plugin/task/:key/dryrun":              accessTokenScopeRule("plugin:write"),
-	"DELETE /api/plugin/task/:key/versions/:version": accessTokenScopeRule("plugin:write"),
-
 	// router/channel-router.go: the key route is RootAuth, not Casbin-guarded.
 	"POST /api/channel/:id/key": accessTokenScopeRule(service.AccessTokenScopeOf(authz.ChannelSecretView)),
 
@@ -254,12 +239,9 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	"PUT /api/prefill_group/":       accessTokenScopeRule("group:write"),
 	"DELETE /api/prefill_group/:id": accessTokenScopeRule("group:write"),
 
-	// router/api-router.go: /api/mj, /api/task
-	"GET /api/mj/self":                 accessTokenScopeRule("usage:read"),
-	"GET /api/mj/":                     accessTokenScopeRule("log:read"),
-	"GET /api/task/self":               accessTokenScopeRule("usage:read"),
-	"GET /api/task":                    accessTokenScopeRule("log:read"),
-	"GET /api/task/:task_id/artifacts": accessTokenScopeRule("usage:read"),
+	// router/api-router.go: /api/mj
+	"GET /api/mj/self": accessTokenScopeRule("usage:read"),
+	"GET /api/mj/":     accessTokenScopeRule("log:read"),
 
 	// router/api-router.go: /api/vendors, /api/models (admin)
 	"POST /api/vendors/operations/preview":  accessTokenScopeRule("model:read"),

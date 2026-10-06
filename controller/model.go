@@ -38,6 +38,11 @@ func init() {
 			continue
 		}
 		adaptor := relay.GetAdaptor(i)
+		if adaptor == nil {
+			// 已精简移除的渠道类型（如 Jimeng）没有适配器，跳过即可，
+			// 不能让包级 init 因 nil 解引用而 panic。
+			continue
+		}
 		channelName := adaptor.GetChannelName()
 		modelNames := adaptor.GetModelList()
 		for _, modelName := range modelNames {
@@ -103,6 +108,9 @@ func init() {
 			ChannelType: i,
 		}}
 		adaptor := relay.GetAdaptor(apiType)
+		if adaptor == nil {
+			continue
+		}
 		adaptor.Init(meta)
 		channelId2Models[i] = adaptor.GetModelList()
 	}
