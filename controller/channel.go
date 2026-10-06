@@ -547,6 +547,13 @@ func validateChannel(channel *model.Channel, isAdd bool) error {
 		return fmt.Errorf("channel cannot be empty")
 	}
 
+	// 精简移除的渠道类型没有 relay 适配器，留着只会让管理员配出一个永远报
+	// invalid api type 的渠道。常量保留以免枚举位移，但这里直接拒绝写入。
+	if constant.IsRemovedChannelType(channel.Type) {
+		name := constant.RemovedChannelTypes[channel.Type]
+		return fmt.Errorf("渠道类型 %s(%d) 已在本版本中移除，无法保存", name, channel.Type)
+	}
+
 	// 校验 channel settings
 	if err := channel.ValidateSettings(); err != nil {
 		return fmt.Errorf("渠道额外设置[channel setting] 格式错误：%s", err.Error())

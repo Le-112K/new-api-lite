@@ -33,6 +33,21 @@ export const CHANNEL_TYPE_VLLM = 62
 
 export const CHANNEL_TYPE_SGLANG = 63
 
+/**
+ * 二开精简中移除的渠道类型：后端已经没有对应的 relay 适配器。
+ * 数字常量保留（枚举位移会破坏存量渠道数据），但不再出现在渠道类型下拉里，
+ * 后端 validateChannel 也会拒绝写入。
+ */
+export const REMOVED_CHANNEL_TYPES: ReadonlySet<number> = new Set([
+  36, // SunoAPI
+  50, // Kling
+  51, // Jimeng
+  52, // Vidu
+  54, // Doubao Video
+  55, // Sora
+  CHANNEL_TYPE_TASK_PLUGIN, // 61
+])
+
 export const CHANNEL_TYPES = {
   0: 'Unknown',
   1: 'OpenAI',
@@ -192,6 +207,7 @@ export const CHANNEL_TYPE_OPTIONS: { value: number; label: string }[] = (() => {
   const ordered: { value: number; label: string }[] = []
   const seen = new Set<number>()
   for (const id of CHANNEL_TYPE_DISPLAY_ORDER) {
+    if (REMOVED_CHANNEL_TYPES.has(id)) continue
     const label = CHANNEL_TYPES[id as keyof typeof CHANNEL_TYPES]
     if (label) {
       ordered.push({ value: id, label })
@@ -200,7 +216,7 @@ export const CHANNEL_TYPE_OPTIONS: { value: number; label: string }[] = (() => {
   }
   for (const [key, label] of Object.entries(CHANNEL_TYPES)) {
     const id = Number(key)
-    if (id !== 0 && !seen.has(id)) {
+    if (id !== 0 && !seen.has(id) && !REMOVED_CHANNEL_TYPES.has(id)) {
       ordered.push({ value: id, label })
     }
   }

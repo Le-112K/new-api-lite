@@ -67,7 +67,8 @@ test('identifies a bound plugin by its metadata and retains the task-plugin type
   ])
   render(<ChannelTypeHarness pluginKey='incho' />)
   expect(await screen.findByText('Incho AI')).toBeInTheDocument()
-  expect(screen.getByText('IA')).toBeInTheDocument()
+  // 任务插件系统在二开精简中移除，PluginIcon 不再渲染图标（stub 返回 null），
+  // 这里只验证渠道类型与绑定插件名仍能正确展示。
   expect(screen.getByText('Task Plugin')).toBeInTheDocument()
   expect(screen.queryByTestId('OpenAI.Color')).not.toBeInTheDocument()
 })

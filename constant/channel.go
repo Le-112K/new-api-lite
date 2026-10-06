@@ -65,6 +65,25 @@ const (
 
 )
 
+// RemovedChannelTypes 列出二开精简中移除了适配器的渠道类型。
+// 这些常量不能删除：枚举值一旦位移，数据库里存量渠道会对到错误的适配器。
+// 但它们已经没有 relay 适配器，创建/编辑时必须拒绝，前端下拉也不再展示。
+var RemovedChannelTypes = map[int]string{
+	ChannelTypeSunoAPI:     "Suno API",
+	ChannelTypeKling:       "Kling",
+	ChannelTypeJimeng:      "Jimeng",
+	ChannelTypeVidu:        "Vidu",
+	ChannelTypeDoubaoVideo: "Doubao Video",
+	ChannelTypeSora:        "Sora",
+	ChannelTypeTaskPlugin:  "Task Plugin",
+}
+
+// IsRemovedChannelType 报告渠道类型是否已在本次精简中移除。
+func IsRemovedChannelType(channelType int) bool {
+	_, removed := RemovedChannelTypes[channelType]
+	return removed
+}
+
 // ChannelBaseURLs 保存各渠道类型的内置默认 Base URL。
 // 非空值会通过 /api/channel/default_base_urls 下发到前端，作为渠道表单的 API 地址占位提示。
 var ChannelBaseURLs = []string{
