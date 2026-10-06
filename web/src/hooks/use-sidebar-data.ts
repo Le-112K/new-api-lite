@@ -98,10 +98,10 @@ export function useSidebarData(): SidebarData {
             icon: ClipboardList,
           },
           {
-            title: t('Task Logs'),
-            url: '/usage-logs/task',
+            title: t('Drawing Logs'),
+            url: '/usage-logs/drawing',
             activeUrls: ['/usage-logs/drawing'],
-            configUrls: ['/usage-logs/drawing', '/usage-logs/task'],
+            configUrls: ['/usage-logs/drawing'],
             icon: ListTodo,
           },
         ],
