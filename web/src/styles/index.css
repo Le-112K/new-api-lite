@@ -29,6 +29,7 @@ For commercial licensing, please contact support@quantumnous.com
 
 @import './theme.css';
 @import './theme-presets.css';
+@import './theme-apple-bw.css';
 
 @layer base {
   :root {

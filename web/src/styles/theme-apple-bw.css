@@ -1,0 +1,185 @@
+/* theme-apple-bw.css — new-api · Apple 黑白灰（只改气质，不改业务） */
+/* 用法：把本文件放到 web/src/styles/theme-apple-bw.css，并在 web/src/styles/index.css 末尾 @import "./theme-apple-bw.css"; */
+
+/* 1) 锁死三色 + Apple 灰阶。覆盖 :root 与 .dark 的关键 token，但保留原有 radius 体系 */
+:root{
+  --background: #F5F5F7;
+  --foreground: #0a0a0a;
+  --card: #FFFFFF;
+  --card-foreground: #0a0a0a;
+  --popover: #FFFFFF;
+  --popover-foreground: #0a0a0a;
+
+  /* 仅黑白灰：主色用黑，次要用极浅灰 */
+  --primary: #0a0a0a;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F2F2F4;
+  --secondary-foreground: #0a0a0a;
+
+  --muted: #F5F5F7;
+  --muted-foreground: #6E6E73;
+  --accent: #FFFFFF;
+  --accent-foreground: #0a0a0a;
+
+  --border: #E8E8ED;
+  --input: #E8E8ED;
+  --ring: #0a0a0a;
+
+  /* 侧边与顶栏：更通透 */
+  --sidebar: rgba(255,255,255,0.72);
+  --sidebar-foreground: #0a0a0a;
+  --sidebar-primary: #0a0a0a;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #FFFFFF;
+  --sidebar-accent-foreground: #0a0a0a;
+  --sidebar-border: #E8E8ED;
+  --sidebar-ring: #0a0a0a;
+
+  /* 表格与骨架：克制灰 */
+  --table-header: #FBFBFB;
+  --table-header-hover: #F5F5F7;
+  --skeleton-base: #F2F2F4;
+  --skeleton-highlight: #FFFFFF;
+
+  /* 语义色转灰阶：保留明暗层级，仍可辨识状态（如需彩色，删掉这四行即可） */
+  --success: #4A4A4E;
+  --success-foreground: #FFFFFF;
+  --warning: #6E6E73;
+  --warning-foreground: #FFFFFF;
+  --info: #8E8E93;
+  --info-foreground: #FFFFFF;
+  --destructive: #1C1C1E;
+  --destructive-foreground: #FFFFFF;
+
+  /* 半透明与阴影 */
+  --glass-bg: rgba(255,255,255,0.72);
+  --glass-border: rgba(232,232,237,0.9);
+}
+
+/* 深色仍保持黑白灰：用深炭灰作背景，纯白作前景，线用半透白 */
+.dark{
+  --background: #0a0a0a;
+  --foreground: #FFFFFF;
+  --card: #141414;
+  --card-foreground: #FFFFFF;
+  --popover: #141414;
+  --popover-foreground: #FFFFFF;
+
+  --primary: #FFFFFF;
+  --primary-foreground: #0a0a0a;
+  --secondary: #1C1C1E;
+  --secondary-foreground: #FFFFFF;
+
+  --muted: #1C1C1E;
+  --muted-foreground: #A1A1A6;
+  --accent: #1C1C1E;
+  --accent-foreground: #FFFFFF;
+
+  --border: rgba(255,255,255,0.10);
+  --input: rgba(255,255,255,0.14);
+  --ring: #FFFFFF;
+
+  --sidebar: rgba(20,20,20,0.72);
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #FFFFFF;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: #1C1C1E;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: rgba(255,255,255,0.10);
+  --sidebar-ring: #FFFFFF;
+
+  --skeleton-base: #1C1C1E;
+  --skeleton-highlight: #2C2C2E;
+
+  /* 深色下的语义色同样转灰阶 */
+  --success: #C7C7CC;
+  --success-foreground: #0a0a0a;
+  --warning: #A1A1A6;
+  --warning-foreground: #0a0a0a;
+  --info: #8E8E93;
+  --info-foreground: #0a0a0a;
+  --destructive: #E5E5EA;
+  --destructive-foreground: #0a0a0a;
+
+  --glass-bg: rgba(20,20,20,0.62);
+  --glass-border: rgba(255,255,255,0.10);
+}
+
+/* 2) 全局：更 Apple 的字距与行高 */
+html{ -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+h1,h2,h3{ letter-spacing: -0.02em; }
+
+/* 3) 顶栏与侧边：磨砂玻璃 + 细线 */
+[data-slot="sidebar"],
+[data-sidebar="sidebar"]{
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  border-right: 1px solid var(--border) !important;
+}
+
+/* 顶栏容器在不同布局里类名不同，这里做通用兜底：给 header 加玻璃 */
+header[class*="sticky"]{
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  background: var(--glass-bg) !important;
+  border-bottom: 1px solid var(--glass-border) !important;
+}
+
+/* 4) 卡片：20px 圆角、细线、克制阴影 */
+[data-slot="card"],
+.card,
+.overflow-hidden.rounded-lg.border{
+  border-radius: 20px !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+}
+.dark [data-slot="card"],
+.dark .overflow-hidden.rounded-lg.border{
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04);
+}
+
+/* 5) 按钮：主按钮黑、次按钮白+细线、胶囊更圆 */
+[data-slot="button"]{ border-radius: 999px !important; }
+[data-slot="button"][data-variant="default"]{
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  border-color: var(--primary) !important;
+}
+
+/* 6) 输入框：12px 圆角，聚焦黑线 + 柔和外发光 */
+[data-slot="input"],
+input[data-slot="input"],
+textarea{
+  border-radius: 12px !important;
+}
+[data-slot="input"]:focus-visible,
+input:focus-visible, textarea:focus-visible, select:focus-visible{
+  border-color: var(--foreground) !important;
+  box-shadow: 0 0 0 4px rgba(0,0,0,0.08) !important;
+}
+.dark [data-slot="input"]:focus-visible,
+.dark input:focus-visible, .dark textarea:focus-visible{
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.10) !important;
+}
+
+/* 7) 表格头：极浅灰，分割线更细 */
+thead tr{ background: var(--table-header) !important; }
+thead th{ border-bottom-color: var(--border) !important; letter-spacing: 0.08em !important; }
+
+/* 8) 胶囊标签：只统一形状，不吞掉状态色（状态色仍需可辨识） */
+.badge,
+[data-slot="badge"]{
+  border-radius: 999px !important;
+}
+
+/* 9) 选中/激活态：只作用于导航与 Tab，避免误伤表格行 / 开关 / 日历 */
+[data-slot="sidebar-menu-button"][data-active="true"],
+[data-slot="sidebar-menu-sub-button"][data-active="true"],
+[data-slot="tabs-trigger"][data-state="active"]{
+  background: var(--foreground) !important;
+  color: var(--background) !important;
+  border-color: var(--foreground) !important;
+}
+
+/* 10) 滚动条：更细更淡 */
+*{ scrollbar-color: var(--border) transparent; }

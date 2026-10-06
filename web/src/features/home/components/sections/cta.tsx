@@ -36,47 +36,45 @@ export function CTA(props: CTAProps) {
   }
 
   return (
-    <section className='relative z-10 overflow-hidden px-6 py-24 md:py-32'>
-      {/* Gradient mesh background */}
-      <div
-        aria-hidden
-        className='absolute inset-0 -z-10 opacity-20 dark:opacity-[0.08]'
-        style={{
-          background: [
-            'radial-gradient(ellipse 50% 50% at 30% 50%, oklch(0.7 0.15 250 / 70%) 0%, transparent 70%)',
-            'radial-gradient(ellipse 40% 40% at 70% 40%, oklch(0.65 0.12 200 / 50%) 0%, transparent 70%)',
-          ].join(', '),
-        }}
-      />
-
+    <section className='relative z-10 bg-[#F5F5F7] px-6 py-14 md:py-20 dark:bg-[#0a0a0a]'>
       <AnimateInView
-        className='mx-auto max-w-2xl text-center'
         animation='scale-in'
+        className='mx-auto max-w-6xl rounded-[20px] border border-black/10 bg-white px-6 py-8 shadow-[0_1px_0_rgba(0,0,0,0.03)] md:px-10 md:py-10 dark:border-white/10 dark:bg-white/[0.06]'
       >
-        <h2 className='text-2xl leading-tight font-bold tracking-tight md:text-4xl'>
-          {t('Ready to simplify')}
-          <br />
-          <span className='bg-gradient-to-r from-blue-400 via-violet-400 to-purple-500 bg-clip-text text-transparent'>
-            {t('your AI integration?')}
-          </span>
-        </h2>
-        <p className='text-muted-foreground/80 mx-auto mt-5 max-w-md text-sm leading-relaxed md:text-base'>
-          {t(
-            'Deploy your own gateway and start routing requests through your configured upstream services.'
-          )}
-        </p>
-        <div className='mt-8 flex items-center justify-center gap-3'>
-          <Button className='group rounded-lg' render={<Link to='/sign-up' />}>
-            {t('Get Started')}
-            <ArrowRight className='ml-1 size-3.5 transition-transform duration-200 group-hover:translate-x-0.5' />
-          </Button>
-          <Button
-            variant='outline'
-            className='border-border/50 hover:border-border hover:bg-muted/50 rounded-lg'
-            render={<Link to='/pricing' />}
-          >
-            {t('View Pricing')}
-          </Button>
+        <div className='flex flex-col items-start justify-between gap-6 md:flex-row md:items-center'>
+          <div className='max-w-xl'>
+            <h2 className='text-2xl leading-tight font-bold tracking-[-0.03em] md:text-3xl'>
+              {t('Ready to simplify')}
+              <br />
+              <span className='font-[520] text-[#1d1d1f] dark:text-white/80'>
+                {t('your AI integration?')}
+              </span>
+            </h2>
+            <p className='mt-3 max-w-md text-sm leading-relaxed text-[#6E6E73] dark:text-white/55'>
+              {t(
+                'Deploy your own gateway and start routing requests through your configured upstream services.'
+              )}
+            </p>
+            <p className='mt-2 text-xs text-[#86868B] dark:text-white/35'>
+              首页到此为止。更多能力与定价，去文档与定价页慢慢看。
+            </p>
+          </div>
+          <div className='flex shrink-0 flex-wrap items-center gap-3'>
+            <Button
+              className='group rounded-full bg-[#0a0a0a] px-6 text-white hover:bg-black dark:bg-white dark:text-black dark:hover:bg-white/90'
+              render={<Link to='/sign-up' />}
+            >
+              {t('Get Started')}
+              <ArrowRight className='ml-1 size-3.5 transition-transform duration-200 group-hover:translate-x-0.5' />
+            </Button>
+            <Button
+              variant='outline'
+              className='rounded-full border-black/10 bg-white hover:bg-[#F5F5F7] dark:border-white/15 dark:bg-transparent dark:text-white dark:hover:bg-white/5'
+              render={<Link to='/pricing' />}
+            >
+              {t('View Pricing')}
+            </Button>
+          </div>
         </div>
       </AnimateInView>
     </section>

@@ -11,9 +11,6 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU Affero General Public License for more details.
 
-You should have received a copy of the GNU Affero General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
-
 For commercial licensing, please contact support@quantumnous.com
 */
 import { useRef, useEffect, useCallback } from 'react'
@@ -28,7 +25,7 @@ interface CounterProps {
 }
 
 function Counter(props: CounterProps) {
-  const { end, suffix = '', prefix = '', duration = 1600, decimals = 0 } = props
+  const { end, suffix = '', prefix = '', duration = 1200, decimals = 0 } = props
   const ref = useRef<HTMLSpanElement>(null)
   const startedRef = useRef(false)
 
@@ -54,13 +51,11 @@ function Counter(props: CounterProps) {
   useEffect(() => {
     const el = ref.current
     if (!el) return
-
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
     if (mq.matches) {
       el.textContent = `${prefix}${formatValue(end)}${suffix}`
       return
     }
-
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !startedRef.current) {
@@ -71,7 +66,6 @@ function Counter(props: CounterProps) {
       },
       { threshold: 0.5 }
     )
-
     observer.observe(el)
     return () => observer.disconnect()
   }, [animate, end, prefix, suffix, formatValue])
@@ -105,18 +99,18 @@ export function Stats(_props: StatsProps) {
   ]
 
   return (
-    <div className='border-border/40 bg-muted/10 relative z-10 border-y'>
-      <div className='mx-auto max-w-6xl px-6 py-10 md:py-12'>
+    <div className='relative z-10 border-y border-black/10 bg-white dark:border-white/10 dark:bg-[#0a0a0a]'>
+      <div className='mx-auto max-w-6xl px-6 py-8 md:py-10'>
         <div className='grid grid-cols-2 gap-8 md:grid-cols-4 md:gap-12'>
           {stats.map((s) => (
             <div
               key={s.label}
               className='flex flex-col items-center text-center'
             >
-              <span className='text-2xl font-bold tracking-tight md:text-3xl'>
+              <span className='text-[22px] font-bold tracking-[-0.03em] text-[#0a0a0a] md:text-[26px] dark:text-white'>
                 <Counter end={s.end} suffix={s.suffix} decimals={s.decimals} />
               </span>
-              <span className='text-muted-foreground mt-1.5 text-xs'>
+              <span className='mt-1.5 text-xs text-[#86868B] dark:text-white/45'>
                 {s.label}
               </span>
             </div>
