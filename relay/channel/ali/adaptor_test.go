@@ -129,8 +129,8 @@ func TestConvertOpenAIRequestPreservesExplicitZeroForMappedQwenModel(t *testing.
 	assert.Equal(t, int64(0), value.Int())
 }
 
-// Image models the alibaba task plugin does not claim reach this adaptor only
-// through a channel misconfiguration. The rejection is a client error that
+// Image models reach this adaptor only through a channel misconfiguration: the
+// task plugin that used to serve them was removed. The rejection is a client error that
 // skips channel retries; a retryable 500 would be re-attempted on unrelated
 // channels and still end as a 500 for the client.
 func TestConvertImageRequestRejectsUnclaimedModelWithoutRetry(t *testing.T) {

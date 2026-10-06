@@ -1,9 +1,8 @@
-// Package jsplugin preserves the billing-related type definitions that were
-// part of the task plugin runtime. The runtime itself was removed during the
-// new-api streamlining (二开精简), but pricing/billing structs still embed
-// UsageFieldSchema, UsageExample, and LocalizedText for JSON compatibility
-// with persisted pricing records.
-package jsplugin
+// Package usageschema holds the shared usage-schema types used by billing and
+// pricing. They originally lived in the task plugin runtime, which was removed
+// during the new-api streamlining (二开精简); the structs are kept so persisted
+// pricing records keep decoding.
+package usageschema
 
 // LocalizedText is a locale-keyed display string map (BCP 47 tags → text).
 type LocalizedText map[string]string

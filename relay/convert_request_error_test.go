@@ -312,5 +312,5 @@ func TestImageHelperKeepsAdaptorClassifiedConvertError(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, apiErr.StatusCode)
 	assert.Equal(t, types.ErrorCodeInvalidRequest, apiErr.GetErrorCode())
 	assert.True(t, types.IsSkipRetryError(apiErr), "other channels must not be asked to serve the same name")
-	assert.Contains(t, apiErr.Error(), "not served by the alibaba task plugin")
+	assert.Contains(t, apiErr.Error(), "is not supported by the Ali channel")
 }

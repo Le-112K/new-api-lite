@@ -104,10 +104,6 @@ var accessTokenStaticResources = []AccessTokenResource{
 		accessTokenView("View system settings, custom OAuth providers, and price sync sources."),
 		accessTokenEdit("Change system settings and custom OAuth providers, and sync prices."),
 	}},
-	{Resource: "plugin", LabelKey: "Task plugins", group: AccessTokenGroupSystem, minRole: common.RoleRootUser, Actions: []authz.ActionDefinition{
-		accessTokenView("View installed task plugins and their settings."),
-		accessTokenEdit("Install, configure, test, and remove task plugins."),
-	}},
 	{Resource: "ops", LabelKey: "Operations", group: AccessTokenGroupSystem, minRole: common.RoleRootUser, Actions: []authz.ActionDefinition{
 		accessTokenView("View performance, system tasks, and system information."),
 		accessTokenEdit("Run and manage maintenance tasks and performance settings."),

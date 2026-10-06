@@ -9,7 +9,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/pkg/billingexpr"
-	"github.com/QuantumNous/new-api/pkg/jsplugin"
+	"github.com/QuantumNous/new-api/pkg/usageschema"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/setting/config"
@@ -129,7 +129,7 @@ func ResolveTaskBillingExpr(pluginKey, model, mappedModel string) (string, bool)
 
 // TaskExprCompatible checks the schema contract even for usage references in
 // branches that the current request would not evaluate.
-func TaskExprCompatible(expression string, schema map[string]jsplugin.UsageFieldSchema) bool {
+func TaskExprCompatible(expression string, schema map[string]usageschema.UsageFieldSchema) bool {
 	if strings.TrimSpace(expression) == "" {
 		return false
 	}
@@ -231,7 +231,7 @@ func smokeTestExpr(exprStr string) error {
 // SmokeTestTaskExpr validates a task usage expression against the usage facts
 // declared by its plugin. Literal u() keys must be declared; dynamic calls are
 // still exercised by the generated runtime vectors when possible.
-func SmokeTestTaskExpr(exprStr string, schema map[string]jsplugin.UsageFieldSchema) error {
+func SmokeTestTaskExpr(exprStr string, schema map[string]usageschema.UsageFieldSchema) error {
 	if _, err := billingexpr.CompileFromCache(exprStr); err != nil {
 		return err
 	}
@@ -264,7 +264,7 @@ type usageSmokeDimension struct {
 	values []any
 }
 
-func taskUsageSmokeVectors(schema map[string]jsplugin.UsageFieldSchema) []map[string]any {
+func taskUsageSmokeVectors(schema map[string]usageschema.UsageFieldSchema) []map[string]any {
 	names := make([]string, 0, len(schema))
 	for name := range schema {
 		names = append(names, name)

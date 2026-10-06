@@ -27,19 +27,6 @@ func GetChannelConstraints(c *gin.Context) *dto.ChannelConstraints {
 	return constraints
 }
 
-func AppendTaskPluginIdentityFilter(c *gin.Context, pluginKey string) {
-	if c == nil {
-		return
-	}
-	channelTypes, pluginKeys := pinnedTaskPluginIdentities(c, pluginKey)
-	GetChannelConstraints(c).AddFilter(dto.ChannelFilter{
-		Kind:                   dto.FilterTaskPluginIdentity,
-		TaskPluginKey:          pluginKey,
-		TaskPluginChannelTypes: channelTypes,
-		TaskPluginKeys:         pluginKeys,
-	})
-}
-
 type RetryParam struct {
 	Ctx          *gin.Context
 	TokenGroup   string
@@ -202,10 +189,6 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 	return channel, selectGroup, nil
 }
 
-func pinnedTaskPluginIdentities(c *gin.Context, expected string) ([]int, []string) {
-	return nil, nil
-}
-
 // ChannelSelectError explains why SelectChannelForRequest found no channel.
 // Callers render it for their transport: the HTTP distributor localizes
 // MessageID with its own helpers and the Responses WebSocket relay wraps it in
@@ -220,8 +203,7 @@ type ChannelSelectError struct {
 	// FilterKind and Channel identify a candidate rejected by request filters.
 	FilterKind dto.ChannelFilterKind
 	Channel    *model.Channel
-	// NoAvailableChannel marks the "no channel for this group and model"
-	// outcome so the distributor can name the claiming task plugin.
+	// NoAvailableChannel marks the "no channel for this group and model" outcome.
 	NoAvailableChannel bool
 }
 

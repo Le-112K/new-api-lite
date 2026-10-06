@@ -8,7 +8,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/pkg/jsplugin"
+	"github.com/QuantumNous/new-api/pkg/usageschema"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/setting/billing_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
@@ -21,8 +21,8 @@ type PricingPluginVariant struct {
 	Icon                 string                               `json:"icon,omitempty"`
 	BillingExpr          string                               `json:"billing_expr"`
 	BillingMode          string                               `json:"billing_mode"`
-	BillingUsageSchema   map[string]jsplugin.UsageFieldSchema `json:"billing_usage_schema"`
-	BillingUsageExamples []jsplugin.UsageExample              `json:"billing_usage_examples,omitempty"`
+	BillingUsageSchema   map[string]usageschema.UsageFieldSchema `json:"billing_usage_schema"`
+	BillingUsageExamples []usageschema.UsageExample              `json:"billing_usage_examples,omitempty"`
 }
 
 type Pricing struct {
@@ -46,8 +46,8 @@ type Pricing struct {
 	SupportedEndpointTypes []constant.EndpointType              `json:"supported_endpoint_types"`
 	BillingMode            string                               `json:"billing_mode,omitempty"`
 	BillingExpr            string                               `json:"billing_expr,omitempty"`
-	BillingUsageSchema     map[string]jsplugin.UsageFieldSchema `json:"billing_usage_schema,omitempty"`
-	BillingUsageExamples   []jsplugin.UsageExample              `json:"billing_usage_examples,omitempty"`
+	BillingUsageSchema     map[string]usageschema.UsageFieldSchema `json:"billing_usage_schema,omitempty"`
+	BillingUsageExamples   []usageschema.UsageExample              `json:"billing_usage_examples,omitempty"`
 	PricingVersion         string                               `json:"pricing_version,omitempty"`
 }
 

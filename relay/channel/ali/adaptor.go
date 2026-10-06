@@ -136,16 +136,16 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 }
 
 // ConvertImageRequest is not implemented: Ali image generation and editing
-// are served by the alibaba task plugin through the openai_image host
-// protocol, which claims every declared image model on /v1/images/*. A model
-// reaching this adaptor is not declared by the plugin (or is named
-// differently from the Bailian model list), so the request cannot be served.
+// used to be served by the alibaba task plugin through the openai_image host
+// protocol, which claimed every declared image model on /v1/images/*. That
+// plugin system was removed during the new-api streamlining (二开精简), so no
+// image model can be served here anymore.
 // The rejection is a 400 that skips channel retries: every channel of this
 // type refuses the same name, and a retryable 500 would only hide the
 // misconfiguration behind unrelated channels.
 func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.ImageRequest) (any, error) {
 	return nil, types.NewErrorWithStatusCode(
-		fmt.Errorf("image model %q is not served by the alibaba task plugin; use a Bailian image model name declared by the plugin or map it with the channel model mapping", info.UpstreamModelName),
+		fmt.Errorf("image model %q is not supported by the Ali channel; the task plugin that served Ali image models was removed, so route image requests to a channel with native image support", info.UpstreamModelName),
 		types.ErrorCodeInvalidRequest,
 		http.StatusBadRequest,
 		types.ErrOptionWithSkipRetry(),

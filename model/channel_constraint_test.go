@@ -12,13 +12,9 @@ import (
 )
 
 func TestFilterCandidateIDs(t *testing.T) {
-	alphaSetting := `{"task_plugin_key":"alpha"}`
-	betaSetting := `{"task_plugin_key":"beta"}`
-	alpha := &Channel{Id: 900001, Type: constant.ChannelTypeTaskPlugin, Status: common.ChannelStatusEnabled, Setting: &alphaSetting}
-	beta := &Channel{Id: 900002, Type: constant.ChannelTypeTaskPlugin, Status: common.ChannelStatusEnabled, Setting: &betaSetting}
 	ordinary := &Channel{Id: 900003, Type: constant.ChannelTypeOpenAI, Status: common.ChannelStatusEnabled}
-	kling := &Channel{Id: 900004, Type: constant.ChannelTypeKling, Status: common.ChannelStatusEnabled}
-	jimeng := &Channel{Id: 900005, Type: constant.ChannelTypeJimeng, Status: common.ChannelStatusEnabled}
+	wsSetting := `{"responses_websocket_enabled":true}`
+	wsOpenAI := &Channel{Id: 900006, Type: constant.ChannelTypeOpenAI, Status: common.ChannelStatusEnabled, Setting: &wsSetting}
 	matchingCustom := &Channel{Id: 900010, Type: constant.ChannelTypeAdvancedCustom, Status: common.ChannelStatusEnabled}
 	matchingCustom.SetOtherSettings(kitdto.ChannelOtherSettings{
 		AdvancedCustom: &kitdto.AdvancedCustomConfig{
@@ -40,6 +36,7 @@ func TestFilterCandidateIDs(t *testing.T) {
 
 	pathFilter := dto.ChannelFilter{Kind: dto.FilterRequestPath, RequestPath: "/v1/chat/completions"}
 	emptyPathFilter := dto.ChannelFilter{Kind: dto.FilterRequestPath, RequestPath: ""}
+	wsFilter := dto.ChannelFilter{Kind: dto.FilterResponsesWebSocket}
 
 	tests := []struct {
 		name      string
@@ -49,57 +46,6 @@ func TestFilterCandidateIDs(t *testing.T) {
 		wantKept  []int
 		wantEmpty dto.ChannelFilterKind
 	}{
-		{
-			name:      "identity keeps matching type-59 key",
-			ids:       []int{900001, 900002},
-			modelName: "shared",
-			filters:   identityFilters("alpha", nil),
-			wantKept:  []int{900001},
-		},
-		{
-			name:      "identity empty key drops all type-59",
-			ids:       []int{900001, 900002},
-			modelName: "shared",
-			filters:   identityFilters("", nil),
-			wantKept:  []int{},
-			wantEmpty: dto.FilterTaskPluginIdentity,
-		},
-		{
-			name:      "identity empty key keeps ordinary channel",
-			ids:       []int{900003},
-			modelName: "ordinary",
-			filters:   identityFilters("", nil),
-			wantKept:  []int{900003},
-		},
-		{
-			name:      "identity keeps matching legacy type",
-			ids:       []int{900004, 900005},
-			modelName: "legacy",
-			filters:   identityFilters("legacy-alpha", []int{constant.ChannelTypeKling}),
-			wantKept:  []int{900004},
-		},
-		{
-			name:      "identity keeps all listed legacy types",
-			ids:       []int{900004, 900005},
-			modelName: "legacy",
-			filters:   identityFilters("legacy-alpha", []int{constant.ChannelTypeKling, constant.ChannelTypeJimeng}),
-			wantKept:  []int{900004, 900005},
-		},
-		{
-			name:      "identity keyed with no types drops legacy",
-			ids:       []int{900004, 900005},
-			modelName: "legacy",
-			filters:   identityFilters("legacy-alpha", nil),
-			wantKept:  []int{},
-			wantEmpty: dto.FilterTaskPluginIdentity,
-		},
-		{
-			name:      "identity drops missing cache entry",
-			ids:       []int{900004, 999999},
-			modelName: "legacy",
-			filters:   identityFilters("legacy-alpha", []int{constant.ChannelTypeKling}),
-			wantKept:  []int{900004},
-		},
 		{
 			name:      "empty request path is a passthrough including missing ids",
 			ids:       []int{900003, 900010, 999999},
@@ -115,14 +61,14 @@ func TestFilterCandidateIDs(t *testing.T) {
 			wantKept:  []int{900003, 999999},
 		},
 		{
-			name:      "request path keeps matching type-58 and ordinary",
+			name:      "request path keeps matching advanced custom and ordinary",
 			ids:       []int{900003, 900010, 900011},
 			modelName: "gpt-4",
 			filters:   []dto.ChannelFilter{pathFilter},
 			wantKept:  []int{900003, 900010},
 		},
 		{
-			name:      "request path empties when only unmatched type-58 remains",
+			name:      "request path empties when only unmatched advanced custom remains",
 			ids:       []int{900011},
 			modelName: "gpt-4",
 			filters:   []dto.ChannelFilter{pathFilter},
@@ -130,31 +76,35 @@ func TestFilterCandidateIDs(t *testing.T) {
 			wantEmpty: dto.FilterRequestPath,
 		},
 		{
-			name:      "intersection attributes empty set to identity after path keeps candidates",
-			ids:       []int{900001, 900010},
+			name:      "responses websocket keeps only channels that enable it",
+			ids:       []int{900003, 900006},
 			modelName: "gpt-4",
-			filters:   []dto.ChannelFilter{pathFilter, identityFilters("missing", nil)[0]},
-			wantKept:  []int{},
-			wantEmpty: dto.FilterTaskPluginIdentity,
+			filters:   []dto.ChannelFilter{wsFilter},
+			wantKept:  []int{900006},
 		},
 		{
-			name:      "intersection attributes empty set to path when path runs first",
+			name:      "intersection attributes empty set to request path when it runs first",
 			ids:       []int{900011},
 			modelName: "gpt-4",
-			filters:   []dto.ChannelFilter{identityFilters("", nil)[0], pathFilter},
+			filters:   []dto.ChannelFilter{pathFilter, wsFilter},
 			wantKept:  []int{},
 			wantEmpty: dto.FilterRequestPath,
+		},
+		{
+			name:      "intersection attributes empty set to websocket after path keeps candidates",
+			ids:       []int{900003},
+			modelName: "gpt-4",
+			filters:   []dto.ChannelFilter{pathFilter, wsFilter},
+			wantKept:  []int{},
+			wantEmpty: dto.FilterResponsesWebSocket,
 		},
 	}
 
 	channelSyncLock.Lock()
 	previous := channelsIDM
 	channelsIDM = map[int]*Channel{
-		900001: alpha,
-		900002: beta,
 		900003: ordinary,
-		900004: kling,
-		900005: jimeng,
+		900006: wsOpenAI,
 		900010: matchingCustom,
 		900011: otherCustom,
 	}
@@ -177,9 +127,9 @@ func TestFilterCandidateIDs(t *testing.T) {
 }
 
 func TestChannelSatisfiesFilters(t *testing.T) {
-	alphaSetting := `{"task_plugin_key":"alpha"}`
-	alpha := &Channel{Id: 1, Type: constant.ChannelTypeTaskPlugin, Setting: &alphaSetting}
 	ordinary := &Channel{Id: 2, Type: constant.ChannelTypeOpenAI}
+	wsSetting := `{"responses_websocket_enabled":true}`
+	wsOpenAI := &Channel{Id: 4, Type: constant.ChannelTypeOpenAI, Setting: &wsSetting}
 	custom := &Channel{Id: 3, Type: constant.ChannelTypeAdvancedCustom}
 	custom.SetOtherSettings(kitdto.ChannelOtherSettings{
 		AdvancedCustom: &kitdto.AdvancedCustomConfig{
@@ -194,14 +144,6 @@ func TestChannelSatisfiesFilters(t *testing.T) {
 	assert.False(t, ok)
 	assert.Equal(t, dto.ChannelFilterKind(""), kind)
 
-	ok, kind = ChannelSatisfiesFilters(alpha, "shared", identityFilters("alpha", nil))
-	require.True(t, ok)
-	assert.Equal(t, dto.ChannelFilterKind(""), kind)
-
-	ok, kind = ChannelSatisfiesFilters(alpha, "shared", identityFilters("beta", nil))
-	assert.False(t, ok)
-	assert.Equal(t, dto.FilterTaskPluginIdentity, kind)
-
 	ok, kind = ChannelSatisfiesFilters(ordinary, "gpt-4", []dto.ChannelFilter{{
 		Kind:        dto.FilterRequestPath,
 		RequestPath: "/v1/chat/completions",
@@ -215,4 +157,16 @@ func TestChannelSatisfiesFilters(t *testing.T) {
 	}})
 	assert.False(t, ok)
 	assert.Equal(t, dto.FilterRequestPath, kind)
+
+	ok, kind = ChannelSatisfiesFilters(wsOpenAI, "gpt-4", []dto.ChannelFilter{{
+		Kind: dto.FilterResponsesWebSocket,
+	}})
+	require.True(t, ok)
+	assert.Equal(t, dto.ChannelFilterKind(""), kind)
+
+	ok, kind = ChannelSatisfiesFilters(ordinary, "gpt-4", []dto.ChannelFilter{{
+		Kind: dto.FilterResponsesWebSocket,
+	}})
+	assert.False(t, ok)
+	assert.Equal(t, dto.FilterResponsesWebSocket, kind)
 }

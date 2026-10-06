@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/dto"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
@@ -77,15 +76,6 @@ func TestMain(m *testing.M) {
 	}
 
 	os.Exit(m.Run())
-}
-
-// identityFilters builds a task-plugin-identity channel filter for tests.
-func identityFilters(key string, channelTypes []int) []dto.ChannelFilter {
-	return []dto.ChannelFilter{{
-		Kind:                   dto.FilterTaskPluginIdentity,
-		TaskPluginKey:          key,
-		TaskPluginChannelTypes: channelTypes,
-	}}
 }
 
 // truncateTables registers a cleanup that wipes the core tables after each test.

@@ -124,7 +124,6 @@ New API は、アプリケーション、Agent、チーム向けのセルフホ�
 | ルーティング | モデル名のマッピング、チャネルの優先度と重み、再試行、チャネルアフィニティ、複数キーの管理 |
 | 使用量とコスト | クォータ、サブスクリプション、使用ログ、キャッシュの課金、式による段階的な料金設定 |
 | アクセス制御 | ユーザー、グループ、詳細な権限、API キーの制限。OAuth/OIDC、パスキー、二要素認証、ログインセッション管理 |
-| 非同期タスク | JavaScript プラグインで画像・動画などのタスク API を拡張し、状態の確認と成果物の取得に対応 |
 | Web 管理画面 | チャネルとモデルの設定、使用・監査ログの確認、Playground でのモデル検証。英語、簡体字中国語、繁体字中国語、フランス語、日本語、ロシア語、ベトナム語に対応 |
 
 ### プロトコルとエンドポイント
@@ -137,7 +136,6 @@ New API は、アプリケーション、Agent、チーム向けのセルフホ�
 | Realtime / Responses WebSocket | `GET /v1/realtime`、`GET /v1/responses`（WebSocket アップグレード） |
 | 画像 / 音声 | `/v1/images/generations`、`/v1/images/edits`、`/v1/audio/speech`、`/v1/audio/transcriptions`、`/v1/audio/translations` |
 | 埋め込み / リランク | `POST /v1/embeddings`、`POST /v1/rerank` |
-| タスクプラグイン | `POST /v1/tasks/{pluginKey}`、`GET /v1/tasks/{taskId}`、各プラグインが宣言するルート |
 
 [RelayKit](./relaykit/README.md) は、上記 4 種類のテキストプロトコル間でリクエスト、レスポンス、ストリームを変換します。利用できる機能はチャネル、上流モデル、変換経路に依存し、固有のツールやフィールドを完全には変換できない場合があります。WebSocket も対応する上流とチャネル設定が必要です。
 
@@ -263,7 +261,6 @@ bun run dev -- --port 5173
 | `relay/` | 上流アダプターとリクエストのルーティング |
 | `service/`、`model/` | ビジネスロジックと永続化 |
 | [relaykit/](./relaykit/README.md) | プロトコル DTO と変換を提供する、独立してビルド可能な Go モジュール |
-| [plugins/tasks/](./plugins/tasks/) | JavaScript タスクプラグイン。作成方法とホストの境界は [Task Plugin API v1](./docs/plugin-api/v1.md) を参照 |
 | `web/` | Web 管理画面。[フロントエンドの規約](./web/AGENTS.md)を参照 |
 | [electron/](./electron/README.md) | デスクトップアプリのラッパーとパッケージング |
 

@@ -28,9 +28,7 @@ import { CHANNEL_TYPE_ADVANCED_CUSTOM } from './advanced-custom'
 import { channelFormSchema, type ChannelFormValues } from './channel-form'
 import { supportsResponsesWebSocket } from './responses-websocket'
 
-export type ChannelProviderTarget =
-  | { kind: 'builtin'; type: number }
-  | { kind: 'plugin'; key: string }
+export type ChannelProviderTarget = { kind: 'builtin'; type: number }
 
 export type ChannelConfigurationSection =
   | 'connection'

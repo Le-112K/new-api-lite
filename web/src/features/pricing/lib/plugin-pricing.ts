@@ -87,7 +87,7 @@ export function pluginExpressionsEqual(
 
 export function pluginUsageSchema(
   model: PricingModel | undefined,
-  pluginKey: string | undefined
+  pluginKey?: string | undefined
 ): BillingUsageSchema | undefined {
   const variant = model?.billing_plugin_variants?.find(
     (item) => item.plugin_key === pluginKey

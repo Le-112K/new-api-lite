@@ -21,17 +21,11 @@ import { useTranslation } from 'react-i18next'
 
 import { Dialog } from '@/components/dialog'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { PluginIcon } from '@/features/task-plugins/components/plugin-icon'
-
-import type { TaskPluginOption } from '../../api'
 import { UpstreamModelSelection } from '../upstream-model-selection'
 
 type ConfigureModelsDialogProps = {
   open: boolean
   models: string[]
-  plugins?: TaskPluginOption[]
-  initialPluginKey?: string
   onOpenChange: (open: boolean) => void
   onApply: (models: string[]) => void
   /** Called after the selection is applied when the user starts a redirect for a model. */
@@ -43,19 +37,7 @@ export function ConfigureModelsDialog(props: ConfigureModelsDialogProps) {
   // Mounted for each opening. Keep unchecked candidates available until close.
   const [initialModels] = useState(props.models)
   const [selected, setSelected] = useState(initialModels)
-  const [source, setSource] = useState(
-    props.initialPluginKey ? `plugin:${props.initialPluginKey}` : 'all'
-  )
-  const plugins =
-    props.plugins?.filter((plugin) => plugin.models.length > 0) ?? []
-  const plugin = plugins.find((item) => `plugin:${item.key}` === source)
-  const models = [
-    ...new Set(
-      plugin
-        ? plugin.models
-        : [...initialModels, ...plugins.flatMap((item) => item.models)]
-    ),
-  ]
+  const models = [...new Set(initialModels)]
   const onRedirect = props.onRedirect
   // Redirecting keeps the current picks and makes sure the redirected model is
   // published, otherwise the alias could never be called.
@@ -70,22 +52,13 @@ export function ConfigureModelsDialog(props: ConfigureModelsDialogProps) {
     : undefined
   const selection = (
     <UpstreamModelSelection
-      key={plugin?.key ?? 'all'}
       models={models}
       selected={selected}
       existingModels={initialModels}
       onChange={setSelected}
       onRedirectModel={handleRedirect}
       showChanges={false}
-      summaryText={
-        plugins.length > 0
-          ? t('Selected {{selected}} / {{total}}', {
-              selected: models.filter((model) => selected.includes(model))
-                .length,
-              total: models.length,
-            })
-          : t('Current models: {{count}}', { count: models.length })
-      }
+      summaryText={t('Current models: {{count}}', { count: models.length })}
     />
   )
 
@@ -94,11 +67,7 @@ export function ConfigureModelsDialog(props: ConfigureModelsDialogProps) {
       open={props.open}
       onOpenChange={props.onOpenChange}
       title={t('Configure Models')}
-      description={
-        plugins.length > 0
-          ? t('Select models and apply to channel models list.')
-          : t('Select the models to keep in this channel.')
-      }
+      description={t('Select the models to keep in this channel.')}
       contentClassName='sm:max-w-3xl'
       footer={
         <>
@@ -121,40 +90,7 @@ export function ConfigureModelsDialog(props: ConfigureModelsDialogProps) {
         </>
       }
     >
-      {plugins.length > 0 ? (
-        <Tabs
-          value={plugin ? `plugin:${plugin.key}` : 'all'}
-          onValueChange={(value) => setSource(String(value))}
-          className='min-w-0 gap-3'
-        >
-          <div className='max-w-full overflow-x-auto'>
-            <TabsList
-              variant='line'
-              aria-label={t('Models')}
-              className='min-w-max'
-            >
-              <TabsTrigger value='all'>{t('All')}</TabsTrigger>
-              {plugins.map((item) => (
-                <TabsTrigger
-                  key={item.key}
-                  value={`plugin:${item.key}`}
-                  title={item.name}
-                >
-                  <span aria-hidden='true'>
-                    <PluginIcon plugin={item} size={16} />
-                  </span>
-                  <span className='max-w-40 truncate'>{item.name}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-          <TabsContent value={plugin ? `plugin:${plugin.key}` : 'all'}>
-            {selection}
-          </TabsContent>
-        </Tabs>
-      ) : (
-        selection
-      )}
+      {selection}
     </Dialog>
   )
 }

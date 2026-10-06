@@ -89,7 +89,6 @@ import {
 } from '../../lib/utils'
 import { USAGE_BILLING_PATH, type LogOtherData } from '../../types'
 import { ResponseModelDetails } from '../model-badge'
-import { PluginAuthorLink } from '../plugin-author-link'
 import { DetailRow, DetailSection } from './log-detail-layout'
 
 // Maps a channel-update changed-field token (as recorded by the backend audit)
@@ -493,10 +492,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
     !!other?.expr_b64
   const pricingData = usePricingData(props.open && isTieredBilling)
   const billingUsageSchema = pluginUsageSchema(
-    pricingData.models.find(
-      (model) => model.model_name === props.log.model_name
-    ),
-    other?.admin_info?.task_plugin?.key
+    pricingData.models.find((model) => model.model_name === props.log.model_name)
   )
   const hasAudioTokens = other?.ws || other?.audio
   const showTiming = isTimingLogType(props.log.type)
@@ -883,51 +879,8 @@ export function DetailsDialog(props: DetailsDialogProps) {
           </DetailSection>
         )}
 
-        {props.isAdmin && adminInfo?.task_plugin ? (
-          <DetailSection label={t('Task Plugin')}>
-            <DetailRow
-              label={t('Plugin key')}
-              value={adminInfo.task_plugin.key}
-              mono
-            />
-            <DetailRow label={t('Name')} value={adminInfo.task_plugin.name} />
-            {adminInfo.task_plugin.version ? (
-              <DetailRow
-                label={t('Version')}
-                value={adminInfo.task_plugin.version}
-                mono
-              />
-            ) : null}
-            {adminInfo.task_plugin.author ? (
-              <DetailRow
-                label={t('Plugin author')}
-                value={
-                  <PluginAuthorLink
-                    author={adminInfo.task_plugin.author}
-                    showUrl
-                  />
-                }
-              />
-            ) : null}
-          </DetailSection>
-        ) : null}
-
         {props.isRoot && other?.root_info ? (
           <DetailSection label={t('Root Diagnostics')}>
-            {other.root_info.task_plugin ? (
-              <>
-                <DetailRow
-                  label={t('API Version')}
-                  value={String(other.root_info.task_plugin.api_version)}
-                  mono
-                />
-                <DetailRow
-                  label={t('Plugin Generation')}
-                  value={String(other.root_info.task_plugin.generation)}
-                  mono
-                />
-              </>
-            ) : null}
             {other.root_info.upstream_task_id ? (
               <DetailRow
                 label={t('Upstream Task ID')}

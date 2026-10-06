@@ -123,7 +123,6 @@ New API 是面向應用程式、Agent 和團隊的自託管 AI 閘道。將不�
 | 渠道調度 | 設定模型映射、渠道優先順序與權重、失敗重試、渠道親和性和多金鑰管理 |
 | 用量與成本 | 管理額度、訂閱方案、用量日誌、快取計費，以及基於運算式的階梯定價 |
 | 存取控制 | 管理使用者、群組、細粒度權限和 API Key 限制；支援 OAuth/OIDC、通行密鑰、兩步驟驗證與登入工作階段管理 |
-| 非同步任務 | 透過 JavaScript 外掛擴充圖片、影片等任務 API，統一查詢任務狀態和取得產物 |
 | Web 控制台 | 設定渠道與模型、查看用量和稽核日誌、在 Playground 中測試模型；支援簡體中文、繁體中文、英語、法語、日語、俄語和越南語 |
 
 ### 協定與介面
@@ -136,7 +135,6 @@ New API 是面向應用程式、Agent 和團隊的自託管 AI 閘道。將不�
 | Realtime / Responses WebSocket | `GET /v1/realtime`、`GET /v1/responses`（WebSocket 升級） |
 | 圖片 / 音訊 | `/v1/images/generations`、`/v1/images/edits`、`/v1/audio/speech`、`/v1/audio/transcriptions`、`/v1/audio/translations` |
 | 向量 / 重排 | `POST /v1/embeddings`、`POST /v1/rerank` |
-| 任務外掛 | `POST /v1/tasks/{pluginKey}`、`GET /v1/tasks/{taskId}`，以及各外掛宣告的協定路由 |
 
 [RelayKit](./relaykit/README.md) 提供上述四種文字協定之間的請求、回應和串流轉換。實際可用能力取決於渠道、上游模型和轉換路徑；協定特有的工具與欄位可能無法完整映射。WebSocket 同樣需要上游與渠道設定支援。
 
@@ -262,7 +260,6 @@ bun run dev -- --port 5173
 | `relay/` | 上游介接與請求調度 |
 | `service/`、`model/` | 業務邏輯與持久化 |
 | [relaykit/](./relaykit/README.md) | 可獨立建置的協定 DTO 與轉換 Go 模組 |
-| [plugins/tasks/](./plugins/tasks/) | JavaScript 任務外掛；編寫方式與宿主邊界見 [Task Plugin API v1](./docs/plugin-api/v1.md) |
 | `web/` | Web 控制台，參閱[前端開發約定](./web/AGENTS.md) |
 | [electron/](./electron/README.md) | 桌面封裝與打包 |
 

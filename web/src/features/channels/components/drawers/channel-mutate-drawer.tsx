@@ -23,7 +23,6 @@ import {
   ArrowLeft,
   ArrowRightLeft,
   PanelLeftOpen,
-  AlertCircle,
   ChevronDown,
   ClipboardPaste,
   Loader2,
@@ -105,7 +104,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { SecureVerificationDialog } from '@/features/auth/secure-verification'
-import { PluginIcon } from '@/features/task-plugins/components/plugin-icon'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { useHiddenClickUnlock } from '@/hooks/use-hidden-click-unlock'
 import {
@@ -133,14 +131,12 @@ import {
   getChannelDefaultBaseURLs,
   getGroups,
   getPrefillGroups,
-  getTaskPluginOptions,
   refreshCodexCredential,
 } from '../../api'
 import {
   ADD_MODE_OPTIONS,
   CLAUDE_FIELD_PASSTHROUGH_TYPES,
   CHANNEL_STATUS_LABELS,
-  CHANNEL_TYPE_NEW_API,
   CHANNEL_TYPE_OLLAMA,
   CHANNEL_TYPE_OPTIONS,
   CHANNEL_TYPE_TASK_PLUGIN,
@@ -191,22 +187,12 @@ import {
   type ChannelConfigurationSection,
   type ChannelProviderTarget,
 } from '../../lib/channel-configuration'
-import {
-  getChannelPluginExtensions,
-  supportsChannelPluginExtensions,
-  supportsNewAPIUpstream,
-} from '../../lib/channel-plugin-extensions'
 import { getChannelTypeConfig } from '../../lib/channel-type-config'
 import {
   collectInvalidStatusCodeEntries,
   collectNewDisallowedStatusCodeRedirects,
 } from '../../lib/status-code-risk-guard'
-import {
-  assessBaseUrlTrust,
-  nextTaskPluginBaseUrl,
-} from '../../lib/task-plugin-base-url'
 import type { Channel } from '../../types'
-import { ChannelPluginExtensions } from '../channel-plugin-extensions'
 import { ChannelQuickOptions } from '../channel-quick-options'
 import { ChannelTypeLogo } from '../channel-type-badge'
 import { useChannels } from '../channels-provider'
@@ -418,11 +404,6 @@ export function ChannelMutateDrawer({
     ADMIN_PERMISSION_RESOURCES.CHANNEL,
     ADMIN_PERMISSION_ACTIONS.OPERATE
   )
-  const canBindTaskPlugin = hasPermission(
-    currentUser,
-    ADMIN_PERMISSION_RESOURCES.TASK_PLUGIN,
-    ADMIN_PERMISSION_ACTIONS.BIND
-  )
   const canRevealChannelKey = currentUser?.role === ROLE.SUPER_ADMIN
   const [isCodexCredentialRefreshing, setIsCodexCredentialRefreshing] =
     useState(false)
@@ -447,9 +428,9 @@ export function ChannelMutateDrawer({
     ((action: MissingModelsAction) => void) | null
   >(null)
   const channelFormRef = useRef<HTMLFormElement>(null)
-  const [modelConfiguration, setModelConfiguration] = useState<{
-    pluginKey?: string
-  } | null>(null)
+  const [modelConfiguration, setModelConfiguration] = useState<object | null>(
+    null
+  )
   const [paramOverrideEditorOpen, setParamOverrideEditorOpen] = useState(false)
   const [advancedCustomEditorOpen, setAdvancedCustomEditorOpen] =
     useState(false)
@@ -590,8 +571,6 @@ export function ChannelMutateDrawer({
     : defaultBaseURLs?.[currentType] || t(FIELD_PLACEHOLDERS.BASE_URL)
   const currentStatus = formValues.status
   const currentBaseUrl = formValues.base_url
-  const currentTaskPluginKey = formValues.task_plugin_key
-  const currentTaskExtendPluginKeys = formValues.task_extend_plugin_keys
   const currentKey = formValues.key
   const currentModels = formValues.models
   const currentModelMapping = formValues.model_mapping
@@ -760,118 +739,37 @@ export function ChannelMutateDrawer({
         ?.label || `#${currentType}`,
     [currentType]
   )
-  const taskPluginOptionsQuery = useQuery({
-    queryKey: ['task-plugin-options'],
-    queryFn: async () => requireServerSuccess(await getTaskPluginOptions()),
-    enabled: open && canBindTaskPlugin,
-    meta: { errorToast: false },
-  })
-  const canHavePluginExtensions = supportsChannelPluginExtensions(currentType)
-  const pluginExtensions = useMemo(() => {
-    if (!canBindTaskPlugin || !taskPluginOptionsQuery.isSuccess) return []
-    return getChannelPluginExtensions(
-      currentType,
-      taskPluginOptionsQuery.data,
-      currentTaskExtendPluginKeys
-    )
-  }, [
-    canBindTaskPlugin,
-    currentType,
-    currentTaskExtendPluginKeys,
-    taskPluginOptionsQuery.isSuccess,
-    taskPluginOptionsQuery.data,
-  ])
-  const boundTaskPlugin =
-    currentType === CHANNEL_TYPE_TASK_PLUGIN
-      ? taskPluginOptionsQuery.data?.find(
-          (item) => item.key === currentTaskPluginKey
-        )
-      : undefined
-  const providerLabel =
-    boundTaskPlugin?.name ||
-    (currentType === CHANNEL_TYPE_TASK_PLUGIN && currentTaskPluginKey) ||
-    t(currentTypeLabel)
+  const providerLabel = t(currentTypeLabel)
 
   const selectProvider = useCallback(
     (target: ChannelProviderTarget) => {
       if (!canEditSensitive) return
       if (
-        (target.kind === 'builtin' &&
-          providerTarget?.kind === 'builtin' &&
-          target.type === providerTarget.type) ||
-        (target.kind === 'plugin' &&
-          providerTarget?.kind === 'plugin' &&
-          target.key === providerTarget.key)
+        providerTarget?.kind === 'builtin' &&
+        target.type === providerTarget.type
       ) {
         setChoosingProvider(false)
         return
       }
-      if (target.kind === 'plugin') {
-        if (!canBindTaskPlugin) return
-        const plugin = taskPluginOptionsQuery.data?.find(
-          (item) => item.key === target.key
-        )
-        if (!plugin) return
-        const previousPlugin = taskPluginOptionsQuery.data?.find(
-          (item) => item.key === form.getValues('task_plugin_key')
-        )
-        form.setValue('type', CHANNEL_TYPE_TASK_PLUGIN, { shouldDirty: true })
-        form.setValue('task_plugin_key', plugin.key, { shouldDirty: true })
-        if (!isEditing && !providerTarget && !form.getValues('name').trim()) {
-          form.setValue('name', plugin.name)
-        }
-        if (plugin.models.length) {
-          form.setValue('models', formatModelsArray(plugin.models), {
-            shouldDirty: true,
-          })
-        }
-        const baseUrl = nextTaskPluginBaseUrl(
-          form.getValues('base_url'),
-          previousPlugin?.baseUrl,
-          plugin.baseUrl
-        )
-        if (baseUrl !== null) {
-          form.setValue('base_url', baseUrl, {
-            shouldDirty: true,
-            shouldValidate: true,
-          })
-        }
-      } else {
-        if (
-          !Number.isSafeInteger(target.type) ||
-          target.type <= 0 ||
-          target.type === CHANNEL_TYPE_TASK_PLUGIN
-        ) {
-          return
-        }
-        form.setValue('type', target.type, { shouldDirty: true })
-        if (!isEditing && !providerTarget && !form.getValues('name').trim()) {
-          const label = CHANNEL_TYPE_OPTIONS.find(
-            (option) => option.value === target.type
-          )?.label
-          form.setValue('name', label ? t(label) : `#${target.type}`)
-        }
+      if (
+        !Number.isSafeInteger(target.type) ||
+        target.type <= 0 ||
+        target.type === CHANNEL_TYPE_TASK_PLUGIN
+      ) {
+        return
+      }
+      form.setValue('type', target.type, { shouldDirty: true })
+      if (!isEditing && !providerTarget && !form.getValues('name').trim()) {
+        const label = CHANNEL_TYPE_OPTIONS.find(
+          (option) => option.value === target.type
+        )?.label
+        form.setValue('name', label ? t(label) : `#${target.type}`)
       }
       setProviderTarget(target)
       setChoosingProvider(false)
     },
-    [
-      canBindTaskPlugin,
-      canEditSensitive,
-      providerTarget,
-      isEditing,
-      form,
-      t,
-      taskPluginOptionsQuery.data,
-    ]
+    [canEditSensitive, providerTarget, isEditing, form, t]
   )
-  // The plugin author proposes the destination host once a default is
-  // prefilled, so the admin is told when the key would travel over plain HTTP
-  // or to a private network before the channel is saved.
-  const taskPluginBaseUrlTrust =
-    currentType === CHANNEL_TYPE_TASK_PLUGIN
-      ? assessBaseUrlTrust(currentBaseUrl)
-      : null
 
   const formErrors = form.formState.errors
   const configuration = getChannelConfigurationState(
@@ -975,11 +873,7 @@ export function ChannelMutateDrawer({
     const targetBySource = new Map(
       modelMappingGuardrail.entries.map((entry) => [entry.source, entry.target])
     )
-    const allModels = new Set([
-      ...allModelsList,
-      ...currentModelsArray,
-      ...pluginExtensions.flatMap((plugin) => plugin.models),
-    ])
+    const allModels = new Set([...allModelsList, ...currentModelsArray])
     return [...allModels].map((model) => {
       const target = targetBySource.get(model)
       return {
@@ -990,13 +884,7 @@ export function ChannelMutateDrawer({
           : undefined,
       }
     })
-  }, [
-    allModelsList,
-    currentModelsArray,
-    pluginExtensions,
-    modelMappingGuardrail.entries,
-    t,
-  ])
+  }, [allModelsList, currentModelsArray, modelMappingGuardrail.entries, t])
 
   const upstreamUpdateMeta = useMemo(() => {
     const settings = parseSettingsRecord(currentSettings)
@@ -1050,11 +938,7 @@ export function ChannelMutateDrawer({
         channelId: channelData.data.id,
         snapshot: JSON.stringify(form.getValues()),
       }
-      setProviderTarget(
-        defaults.type === CHANNEL_TYPE_TASK_PLUGIN
-          ? { kind: 'plugin', key: defaults.task_plugin_key || '' }
-          : { kind: 'builtin', type: defaults.type }
-      )
+      setProviderTarget({ kind: 'builtin', type: defaults.type })
       if (isNewChannel) {
         setModelConfiguration(null)
         setChoosingProvider(false)
@@ -1326,46 +1210,6 @@ export function ChannelMutateDrawer({
       form.setValue('models', selected.join(','))
     },
     [form]
-  )
-
-  const taskPluginExtensionOptions = useMemo(
-    () =>
-      (taskPluginOptionsQuery.data ?? [])
-        .filter(supportsNewAPIUpstream)
-        .map((plugin) => ({
-          value: plugin.key,
-          label: plugin.name,
-          hint: plugin.key,
-          icon: <PluginIcon plugin={plugin} size={16} />,
-        })),
-    [taskPluginOptionsQuery.data]
-  )
-
-  // Binding an upstream plugin publishes its models like the type-61 prefill;
-  // unbinding removes the models that no remaining bound plugin declares.
-  const handleTaskExtendPluginKeysChange = useCallback(
-    (keys: string[]) => {
-      const plugins = taskPluginOptionsQuery.data ?? []
-      const declaredBy = (bound: readonly string[]) =>
-        new Set(
-          plugins
-            .filter((plugin) => bound.includes(plugin.key))
-            .flatMap((plugin) => plugin.models)
-        )
-      const previous = form.getValues('task_extend_plugin_keys') ?? []
-      const added = declaredBy(keys.filter((key) => !previous.includes(key)))
-      const kept = declaredBy(keys)
-      const dropped = declaredBy(previous.filter((key) => !keys.includes(key)))
-      const models = parseModelsString(form.getValues('models') || '').filter(
-        (model) => kept.has(model) || !dropped.has(model)
-      )
-      for (const model of added) {
-        if (!models.includes(model)) models.push(model)
-      }
-      form.setValue('task_extend_plugin_keys', keys, { shouldDirty: true })
-      form.setValue('models', models.join(','), { shouldDirty: true })
-    },
-    [form, taskPluginOptionsQuery.data]
   )
 
   const raiseMappingDraft = useCallback(
@@ -3091,38 +2935,6 @@ export function ChannelMutateDrawer({
       <ChannelModelsSection>
         <div className='space-y-5'>
           <div className='border-border/60 bg-muted/10 rounded-lg border p-4'>
-            {currentType === CHANNEL_TYPE_NEW_API &&
-              canBindTaskPlugin &&
-              taskPluginOptionsQuery.isSuccess &&
-              !showProviderPicker && (
-                <FormField
-                  control={form.control}
-                  name='task_extend_plugin_keys'
-                  render={({ field }) => (
-                    <FormItem className='mb-4'>
-                      <FormLabel>{t('Upstream task plugins')}</FormLabel>
-                      <FormControl>
-                        <MultiSelect
-                          options={taskPluginExtensionOptions}
-                          selected={field.value ?? []}
-                          onChange={handleTaskExtendPluginKeysChange}
-                          placeholder={t(
-                            'Select the task plugins installed on the upstream gateway'
-                          )}
-                          maxVisibleChips={8}
-                          disabled={!canEditSensitive}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        {t(
-                          'This channel serves the models of every selected plugin. The upstream New API gateway must have the same plugins installed.'
-                        )}
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
             <FormField
               control={form.control}
               name='models'
@@ -3144,12 +2956,7 @@ export function ChannelMutateDrawer({
                       variant='outline'
                       size='sm'
                       onClick={() => setModelConfiguration({})}
-                      disabled={
-                        currentModelsArray.length === 0 &&
-                        !pluginExtensions.some(
-                          (plugin) => plugin.models.length > 0
-                        )
-                      }
+                      disabled={currentModelsArray.length === 0}
                     >
                       <Settings className='mr-2 h-4 w-4' aria-hidden='true' />
                       {t('Configure Models')}
@@ -3188,34 +2995,6 @@ export function ChannelMutateDrawer({
                         : t('Set up model redirects')}
                     </Button>
                   </div>
-                  {canBindTaskPlugin &&
-                    canHavePluginExtensions &&
-                    !showProviderPicker && (
-                      <>
-                        {taskPluginOptionsQuery.isLoading && (
-                          <LoadingState
-                            inline
-                            message={t('Loading plugins...')}
-                          />
-                        )}
-                        {taskPluginOptionsQuery.isError && (
-                          <ErrorState
-                            className='min-h-0 p-3'
-                            title={t('Failed to load plugins')}
-                            onRetry={() => {
-                              void taskPluginOptionsQuery.refetch()
-                            }}
-                          />
-                        )}
-                        <ChannelPluginExtensions
-                          plugins={pluginExtensions}
-                          selected={currentModelsArray}
-                          onConfigure={(pluginKey) =>
-                            setModelConfiguration({ pluginKey })
-                          }
-                        />
-                      </>
-                    )}
                   {modelMappingGuardrail.exposedTargetModels.length > 0 && (
                     <Alert className='border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-50'>
                       <AlertDescription className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
@@ -4111,64 +3890,7 @@ export function ChannelMutateDrawer({
                         )}
                       </FormDescription>
                     )}
-                    {currentType === CHANNEL_TYPE_TASK_PLUGIN &&
-                      !boundTaskPlugin?.baseUrl && (
-                        <FormDescription>
-                          {t(
-                            'The upstream address this plugin sends requests to. The plugin declares no default, so it must be filled in.'
-                          )}
-                        </FormDescription>
-                      )}
-                    {currentType === CHANNEL_TYPE_TASK_PLUGIN &&
-                      boundTaskPlugin?.baseUrl && (
-                        <FormDescription className='flex flex-wrap items-center gap-x-1'>
-                          <span>{t('Plugin default')}:</span>
-                          <span className='font-mono break-all'>
-                            {boundTaskPlugin.baseUrl}
-                          </span>
-                          {(field.value ?? '').trim().replace(/\/+$/, '') !==
-                            boundTaskPlugin.baseUrl && (
-                            <Button
-                              type='button'
-                              variant='link'
-                              size='xs'
-                              className='h-auto p-0'
-                              onClick={() =>
-                                form.setValue(
-                                  'base_url',
-                                  boundTaskPlugin.baseUrl ?? '',
-                                  {
-                                    shouldDirty: true,
-                                    shouldValidate: true,
-                                  }
-                                )
-                              }
-                            >
-                              {t('Use default')}
-                            </Button>
-                          )}
-                        </FormDescription>
-                      )}
                     <FormMessage />
-                    {(taskPluginBaseUrlTrust?.plainHttp ||
-                      taskPluginBaseUrlTrust?.privateHost) && (
-                      <Alert>
-                        <AlertCircle />
-                        <AlertDescription>
-                          {taskPluginBaseUrlTrust?.plainHttp &&
-                            t(
-                              'This base URL uses plain HTTP, so the channel key is sent unencrypted.'
-                            )}
-                          {taskPluginBaseUrlTrust?.plainHttp &&
-                            taskPluginBaseUrlTrust?.privateHost &&
-                            ' '}
-                          {taskPluginBaseUrlTrust?.privateHost &&
-                            t(
-                              'This base URL points at a private or local network host. Make sure it is an upstream you control.'
-                            )}
-                        </AlertDescription>
-                      </Alert>
-                    )}
                   </FormItem>
                 )}
               />
@@ -4763,11 +4485,7 @@ export function ChannelMutateDrawer({
                           </span>
                         </>
                       ) : (
-                        <ChannelTypeLogo
-                          type={currentType}
-                          plugin={boundTaskPlugin}
-                          size={18}
-                        />
+                        <ChannelTypeLogo type={currentType} size={18} />
                       )}
                       <span className='min-w-0 truncate'>{providerLabel}</span>
                       {!showProviderPicker && (
@@ -4839,15 +4557,8 @@ export function ChannelMutateDrawer({
           {showProviderPicker && (
             <ChannelProviderPicker
               isCreating={!isEditing}
-              plugins={taskPluginOptionsQuery.data ?? []}
               currentProvider={providerTarget}
-              canBindPlugin={canBindTaskPlugin}
-              loading={taskPluginOptionsQuery.isLoading}
-              failed={taskPluginOptionsQuery.isError}
               disabled={isSubmitting || !canEditSensitive}
-              onRetry={() => {
-                void taskPluginOptionsQuery.refetch()
-              }}
               onSelect={selectProvider}
             />
           )}
@@ -4982,8 +4693,6 @@ export function ChannelMutateDrawer({
         <ConfigureModelsDialog
           open
           models={currentModelsArray}
-          plugins={pluginExtensions}
-          initialPluginKey={modelConfiguration.pluginKey}
           onOpenChange={(nextOpen) => {
             if (!nextOpen) setModelConfiguration(null)
           }}

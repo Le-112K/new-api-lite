@@ -30,7 +30,7 @@ import type { UsageLog } from './data/schema'
 /**
  * Log category for different log types
  */
-export type LogCategory = 'common' | 'drawing' | 'task'
+export type LogCategory = 'common' | 'drawing'
 
 // ============================================================================
 // Filter Types
@@ -65,16 +65,9 @@ export interface DrawingLogFilters extends CommonFilters {
 }
 
 /**
- * Task logs specific filters
- */
-export interface TaskLogFilters extends CommonFilters {
-  taskId?: string
-}
-
-/**
  * Union type for all log filters
  */
-export type LogFilters = CommonLogFilters | DrawingLogFilters | TaskLogFilters
+export type LogFilters = CommonLogFilters | DrawingLogFilters
 
 // ============================================================================
 // Common Logs Additional Types
@@ -146,10 +139,8 @@ export interface LogOtherData {
     }
     // Reject / intercept reason (admin only)
     reject_reason?: string
-    task_plugin?: TaskPluginInfo
   }
   root_info?: {
-    task_plugin?: TaskPluginRuntimeInfo
     upstream_task_id?: string
     node_name?: string
   }
@@ -309,79 +300,6 @@ export interface MidjourneyLog {
   updated_at?: number
 }
 
-// ============================================================================
-// Task Logs Types
-// ============================================================================
-
-export interface TaskLog {
-  id: number
-  user_id: number
-  username?: string
-  platform: string // suno, kling, runway, etc.
-  task_id: string
-  action: string // MUSIC, LYRICS, GENERATE, TEXT_GENERATE, etc.
-  channel_id: number
-  group: string
-  quota: number
-  submit_time: number // seconds
-  start_time?: number // seconds
-  finish_time?: number // seconds
-  progress?: string
-  progress_message_en?: string
-  data?: unknown
-  properties?: {
-    input?: string
-    upstream_model_name?: string
-    origin_model_name?: string
-  }
-  legacy_video_available?: boolean
-  // A synchronous result returned inline and never persisted; artifact
-  // retrieval is not offered for it.
-  result_discarded?: boolean
-  fail_reason?: string
-  status: string // NOT_START, SUBMITTED, IN_PROGRESS, SUCCESS, FAILURE, QUEUED, UNKNOWN
-  admin_info?: {
-    request_id?: string
-    request_path?: string
-    task_plugin?: TaskPluginInfo
-  }
-  root_info?: {
-    task_plugin?: TaskPluginRuntimeInfo
-    upstream_task_id?: string
-    node_name?: string
-  }
-  created_at?: number
-  updated_at?: number
-}
-
-export interface TaskPluginInfo {
-  key: string
-  name: string
-  version?: string
-  author?: TaskPluginAuthor
-}
-
-export interface TaskPluginAuthor {
-  name: string
-  url?: string
-}
-
-export interface TaskPluginRuntimeInfo {
-  key: string
-  version: string
-  api_version: number
-  generation: number
-}
-
-export type TaskArtifactType = 'image' | 'video' | 'audio' | 'file'
-
-export interface TaskArtifact {
-  key: string
-  type: TaskArtifactType
-  mime_type?: string
-  content_url: string
-}
-
 export interface AudioClip {
   clip_id?: string
   id?: string
@@ -394,23 +312,6 @@ export interface AudioClip {
   metadata?: {
     tags?: string
     duration?: number
-  }
-}
-
-export interface TaskArtifactProjection {
-  artifacts: TaskArtifact[]
-  legacyContentUrl?: string
-  legacyAudioClips?: AudioClip[]
-}
-
-export interface TaskArtifactsResponse {
-  success: boolean
-  message?: string
-  code?: string
-  data?: {
-    artifacts?: unknown
-    legacy_content_url?: unknown
-    legacy_audio_clips?: unknown
   }
 }
 
@@ -437,7 +338,7 @@ export interface GetLogsResponse {
   success: boolean
   message?: string
   data?: {
-    items: UsageLog[] | MidjourneyLog[] | TaskLog[]
+    items: UsageLog[] | MidjourneyLog[]
     total: number
     page: number
     page_size: number
@@ -472,19 +373,6 @@ export interface GetMidjourneyLogsParams {
   page_size?: number
   channel_id?: string
   mj_id?: string
-  start_timestamp?: number
-  end_timestamp?: number
-}
-
-// ============================================================================
-// Task Log Types
-// ============================================================================
-
-export interface GetTaskLogsParams {
-  p?: number
-  page_size?: number
-  channel_id?: string
-  task_id?: string
   start_timestamp?: number
   end_timestamp?: number
 }

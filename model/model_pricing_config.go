@@ -13,7 +13,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/pkg/billingexpr"
-	"github.com/QuantumNous/new-api/pkg/jsplugin"
+	"github.com/QuantumNous/new-api/pkg/usageschema"
 	"github.com/QuantumNous/new-api/setting/billing_setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
@@ -38,15 +38,15 @@ type ModelPricingEntry struct {
 	ModelName      string                               `json:"model_name"`
 	Version        string                               `json:"version"`
 	Configured     PricingValues                        `json:"configured"`
-	UsageSchema    map[string]jsplugin.UsageFieldSchema `json:"usage_schema,omitempty"`
+	UsageSchema    map[string]usageschema.UsageFieldSchema `json:"usage_schema,omitempty"`
 }
 
 type ModelPricingPluginVariant struct {
 	PluginKey     string                               `json:"plugin_key"`
 	PluginName    string                               `json:"plugin_name"`
 	Icon          string                               `json:"icon,omitempty"`
-	UsageSchema   map[string]jsplugin.UsageFieldSchema `json:"usage_schema"`
-	UsageExamples []jsplugin.UsageExample              `json:"usage_examples,omitempty"`
+	UsageSchema   map[string]usageschema.UsageFieldSchema `json:"usage_schema"`
+	UsageExamples []usageschema.UsageExample              `json:"usage_examples,omitempty"`
 	Configured    string                               `json:"configured"`
 	Effective     string                               `json:"effective"`
 	Compatible    bool                                 `json:"compatible"`

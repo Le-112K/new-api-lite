@@ -41,7 +41,7 @@ import {
 } from './section-registry'
 
 const route = getRouteApi('/_authenticated/usage-logs/$section')
-const TASK_LOG_SECTIONS = ['drawing', 'task'] as const
+const TASK_LOG_SECTIONS = ['drawing'] as const
 
 const SECTION_META: Record<UsageLogsSectionId, { titleKey: string }> = {
   common: {
@@ -49,9 +49,6 @@ const SECTION_META: Record<UsageLogsSectionId, { titleKey: string }> = {
   },
   drawing: {
     titleKey: 'Drawing Logs',
-  },
-  task: {
-    titleKey: 'Task Logs',
   },
 }
 
@@ -118,7 +115,7 @@ function UsageLogsContent() {
   )
 
   const pageMeta =
-    activeCategory === 'common' ? SECTION_META.common : SECTION_META.task
+    activeCategory === 'common' ? SECTION_META.common : SECTION_META.drawing
   const showTaskSwitcher =
     activeCategory !== 'common' && visibleSections.length > 1
 

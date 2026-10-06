@@ -32,7 +32,6 @@ import { cn } from '@/lib/utils'
 
 import { LOG_TYPE_ENUM } from '../constants'
 import type { UsageLog } from '../data/schema'
-import { TASK_MOBILE_SUMMARY_FIELDS } from '../lib/task-mobile-layout'
 import type { LogCategory } from '../types'
 import { CommonLogMobileCard } from './common-log-mobile-card'
 
@@ -149,42 +148,6 @@ function SummaryField<TData>({
         primaryOnly={primaryOnly}
         className={valueClassName}
       />
-    </div>
-  )
-}
-
-function TaskLogsCard<TData>({
-  cells,
-}: {
-  cells: Map<string, Cell<TData, unknown>>
-}) {
-  const { t } = useTranslation()
-
-  const taskIdCell = cells.get('task_id')
-  const statusCell = cells.get('status')
-
-  return (
-    <div className='space-y-2.5'>
-      <div className='flex min-w-0 items-start justify-between gap-3'>
-        <CompactCell cell={taskIdCell} className='flex-1' />
-        <CompactCell cell={statusCell} className='shrink-0 text-right' />
-      </div>
-
-      <div className='grid grid-cols-2 gap-1.5'>
-        {TASK_MOBILE_SUMMARY_FIELDS.map((field) => (
-          <SummaryField
-            key={field.id}
-            label={t(field.label)}
-            cell={cells.get(field.id)}
-            primaryOnly={field.primaryOnly}
-          />
-        ))}
-        <SummaryField
-          label={t('Details')}
-          cell={cells.get('fail_reason')}
-          className='col-span-2 bg-transparent px-0 py-0'
-        />
-      </div>
     </div>
   )
 }
@@ -306,7 +269,6 @@ export function UsageLogsMobileList<TData>({
                 cells={cells}
               />
             )}
-            {logCategory === 'task' && <TaskLogsCard cells={cells} />}
             {logCategory === 'drawing' && <DrawingLogsCard cells={cells} />}
           </div>
         )

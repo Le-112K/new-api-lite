@@ -188,12 +188,12 @@ const pluginOptions = [
   {
     value: 'alpha',
     label: 'Alpha plugin',
-    icon: <img src='/api/plugin/task/alpha/icon' alt='' />,
+    icon: <img src='/icons/alpha.svg' alt='' />,
   },
   {
     value: 'beta',
     label: 'Beta plugin',
-    icon: <img src='/api/plugin/task/beta/icon' alt='' />,
+    icon: <img src='/icons/beta.svg' alt='' />,
   },
 ]
 
@@ -217,19 +217,19 @@ describe('selected option icons', () => {
     const input = screen.getByRole('combobox', { name: 'Task plugin' })
     expect(screen.getByAltText('')).toHaveAttribute(
       'src',
-      '/api/plugin/task/alpha/icon'
+      '/icons/alpha.svg'
     )
     await user.click(input)
     const nextOption = screen.getByRole('option', { name: 'Beta plugin' })
     expect(nextOption.querySelector('img')).toHaveAttribute(
       'src',
-      '/api/plugin/task/beta/icon'
+      '/icons/beta.svg'
     )
     await user.click(nextOption)
     await waitFor(() => expect(input).toHaveValue('Beta plugin'))
     expect(screen.getByAltText('')).toHaveAttribute(
       'src',
-      '/api/plugin/task/beta/icon'
+      '/icons/beta.svg'
     )
   })
 

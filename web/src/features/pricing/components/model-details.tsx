@@ -55,7 +55,6 @@ import {
   formatUptimePct,
   getSuccessRateTextClass,
 } from '@/features/performance-metrics/lib/format'
-import { PluginIcon } from '@/features/task-plugins/components/plugin-icon'
 import { getLobeIcon } from '@/lib/lobe-icon'
 import { requireServerSuccess } from '@/lib/server-error-message'
 import { cn } from '@/lib/utils'
@@ -1017,14 +1016,6 @@ function GroupPricingSection(props: GroupPricingSectionProps) {
               value={variant.plugin_key}
               className='max-w-full min-w-0'
             >
-              <PluginIcon
-                plugin={{
-                  key: variant.plugin_key,
-                  name: variant.plugin_name,
-                  icon: variant.icon,
-                }}
-                size={16}
-              />
               <span className='truncate' title={variant.plugin_name}>
                 {variant.plugin_name}
               </span>

@@ -22,7 +22,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { createInstance } from 'i18next'
 import { I18nextProvider } from 'react-i18next'
 import { afterAll, afterEach, beforeEach, expect, test, vi } from 'vitest'
@@ -85,12 +85,6 @@ function DetailPreview(props: { other: LogOtherData; isAdmin: boolean }) {
     .find((item) => item.column.id === 'content')
   if (!cell) throw new Error('The log must have a content column')
   return flexRender(cell.column.columnDef.cell, cell.getContext())
-}
-const plugin = {
-  key: 'incho',
-  name: 'Incho',
-  version: '1.0.1',
-  author: { name: 'Plugin maintainer' },
 }
 const previousConfig = useSystemConfigStore.getState().config
 let client: QueryClient
@@ -185,10 +179,7 @@ test.each([
   },
   { name: 'missing price fallback', other: {}, expected: '—' },
 ])('$name stays visible without a plugin counter', ({ other, expected }) => {
-  const preview = renderPreview({
-    ...other,
-    admin_info: { task_plugin: plugin },
-  })
+  const preview = renderPreview(other)
   expect(preview.textContent).toBe(expected)
 })
 
@@ -196,7 +187,6 @@ test('quota saturation remains first and only billing adds to the counter', () =
   const preview = renderPreview({
     model_price: 0.25,
     admin_info: {
-      task_plugin: plugin,
       quota_saturation: {
         op: 'round',
         kind: 'overflow',
@@ -207,27 +197,6 @@ test('quota saturation remains first and only billing adds to the counter', () =
   })
   expect(preview.textContent).toBe('Quota clamped+1')
 })
-
-test.each([true, false])(
-  'plugin information in the opened dialog respects admin=%s',
-  async (isAdmin) => {
-    const preview = renderPreview(
-      { model_price: 0.25, admin_info: { task_plugin: plugin } },
-      isAdmin
-    )
-    expect(preview.textContent).toBe('Per-call · $0.25')
-    fireEvent.click(preview)
-    const dialog = within(await screen.findByRole('dialog'))
-    if (isAdmin) {
-      expect(dialog.getByText('Incho')).toBeVisible()
-      expect(dialog.getByText('1.0.1')).toBeVisible()
-      expect(dialog.getByText('Plugin maintainer')).toBeVisible()
-    } else {
-      expect(dialog.queryByText('Incho')).not.toBeInTheDocument()
-      expect(dialog.queryByText('Plugin maintainer')).not.toBeInTheDocument()
-    }
-  }
-)
 
 test.each([
   {
@@ -282,7 +251,6 @@ test.each([
       expr_b64: Buffer.from(expression).toString('base64'),
       matched_tier: tier,
       model_price: 0,
-      admin_info: { task_plugin: plugin },
     })
     expect(preview.textContent).toBe(expected)
   }
@@ -315,42 +283,6 @@ test('task log prices use localized unit labels from pricing metadata', async ()
   expect(
     screen.getByRole('button', { name: /images · images/ })
   ).toHaveTextContent('images · images $0.25/张')
-})
-
-test('task log prices select the executing provider’s schema', () => {
-  client.setQueryData(['pricing'], {
-    data: [
-      {
-        model_name: 'wan2.5-i2v-preview',
-        billing_usage_schema: { seconds: { type: 'number', unit: 'second' } },
-        billing_plugin_variants: [
-          {
-            plugin_key: 'beta',
-            plugin_name: 'Beta',
-            billing_expr: 'tier("images", u("images") * 0.25)',
-            billing_usage_schema: {
-              images: {
-                type: 'number',
-                unit: 'count',
-                unitLabel: { en: 'image' },
-              },
-            },
-          },
-        ],
-      },
-    ],
-    vendors: [],
-  })
-  const preview = renderPreview({
-    is_task: true,
-    billing_mode: 'tiered_expr',
-    expr_b64: btoa('tier("images", u("images") * 0.25)'),
-    matched_tier: 'images',
-    admin_info: {
-      task_plugin: { key: 'beta', name: 'Beta', version: '1.0.0' },
-    },
-  })
-  expect(preview).toHaveTextContent('images · images $0.25/image')
 })
 
 test.each(['missing schema', 'unsupported expression', 'unknown tier'])(

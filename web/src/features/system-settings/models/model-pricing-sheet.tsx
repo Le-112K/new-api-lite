@@ -79,7 +79,6 @@ import {
 } from '@/features/model-pricing/pricing-conversion-dialog'
 import { PricingCurrencySelector } from '@/features/model-pricing/pricing-currency-selector'
 import { usePricingData } from '@/features/pricing/hooks/use-pricing-data'
-import { combineBillingExpr } from '@/features/pricing/lib/billing-expr'
 import { pluginExpressionsEqual } from '@/features/pricing/lib/plugin-pricing'
 import {
   createDefaultTaskVisualConfig,
@@ -109,7 +108,6 @@ import {
 } from './model-pricing-core'
 import { PriceInput, PriceLane } from './model-pricing-inputs'
 import { formatPricingNumber } from './pricing-format'
-import { TaskPluginPricingEditor } from './task-plugin-pricing-editor'
 import { TaskUsagePricingEditor } from './task-usage-pricing-editor'
 import { TieredPricingEditor } from './tiered-pricing-editor'
 
@@ -909,20 +907,6 @@ export const ModelPricingEditorPanel = forwardRef<
 
                 <PricingCurrencySelector siteCurrency={siteCurrency} />
 
-                <TaskPluginPricingEditor
-                  key={`${editorReloadToken}:${watchedValues.name}`}
-                  variants={pluginVariants ?? []}
-                  expressions={pluginExpressions}
-                  onChange={setPluginExpressions}
-                  modelExpression={combineBillingExpr(
-                    resolvedBillingExpr,
-                    requestRuleExpr
-                  )}
-                  modelBillingMode={
-                    pricingMode === 'tiered_expr' ? 'tiered_expr' : 'ratio'
-                  }
-                  currency={currency}
-                >
                   <Tabs
                     key={editorReloadToken}
                     value={pricingMode}
@@ -1141,7 +1125,6 @@ export const ModelPricingEditorPanel = forwardRef<
                       </FieldGroup>
                     </TabsContent>
                   </Tabs>
-                </TaskPluginPricingEditor>
               </FieldGroup>
 
               <aside

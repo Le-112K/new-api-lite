@@ -42,7 +42,6 @@ func Distribute() func(c *gin.Context) {
 			Kind:        taskdto.FilterRequestPath,
 			RequestPath: c.Request.URL.Path,
 		})
-		service.AppendTaskPluginIdentityFilter(c, c.GetString("expected_task_plugin_key"))
 		modelRequest, shouldSelectChannel, err := getModelRequest(c)
 		if err != nil {
 			abortWithOpenAiMessage(c, http.StatusBadRequest, i18n.T(c, i18n.MsgDistributorInvalidRequest, map[string]any{"Error": err.Error()}))
@@ -106,9 +105,6 @@ func Distribute() func(c *gin.Context) {
 				Retry:       common.GetPointer(0),
 			})
 			if selectErr != nil {
-				if selectErr.FilterKind == taskdto.FilterTaskPluginIdentity {
-					logTaskPluginChannelDecision(c, selectErr.Channel, modelRequest.Model, "channel_rejected", "identity_mismatch")
-				}
 				message := selectErr.Message
 				if selectErr.NoAvailableChannel {
 					message = noAvailableChannelMessage(c, usingGroup, modelRequest.Model)
@@ -128,24 +124,8 @@ func Distribute() func(c *gin.Context) {
 	}
 }
 
-// noAvailableChannelMessage explains a 503 for a task-plugin-claimed model.
-// The response tells the caller the model is plugin-claimed without naming the
-// plugin; the candidate plugin keys go to the server log under the request id.
 func noAvailableChannelMessage(c *gin.Context, group, modelName string) string {
 	return i18n.T(c, i18n.MsgDistributorNoAvailableChannel, map[string]any{"Group": group, "Model": modelName})
-}
-
-func channelMatchesExpectedTaskPlugin(c *gin.Context, channel *model.Channel, expected string) bool {
-	if channel == nil {
-		return false
-	}
-	if expected == "" {
-		return channel.Type != constant.ChannelTypeTaskPlugin
-	}
-	if channel.Type == constant.ChannelTypeTaskPlugin || channel.Type == constant.ChannelTypeNewAPI {
-		return channel.GetSetting().BindsTaskPlugin(expected)
-	}
-	return false
 }
 
 // getModelFromRequest 从请求中读取模型信息
@@ -154,12 +134,6 @@ func channelMatchesExpectedTaskPlugin(c *gin.Context, channel *model.Channel, ex
 // - application/x-www-form-urlencoded
 // - multipart/form-data
 func getModelFromRequest(c *gin.Context) (*ModelRequest, error) {
-	if cached, exists := c.Get(contextKeyTaskPluginEndpointModel); exists {
-		if modelRequest, ok := cached.(ModelRequest); ok {
-			cachedRequest := modelRequest
-			return &cachedRequest, nil
-		}
-	}
 	if strings.HasPrefix(c.Request.Header.Get("Content-Type"), "application/json") {
 		modelRequest, err := getModelFromJSONBody(c)
 		if err != nil {
@@ -458,18 +432,8 @@ func getTaskOriginModelName(_ *gin.Context) string {
 
 func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, modelName string) *types.NewAPIError {
 	c.Set("original_model", modelName) // for retry
-	expectedPlugin := c.GetString("expected_task_plugin_key")
 	if channel == nil {
-		logTaskPluginChannelDecision(c, nil, modelName, "channel_rejected", "nil_channel")
 		return types.NewError(errors.New("channel is nil"), types.ErrorCodeGetChannelFailed, types.ErrOptionWithSkipRetry())
-	}
-	if expectedPlugin != "" && !channelMatchesExpectedTaskPlugin(c, channel, expectedPlugin) {
-		logTaskPluginChannelDecision(c, channel, modelName, "channel_rejected", "identity_mismatch")
-		return types.NewError(
-			errors.New("selected channel does not match the pinned task plugin"),
-			types.ErrorCodeGetChannelFailed,
-			types.ErrOptionWithSkipRetry(),
-		)
 	}
 	common.SetContextKey(c, constant.ContextKeyChannelId, channel.Id)
 	common.SetContextKey(c, constant.ContextKeyChannelName, channel.Name)
@@ -477,17 +441,6 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	common.SetContextKey(c, constant.ContextKeyChannelCreateTime, channel.CreatedTime)
 	common.SetContextKey(c, constant.ContextKeyChannelSetting, channel.GetSetting())
 	common.SetContextKey(c, constant.ContextKeyChannelOtherSetting, channel.GetOtherSettings())
-	switch channel.Type {
-	case constant.ChannelTypeTaskPlugin:
-		c.Set("task_plugin_key", channel.GetSetting().TaskPluginKey)
-	case constant.ChannelTypeNewAPI:
-		// The bound plugin verified above executes; ordinary requests through
-		// the same gateway channel carry no pinned plugin.
-		if executing := c.GetString("expected_task_plugin_key"); executing != "" {
-			c.Set("task_plugin_key", executing)
-		}
-	}
-	logTaskPluginChannelDecision(c, channel, modelName, "channel_selected", "")
 	paramOverride := channel.GetParamOverride()
 	headerOverride := channel.GetHeaderOverride()
 	if mergedParam, applied := service.ApplyChannelAffinityOverrideTemplate(c, paramOverride); applied {
@@ -567,12 +520,4 @@ func extractModelNameFromGeminiPath(path string) string {
 
 	// 返回模型名部分
 	return path[startIndex : startIndex+colonIndex]
-}
-
-// Stub: task plugin system removed in 二开精简
-const contextKeyTaskPluginEndpointModel = "task_plugin_endpoint_model"
-
-// logTaskPluginChannelDecision is a no-op stub (task plugin system removed).
-func logTaskPluginChannelDecision(_ *gin.Context, _ *model.Channel, _ string, _ string, _ string) {
-	// no-op
 }

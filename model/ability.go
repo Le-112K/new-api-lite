@@ -164,8 +164,7 @@ func GetChannel(
 }
 
 // filterAbilitiesByConstraints applies the same ChannelSatisfiesFilters
-// predicate used by the memory-cache path. A failed channel lookup fails
-// closed when a task-plugin identity is required and fails open otherwise.
+// predicate used by the memory-cache path. A failed channel lookup fails open.
 func filterAbilitiesByConstraints(abilities []Ability, modelName string, filters []dto.ChannelFilter) []Ability {
 	if len(abilities) == 0 {
 		return nil
@@ -183,9 +182,6 @@ func filterAbilitiesByConstraints(abilities []Ability, modelName string, filters
 
 	var channels []*Channel
 	if err := DB.Where("id IN ?", channelIds).Find(&channels).Error; err != nil {
-		if identityFilterRequiresKey(filters) {
-			return nil
-		}
 		return abilities
 	}
 
@@ -202,15 +198,6 @@ func filterAbilitiesByConstraints(abilities []Ability, modelName string, filters
 		}
 	}
 	return filtered
-}
-
-func identityFilterRequiresKey(filters []dto.ChannelFilter) bool {
-	for _, filter := range filters {
-		if filter.Kind == dto.FilterTaskPluginIdentity && filter.TaskPluginKey != "" {
-			return true
-		}
-	}
-	return false
 }
 
 func (channel *Channel) AddAbilities(tx *gorm.DB) error {

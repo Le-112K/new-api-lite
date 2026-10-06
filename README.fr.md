@@ -124,7 +124,6 @@ Utilisez-la pour partager des accès autorisés au sein d'une équipe, changer d
 | Routage | Correspondance des noms de modèles, priorités et poids des canaux, tentatives supplémentaires, affinité de canal et gestion de plusieurs clés |
 | Usages et coûts | Quotas, abonnements, journaux d'utilisation, comptabilisation du cache et tarification par paliers fondée sur des expressions |
 | Contrôle d'accès | Utilisateurs, groupes, permissions fines et restrictions des clés API ; OAuth/OIDC, clés d'accès, double authentification et gestion des sessions |
-| Tâches asynchrones | Extensions JavaScript pour les API de tâches d'image, de vidéo et autres, avec suivi d'état et récupération des résultats |
 | Console web | Gestion des canaux et modèles, journaux d'utilisation et d'audit, playground ; interface en anglais, chinois simplifié et traditionnel, français, japonais, russe et vietnamien |
 
 ### Protocoles et points d'accès
@@ -137,7 +136,6 @@ Utilisez-la pour partager des accès autorisés au sein d'une équipe, changer d
 | Realtime / Responses WebSocket | `GET /v1/realtime`, `GET /v1/responses` (mise à niveau WebSocket) |
 | Images / audio | `/v1/images/generations`, `/v1/images/edits`, `/v1/audio/speech`, `/v1/audio/transcriptions`, `/v1/audio/translations` |
 | Embeddings / rerank | `POST /v1/embeddings`, `POST /v1/rerank` |
-| Extensions de tâches | `POST /v1/tasks/{pluginKey}`, `GET /v1/tasks/{taskId}`, ainsi que les routes déclarées par chaque extension |
 
 [RelayKit](./relaykit/README.md) convertit les requêtes, réponses et flux entre les quatre protocoles textuels. Les capacités disponibles dépendent du canal, du modèle amont et du chemin de conversion ; certains outils et champs propres à un protocole ne sont pas entièrement transposables. WebSocket nécessite également un fournisseur et une configuration de canal compatibles.
 
@@ -263,7 +261,6 @@ Ouvrez [http://localhost:5173](http://localhost:5173) ; les requêtes API sont r
 | `relay/` | Adaptateurs amont et routage des requêtes |
 | `service/`, `model/` | Logique métier et persistance |
 | [relaykit/](./relaykit/README.md) | Module Go autonome pour les DTO et conversions de protocoles |
-| [plugins/tasks/](./plugins/tasks/) | Extensions de tâches JavaScript ; contrat et limites de l'hôte dans [Task Plugin API v1](./docs/plugin-api/v1.md) |
 | `web/` | Console web ; voir les [conventions frontend](./web/AGENTS.md) |
 | [electron/](./electron/README.md) | Application de bureau et packaging |
 

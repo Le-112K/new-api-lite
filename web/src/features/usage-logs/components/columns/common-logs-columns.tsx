@@ -816,10 +816,7 @@ export function useCommonLogsColumns(
               other.billing_mode === 'tiered_expr'
           )
           const usageSchema = pluginUsageSchema(
-            pricingData.models.find(
-              (model) => model.model_name === log.model_name
-            ),
-            other?.admin_info?.task_plugin?.key
+            pricingData.models.find((model) => model.model_name === log.model_name)
           )
           const segments = buildDetailSegments(
             log,
