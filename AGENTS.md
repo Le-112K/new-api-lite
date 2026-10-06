@@ -13,14 +13,14 @@ This is an AI API gateway/proxy built with Go. It aggregates 40+ upstream AI pro
 - **Databases**: SQLite, MySQL, PostgreSQL for the primary database (all three must be supported); a separately configured log database also supports ClickHouse
 - **Cache**: Redis (go-redis) + in-memory cache
 - **Auth**: Browser sessions, API tokens and personal access tokens, JWT, WebAuthn/Passkeys, TOTP, OAuth/OIDC; Casbin authorization in `service/authz/`
-- **Extensions**: JavaScript task plugins executed by moejs; Electron desktop wrapper
+- **Extensions**: Electron desktop wrapper
+- **Removed**: the JavaScript task plugin system (`plugins/tasks/`, `pkg/jsplugin/`) was removed in this fork; do not reintroduce it
 - **Frontend package manager**: Bun (preferred over npm/yarn/pnpm)
 
 ## Architecture
 
 - The Go gateway handles management APIs, upstream relay, billing, and background tasks across `router/`, `middleware/`, `controller/`, `service/`, `model/`, and `relay/`.
 - `relaykit/` is an independent Go module for protocol DTOs and conversions; transport, authentication, database access, and billing stay in the host.
-- JavaScript task plugins live in `plugins/tasks/`, run through `pkg/jsplugin/`, and integrate with host task polling and settlement.
 - `web/` is the React frontend (see `web/AGENTS.md`); `electron/` is the desktop wrapper.
 
 ## Internationalization (i18n)
@@ -119,9 +119,9 @@ Inside `relaykit/`, use `kitutil.*` from `relaykit/relayconvert/kitutil/json.go`
 
 - Edits `pkg/billingexpr/`, `setting/billing_setting/`, `common/quota_math.go`, `types/price_data.go`, `relay/request_billing.go`, `relay/image_handler.go`, `relay/relay_task.go`, `relay/helper/price.go`, `relay/helper/billing_expr_request.go`, `relay/helper/valid_request.go`, `service/quota.go`, `service/text_quota.go`, `service/image_billing.go`, `service/tiered_settle.go`, `service/task_billing.go`, `service/responses_usage.go`, the billing part of `service/log_info_generate.go`, the `model/pricing*.go` / `model/model_pricing*.go` files, or the billing fields and methods of `relay/common/relay_info.go` (`PriceData`, `TieredBillingSnapshot`, `BillingImageCount`, `UpdateImageCount`).
 - Reads or writes `PriceData` / `OtherRatios`, quota pre-consume, settlement, refund, or consume-log billing fields anywhere else.
-- Derives a billable quantity or `Usage` from an upstream response or stream (image counts, seconds, tokens, task deductions) in any channel adaptor, response handler, or task plugin.
+- Derives a billable quantity or `Usage` from an upstream response or stream (image counts, seconds, tokens, task deductions) in any channel adaptor or response handler.
 - Validates, bounds, or forwards a request field that becomes a billing multiplier (`n`, `max_tokens`-family fields, duration, resolution or quality, batch counts), including passthrough and multipart paths.
-- Adds or changes model prices, or numeric `usageSchema` / `usageProfiles[].schema` fields in a task plugin.
+- Adds or changes model prices, or numeric usage-schema fields (`pkg/usageschema`).
 
 Tasks that touch none of these (for example unrelated frontend work, authentication, database migrations, or protocol conversion that leaves usage untouched) do not need to read it.
 
@@ -142,7 +142,7 @@ Tasks that touch none of these (for example unrelated frontend work, authenticat
 **Documentation files:**
 
 - Do NOT add new files under `docs/` or any of its subdirectories unless the user explicitly requests it.
-- Do NOT create or generate documentation files in this repository's plugin directories under `plugins/`, including `plugins/tasks/<plugin>/` and their subdirectories. This includes README files, changelogs, usage guides, and other documentation files, regardless of format.
+- Do NOT create or generate documentation files anywhere in this repository unless the user explicitly requests it. This includes README files, changelogs, usage guides, and other documentation files, regardless of format.
 
 ### Frontend Rules
 
