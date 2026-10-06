@@ -32,7 +32,10 @@ import { ErrorState } from '@/components/error-state'
 import { Button } from '@/components/ui/button'
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { listSystemTasks } from '@/features/system-settings/api'
+import {
+  deleteSystemTaskHistory,
+  listSystemTasks,
+} from '@/features/system-settings/api'
 import type {
   SystemTask,
   SystemTaskFilters,
@@ -40,12 +43,11 @@ import type {
 import { handleServerError } from '@/lib/handle-server-error'
 import { createServerError } from '@/lib/server-error-message'
 
-import { deleteSystemTaskHistory } from '../api'
-import { SYSTEM_TASK_TYPE_LABEL } from '../constants'
+import { SYSTEM_TASK_TYPE_LABEL } from './constants'
 import { SystemTasksTable } from './system-tasks-table'
 
 const EMPTY_TASKS: SystemTask[] = []
-const HISTORY_QUERY_KEY = ['system-info', 'system-tasks', 'history']
+const HISTORY_QUERY_KEY = ['system-settings', 'system-tasks', 'history']
 
 export function SystemTaskHistory(props: { activeRefreshAt: number }) {
   const { t } = useTranslation()

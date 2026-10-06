@@ -173,21 +173,18 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	"GET /api/ratio_sync/channels":              accessTokenScopeRule("option:read"),
 	"POST /api/ratio_sync/fetch":                accessTokenScopeRule("option:write"),
 
-	// router/api-router.go: /api/performance, /api/system-task, /api/system-info
-	"GET /api/performance/stats":                   accessTokenScopeRule("ops:read"),
-	"DELETE /api/performance/disk_cache":           accessTokenScopeRule("ops:write"),
-	"POST /api/performance/reset_stats":            accessTokenScopeRule("ops:write"),
-	"POST /api/performance/gc":                     accessTokenScopeRule("ops:write"),
-	"GET /api/performance/logs":                    accessTokenScopeRule("ops:read"),
-	"DELETE /api/performance/logs":                 accessTokenScopeRule("ops:write"),
-	"POST /api/system-task/log-cleanup":            accessTokenScopeRule("ops:write"),
-	"GET /api/system-task/list":                    accessTokenScopeRule("ops:read"),
-	"DELETE /api/system-task/history":              accessTokenScopeRule("ops:write"),
-	"GET /api/system-task/current":                 accessTokenScopeRule("ops:read"),
-	"GET /api/system-task/:task_id":                accessTokenScopeRule("ops:read"),
-	"GET /api/system-info/instances":               accessTokenScopeRule("ops:read"),
-	"DELETE /api/system-info/stale-instances":      accessTokenScopeRule("ops:write"),
-	"DELETE /api/system-info/instances/:node_name": accessTokenScopeRule("ops:write"),
+	// router/api-router.go: /api/performance, /api/system-task
+	"GET /api/performance/stats":        accessTokenScopeRule("ops:read"),
+	"DELETE /api/performance/disk_cache": accessTokenScopeRule("ops:write"),
+	"POST /api/performance/reset_stats":  accessTokenScopeRule("ops:write"),
+	"POST /api/performance/gc":           accessTokenScopeRule("ops:write"),
+	"GET /api/performance/logs":          accessTokenScopeRule("ops:read"),
+	"DELETE /api/performance/logs":       accessTokenScopeRule("ops:write"),
+	"POST /api/system-task/log-cleanup":  accessTokenScopeRule("ops:write"),
+	"GET /api/system-task/list":          accessTokenScopeRule("ops:read"),
+	"DELETE /api/system-task/history":    accessTokenScopeRule("ops:write"),
+	"GET /api/system-task/current":       accessTokenScopeRule("ops:read"),
+	"GET /api/system-task/:task_id":      accessTokenScopeRule("ops:read"),
 
 	// router/channel-router.go: the key route is RootAuth, not Casbin-guarded.
 	"POST /api/channel/:id/key": accessTokenScopeRule(service.AccessTokenScopeOf(authz.ChannelSecretView)),

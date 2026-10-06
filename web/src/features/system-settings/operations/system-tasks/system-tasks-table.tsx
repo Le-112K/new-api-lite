@@ -36,7 +36,7 @@ import { toIntlLocale } from '@/i18n/languages'
 import { formatTimestampRelative, formatTimestampToDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
-import { SYSTEM_TASK_TYPE_LABEL } from '../constants'
+import { SYSTEM_TASK_TYPE_LABEL } from './constants'
 
 const STATUS_VARIANT: Record<SystemTaskStatus, 'secondary' | 'destructive'> = {
   pending: 'secondary',

@@ -61,7 +61,6 @@ func TestMain(m *testing.M) {
 		&CustomOAuthProvider{},
 		&UserOAuthBinding{},
 		&PerfMetric{},
-		&SystemInstance{},
 		&SystemTask{},
 		&SystemTaskLock{},
 		&CasbinRule{},

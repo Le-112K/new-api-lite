@@ -30,7 +30,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 
 import { api } from '@/lib/api'
 
-import { SystemTasksPanel } from '../components/system-tasks-panel'
+import { SystemTasksPanel } from '../system-tasks-panel'
 
 const task = {
   id: 1,

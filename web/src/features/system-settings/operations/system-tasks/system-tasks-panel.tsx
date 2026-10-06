@@ -36,7 +36,7 @@ const ACTIVE_POLL_INTERVAL_MS = 8000
 export function SystemTasksPanel() {
   const { t } = useTranslation()
   const tasksQuery = useQuery({
-    queryKey: ['system-info', 'system-tasks', 'active'],
+    queryKey: ['system-settings', 'system-tasks', 'active'],
     queryFn: async () => {
       const res = await listSystemTasks(100, { scope: 'active' })
       if (!res.success || !Array.isArray(res.data)) {
@@ -60,17 +60,14 @@ export function SystemTasksPanel() {
       <div className='flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5'>
         <div className='min-w-0'>
           <div className='flex items-center gap-2'>
-            <span className='bg-muted text-muted-foreground inline-flex size-7 items-center justify-center rounded-md'>
+            <span className='bg-muted text-muted-foreground inline-flex size-7 shrink-0 items-center justify-center rounded-md'>
               <ListChecks className='size-4' aria-hidden='true' />
             </span>
-            <div className='min-w-0'>
-              <h3 className='text-sm font-semibold'>{t('System Tasks')}</h3>
-              <p className='text-muted-foreground mt-0.5 text-xs'>
-                {t(
-                  'Recent maintenance tasks running across instances and their execution status.'
-                )}
-              </p>
-            </div>
+            <p className='text-muted-foreground text-xs'>
+              {t(
+                'Recent maintenance tasks and their execution status.'
+              )}
+            </p>
           </div>
         </div>
         <div className='flex shrink-0 items-center gap-3'>

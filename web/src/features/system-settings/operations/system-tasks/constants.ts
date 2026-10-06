@@ -16,21 +16,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { createFileRoute, redirect } from '@tanstack/react-router'
-
-import { SystemInfo } from '@/features/system-info'
-import { ROLE } from '@/lib/roles'
-import { useAuthStore } from '@/stores/auth-store'
-
-export const Route = createFileRoute('/_authenticated/system-info/')({
-  beforeLoad: () => {
-    const { auth } = useAuthStore.getState()
-
-    if (auth.user?.role !== ROLE.SUPER_ADMIN) {
-      throw redirect({
-        to: '/403',
-      })
-    }
-  },
-  component: SystemInfo,
-})
+// Maps backend system task type constants to i18n source keys. Unknown/future
+// types fall back to their raw identifier so the panel never shows blank.
+export const SYSTEM_TASK_TYPE_LABEL: Record<string, string> = {
+  log_cleanup: 'Log cleanup',
+  channel_test: 'Batch channel test',
+  model_update: 'Batch upstream model update',
+  midjourney_poll: 'Drawing task polling',
+}

@@ -25,6 +25,7 @@ import { PerformanceSection } from '../maintenance/performance-section'
 import { UpdateCheckerSection } from '../maintenance/update-checker-section'
 import type { OperationsSettings } from '../types'
 import { createSectionRegistry } from '../utils/section-registry'
+import { SystemTasksPanel } from './system-tasks/system-tasks-panel'
 
 const OPERATIONS_SECTIONS = [
   {
@@ -140,6 +141,11 @@ const OPERATIONS_SECTIONS = [
         startTime={startTime}
       />
     ),
+  },
+  {
+    id: 'tasks',
+    titleKey: 'System Tasks',
+    build: () => <SystemTasksPanel />,
   },
 ] as const
 

@@ -13,15 +13,13 @@ import (
 )
 
 // RegisterScheduledSystemTasks wires the periodic channel test, upstream model
-// update, and async task polling (Midjourney / Suno / video) jobs into the
-// system task framework so a DB lease dedups execution across multiple master
-// instances and each run is recorded as one task row. Call this before
-// service.StartSystemTaskRunner.
+// update, and Midjourney polling jobs into the system task framework so a DB
+// lease dedups execution across multiple master instances and each run is
+// recorded as one task row. Call this before service.StartSystemTaskRunner.
 func RegisterScheduledSystemTasks() {
 	service.RegisterSystemTaskHandler(channelTestHandler{})
 	service.RegisterSystemTaskHandler(modelUpdateHandler{})
 	service.RegisterSystemTaskHandler(midjourneyPollHandler{})
-	service.RegisterSystemTaskHandler(asyncTaskPollHandler{})
 }
 
 // channelTestHandler runs the scheduled "test all channels" job. Enablement and
@@ -130,25 +128,6 @@ func (midjourneyPollHandler) NewPayload() any { return nil }
 func (midjourneyPollHandler) Run(ctx context.Context, task *model.SystemTask, runnerID string) {
 	summary := runMidjourneyTaskUpdateOnce(ctx, service.NewSystemTaskProgressReporter(task, runnerID))
 	finishSystemTaskHandler(task, runnerID, model.SystemTaskStatusSucceeded, summary, nil)
-}
-
-// asyncTaskPollHandler runs one async-task (Suno/video) polling pass per
-// scheduled run. Like midjourneyPollHandler, Enabled() folds in the unfinished
-// task existence check so an idle system schedules no rows.
-type asyncTaskPollHandler struct{}
-
-func (asyncTaskPollHandler) Type() string { return model.SystemTaskTypeAsyncTaskPoll }
-
-func (asyncTaskPollHandler) Enabled() bool {
-	return false
-}
-
-func (asyncTaskPollHandler) Interval() time.Duration { return 15 * time.Second }
-
-func (asyncTaskPollHandler) NewPayload() any { return nil }
-
-func (asyncTaskPollHandler) Run(ctx context.Context, task *model.SystemTask, runnerID string) {
-	finishSystemTaskHandler(task, runnerID, model.SystemTaskStatusSucceeded, nil, nil)
 }
 
 func finishSystemTaskHandler(task *model.SystemTask, runnerID string, status model.SystemTaskStatus, result any, runErr error) {

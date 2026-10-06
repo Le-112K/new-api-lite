@@ -23,8 +23,9 @@ import type {
   FetchUpstreamRatiosRequest,
   LogCleanupTask,
   SystemOptionsResponse,
-  SystemTaskListResponse,
   SystemTaskFilters,
+  SystemTaskHistoryDeleteResponse,
+  SystemTaskListResponse,
   SystemTaskResponse,
   UpdateOptionRequest,
   UpdateOptionResponse,
@@ -101,6 +102,16 @@ export async function listSystemTasks(
   const res = await api.get<SystemTaskListResponse>('/api/system-task/list', {
     params: { limit, ...filters },
   })
+  return res.data
+}
+
+export async function deleteSystemTaskHistory(
+  filters: Pick<SystemTaskFilters, 'type' | 'status'>
+) {
+  const res = await api.delete<SystemTaskHistoryDeleteResponse>(
+    '/api/system-task/history',
+    { params: filters }
+  )
   return res.data
 }
 
