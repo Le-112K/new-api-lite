@@ -22,11 +22,9 @@ import {
   ClipboardList,
   CreditCard,
   FileText,
-  FlaskConical,
   Key,
   LayoutDashboard,
   ListTodo,
-  MessageSquare,
   Radio,
   Settings,
   ShieldCheck,
@@ -51,22 +49,6 @@ export function useSidebarData(): SidebarData {
 
   return {
     navGroups: [
-      {
-        id: 'chat',
-        title: t('Chat'),
-        items: [
-          {
-            title: t('Playground'),
-            url: '/playground',
-            icon: FlaskConical,
-          },
-          {
-            title: t('Chat'),
-            icon: MessageSquare,
-            type: 'chat-presets',
-          },
-        ],
-      },
       {
         id: 'general',
         title: t('General'),

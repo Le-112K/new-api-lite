@@ -327,7 +327,6 @@ const (
 	MsgDistributorTokenNoModelAccess           = "distributor.token_no_model_access"
 	MsgDistributorTokenModelForbidden          = "distributor.token_model_forbidden"
 	MsgDistributorModelNameRequired            = "distributor.model_name_required"
-	MsgDistributorInvalidPlayground            = "distributor.invalid_playground_request"
 	MsgDistributorGroupAccessDenied            = "distributor.group_access_denied"
 	MsgDistributorGetChannelFailed             = "distributor.get_channel_failed"
 	MsgDistributorNoAvailableChannel           = "distributor.no_available_channel"

@@ -31,14 +31,12 @@ describe('legacy frontend route migration', () => {
       '/console/subscription': '/subscriptions',
       '/console/channel': '/channels',
       '/console/token': '/keys',
-      '/console/playground': '/playground',
       '/console/redemption': '/redemption-codes',
       '/console/user': '/users',
       '/console/personal': '/profile',
       '/console/log': '/usage-logs',
       '/console/midjourney': '/usage-logs/drawing',
-      '/console/task': '/usage-logs/task',
-      '/console/chat/42': '/chat/42',
+      '/console/chat/42': '/dashboard',
     }
 
     for (const [source, target] of Object.entries(routes)) {
@@ -59,7 +57,6 @@ describe('legacy frontend route migration', () => {
     const settingsTabs = {
       operation: '/system-settings/operations/behavior',
       dashboard: '/system-settings/content/dashboard',
-      chats: '/system-settings/content/chat',
       drawing: '/system-settings/content/drawing',
       payment: '/system-settings/billing/payment',
       ratio: '/system-settings/billing/model-pricing',
