@@ -27,7 +27,7 @@ import { SettingsSwitchField } from '@/features/system-settings/components/setti
 import { ChannelHealthSource } from '@/features/system-settings/request-policies/related-policy-link'
 import { cn } from '@/lib/utils'
 
-import { CHANNEL_TYPE_TASK_PLUGIN, MODEL_FETCHABLE_TYPES } from '../constants'
+import { MODEL_FETCHABLE_TYPES } from '../constants'
 import type { ChannelFormValues } from '../lib/channel-form'
 import {
   getHeaderPassthroughState,
@@ -99,47 +99,45 @@ export function ChannelQuickOptions(props: ChannelQuickOptionsProps) {
     )
 
   const options: QuickOption[] = []
-  if (props.channelType !== CHANNEL_TYPE_TASK_PLUGIN) {
-    options.push({
-      key: 'passthrough',
-      label: t('Pass Through Body'),
-      description: t(
-        'Preserve upstream-specific fields when API formats match; bypasses model redirect, parameter override and format conversion'
-      ),
-      checked: passthrough === true,
-      onCheckedChange: (value) => {
-        if (!value) {
-          setOption('pass_through_body_enabled', false)
-          return
-        }
-        void props.confirmEnablePassthrough('body').then((confirmed) => {
-          if (confirmed) setOption('pass_through_body_enabled', true)
-        })
-      },
-      disabled: sensitiveDisabled,
-    })
-    options.push({
-      key: 'passthrough-headers',
-      label: t('Pass Through Request Headers'),
-      description:
-        headerPassthroughState === 'invalid'
-          ? t('Fix the Request Header Override JSON first')
-          : t(
-              'Enable when the upstream needs client information from Codex or Claude Code headers; may expose client information'
-            ),
-      checked: headerPassthroughState === 'enabled',
-      onCheckedChange: (value) => {
-        if (!value) {
-          applyHeaderPassthrough(false)
-          return
-        }
-        void props.confirmEnablePassthrough('headers').then((confirmed) => {
-          if (confirmed) applyHeaderPassthrough(true)
-        })
-      },
-      disabled: sensitiveDisabled || headerPassthroughState === 'invalid',
-    })
-  }
+  options.push({
+    key: 'passthrough',
+    label: t('Pass Through Body'),
+    description: t(
+      'Preserve upstream-specific fields when API formats match; bypasses model redirect, parameter override and format conversion'
+    ),
+    checked: passthrough === true,
+    onCheckedChange: (value) => {
+      if (!value) {
+        setOption('pass_through_body_enabled', false)
+        return
+      }
+      void props.confirmEnablePassthrough('body').then((confirmed) => {
+        if (confirmed) setOption('pass_through_body_enabled', true)
+      })
+    },
+    disabled: sensitiveDisabled,
+  })
+  options.push({
+    key: 'passthrough-headers',
+    label: t('Pass Through Request Headers'),
+    description:
+      headerPassthroughState === 'invalid'
+        ? t('Fix the Request Header Override JSON first')
+        : t(
+            'Enable when the upstream needs client information from Codex or Claude Code headers; may expose client information'
+          ),
+    checked: headerPassthroughState === 'enabled',
+    onCheckedChange: (value) => {
+      if (!value) {
+        applyHeaderPassthrough(false)
+        return
+      }
+      void props.confirmEnablePassthrough('headers').then((confirmed) => {
+        if (confirmed) applyHeaderPassthrough(true)
+      })
+    },
+    disabled: sensitiveDisabled || headerPassthroughState === 'invalid',
+  })
   options.push({
     key: 'auto-ban',
     label: t('Auto-disable channel'),

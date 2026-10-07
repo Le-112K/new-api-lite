@@ -35,7 +35,6 @@ import { api } from '@/lib/api'
 import {
   CHANNEL_TYPE_NEW_API,
   CHANNEL_TYPE_SUB2API,
-  CHANNEL_TYPE_TASK_PLUGIN,
 } from '../../constants'
 import { CHANNEL_TYPE_ADVANCED_CUSTOM } from '../../lib/advanced-custom'
 import {
@@ -261,20 +260,6 @@ describe('body passthrough quick option', () => {
   })
 })
 
-test('task plugin channels hide both passthrough switches', () => {
-  render(
-    <QuickOptionsHarness
-      channelType={CHANNEL_TYPE_TASK_PLUGIN}
-      confirm={() => Promise.resolve(true)}
-    />
-  )
-  expect(screen.queryByRole('switch', BODY_SWITCH)).not.toBeInTheDocument()
-  expect(screen.queryByRole('switch', HEADERS_SWITCH)).not.toBeInTheDocument()
-  expect(
-    screen.getByRole('switch', { name: 'Auto-disable channel' })
-  ).toBeInTheDocument()
-})
-
 describe('responses websocket quick option', () => {
   const WEBSOCKET_SWITCH = { name: 'Responses WebSocket' }
 
@@ -294,7 +279,7 @@ describe('responses websocket quick option', () => {
     expect(screen.getByRole('switch', WEBSOCKET_SWITCH)).toBeInTheDocument()
   })
 
-  test.each([14, CHANNEL_TYPE_TASK_PLUGIN])(
+  test.each([14])(
     'is hidden for channel type %s',
     (channelType) => {
       render(

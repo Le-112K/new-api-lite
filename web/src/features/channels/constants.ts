@@ -21,14 +21,13 @@ For commercial licensing, please contact support@quantumnous.com
 // All label/name values are i18n keys; use t(value) when displaying.
 // ============================================================================
 
-export const CHANNEL_TYPE_OLLAMA = 4
-
 export const CHANNEL_TYPE_SUB2API = 59
 
 export const CHANNEL_TYPE_NEW_API = 60
 
-export const CHANNEL_TYPE_TASK_PLUGIN = 61
-
+// vLLM / SGLang are no longer offered in the provider picker, but they keep
+// their numeric constants: existing channels still resolve to the Advanced
+// Custom adaptor, and the capability sets below cover them.
 export const CHANNEL_TYPE_VLLM = 62
 
 export const CHANNEL_TYPE_SGLANG = 63

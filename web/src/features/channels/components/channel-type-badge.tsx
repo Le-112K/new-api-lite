@@ -16,12 +16,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Puzzle, Server } from 'lucide-react'
+import { Server } from 'lucide-react'
 
 import { getLobeIcon } from '@/lib/lobe-icon'
 import { cn } from '@/lib/utils'
 
-import { CHANNEL_TYPE_OPTIONS, CHANNEL_TYPE_TASK_PLUGIN } from '../constants'
+import { CHANNEL_TYPE_OPTIONS } from '../constants'
 import { getChannelTypeIcon } from '../lib/channel-utils'
 
 export function ChannelTypeLogo(props: {
@@ -33,8 +33,10 @@ export function ChannelTypeLogo(props: {
   const isKnownType = CHANNEL_TYPE_OPTIONS.some(
     (option) => option.value === props.type
   )
-  if (props.type === CHANNEL_TYPE_TASK_PLUGIN || !isKnownType) {
-    const Icon = props.type === CHANNEL_TYPE_TASK_PLUGIN ? Puzzle : Server
+  // Types removed in this fork (and any future unknown type) fall back to a
+  // generic icon so existing channel rows keep rendering.
+  if (!isKnownType) {
+    const Icon = Server
     return (
       <Icon
         className={cn('text-muted-foreground shrink-0', props.className)}
