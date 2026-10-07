@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useQueryClient } from '@tanstack/react-query'
 import { Loader2, RefreshCw, DollarSign } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -33,15 +33,10 @@ import { IconBadge } from '@/components/ui/icon-badge'
 import { formatCurrencyFromUSD } from '@/lib/currency'
 import { formatTimestampToDate } from '@/lib/format'
 import { handleServerError } from '@/lib/handle-server-error'
-import { createServerError } from '@/lib/server-error-message'
 
-import { getCodexUsage, updateChannelBalance } from '../../api'
+import { updateChannelBalance } from '../../api'
 import { channelsQueryKeys } from '../../lib'
 import { useChannels } from '../channels-provider'
-import {
-  CodexUsageDialog,
-  type CodexUsageDialogData,
-} from './codex-usage-dialog'
 
 type BalanceQueryDialogProps = {
   initialRawResponse?: string
@@ -61,34 +56,6 @@ export function BalanceQueryDialog(props: BalanceQueryDialogProps) {
   const [rawResponse, setRawResponse] = useState<string | null>(
     props.initialRawResponse ?? null
   )
-  const [codexUsageResponse, setCodexUsageResponse] =
-    useState<CodexUsageDialogData | null>(null)
-
-  const isCodex = currentRow?.type === 57
-
-  const handleQueryCodexUsage = async () => {
-    const row = currentRow
-    if (!row) return
-    setIsQuerying(true)
-    try {
-      const res = await getCodexUsage(row.id)
-      if (!res.success) {
-        throw createServerError(res, t('Failed to fetch usage'))
-      }
-      setCodexUsageResponse(res)
-    } catch (error: unknown) {
-      handleServerError(error, t('Failed to fetch usage'))
-    } finally {
-      setIsQuerying(false)
-    }
-  }
-
-  useEffect(() => {
-    if (!isCodex) return
-    if (!props.open) return
-    handleQueryCodexUsage()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.open, isCodex])
 
   if (!currentRow) return null
 
@@ -132,7 +99,6 @@ export function BalanceQueryDialog(props: BalanceQueryDialogProps) {
     setBalance(null)
     setBalanceUpdatedTime(null)
     setRawResponse(null)
-    setCodexUsageResponse(null)
     props.onOpenChange(false)
   }
 
@@ -146,22 +112,6 @@ export function BalanceQueryDialog(props: BalanceQueryDialogProps) {
   const formatDate = (timestamp: number) => {
     if (!timestamp) return 'Never'
     return formatTimestampToDate(timestamp)
-  }
-
-  if (isCodex) {
-    return (
-      <CodexUsageDialog
-        open={props.open}
-        onOpenChange={(v) => {
-          if (!v) handleClose()
-        }}
-        channelName={currentRow.name}
-        channelId={currentRow.id}
-        response={codexUsageResponse}
-        onRefresh={handleQueryCodexUsage}
-        isRefreshing={isQuerying}
-      />
-    )
   }
 
   return (

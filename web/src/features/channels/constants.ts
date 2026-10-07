@@ -34,18 +34,63 @@ export const CHANNEL_TYPE_VLLM = 62
 export const CHANNEL_TYPE_SGLANG = 63
 
 /**
- * 二开精简中移除的渠道类型：后端已经没有对应的 relay 适配器。
- * 数字常量保留（枚举位移会破坏存量渠道数据），但不再出现在渠道类型下拉里，
- * 后端 validateChannel 也会拒绝写入。
+ * 二开保留的渠道类型：本 fork 只对接第三方中转站、少数官方厂商与自建网关。
+ *
+ * 其余类型依然保留数字常量与显示标签（存量渠道数据仍需要它们渲染名称），
+ * 但不再出现在渠道类型下拉里；后端 validateChannel 会拒绝新建这些类型。
+ */
+export const RETAINED_CHANNEL_TYPES = [1, 14, 24, 40, 58, 59, 60] as const
+
+/**
+ * 二开精简中移除的渠道类型：后端不再有对应的 relay 适配器。
+ * 数字常量保留（枚举位移会破坏存量渠道数据），但不再出现在渠道类型下拉里。
  */
 export const REMOVED_CHANNEL_TYPES: ReadonlySet<number> = new Set([
+  2, // MjProxy
+  3, // Azure
+  4, // Ollama
+  5, // MjProxyPlus
+  7, // OhMyGPT
+  8, // Custom
+  15, // Baidu
+  16, // Zhipu
+  17, // Ali
+  18, // Xunfei
+  19, // 360
+  20, // OpenRouter
+  22, // FastGPT
+  23, // Tencent
+  25, // Moonshot
+  26, // Zhipu GLM
+  27, // Perplexity
+  31, // LingYiWanWu
+  33, // AWS
+  34, // Cohere
+  35, // MiniMax
   36, // SunoAPI
+  37, // Dify
+  38, // Jina
+  39, // Cloudflare
+  41, // Vertex AI
+  42, // Mistral
+  43, // DeepSeek
+  44, // MokaAI
+  45, // VolcEngine
+  46, // Baidu V2
+  47, // Xinference
+  48, // xAI
+  49, // Coze
   50, // Kling
   51, // Jimeng
   52, // Vidu
+  53, // Submodel
   54, // Doubao Video
   55, // Sora
-  CHANNEL_TYPE_TASK_PLUGIN, // 61
+  56, // Replicate
+  57, // ChatGPT Subscription (Codex)
+  61, // Task Plugin
+  62, // vLLM
+  63, // SGLang
 ])
 
 export const CHANNEL_TYPES = {
@@ -118,66 +163,16 @@ export type ChannelProviderPresentation = {
 }
 
 // Display copy only; channel routing, availability and ordering remain independent.
-export const CHANNEL_PROVIDER_PRESENTATION: Partial<
-  Record<number, ChannelProviderPresentation>
+// Every retained channel type must carry presentation copy; the exported map stays
+// loosely typed so consumers can look up by a runtime channel type.
+const RETAINED_CHANNEL_PRESENTATION: Record<
+  (typeof RETAINED_CHANNEL_TYPES)[number],
+  ChannelProviderPresentation
 > = {
   1: { descriptionKey: 'Connect to the OpenAI API or compatible services' },
-  2: { descriptionKey: 'Generate Midjourney images through MjProxy' },
-  3: { descriptionKey: 'Connect to OpenAI models deployed on Azure' },
-  4: { descriptionKey: 'Connect to local or self-hosted Ollama models' },
-  5: { descriptionKey: 'Generate Midjourney images through MjProxyPlus' },
-  7: { descriptionKey: 'Access model services through the OhMyGPT gateway' },
-  8: {
-    descriptionKey:
-      'Legacy full-URL integration; use Advanced Custom for new channels',
-    badge: { labelKey: 'Deprecated', tone: 'warning' },
-  },
   14: { descriptionKey: 'Connect to the Anthropic API or compatible services' },
-  15: { descriptionKey: 'Access Baidu Qianfan models through the legacy API' },
-  16: { descriptionKey: 'Access Zhipu models through the legacy API' },
-  17: { descriptionKey: 'Connect to Alibaba Cloud Bailian model services' },
-  18: { descriptionKey: 'Connect to iFlytek Spark model services' },
-  19: { descriptionKey: 'Connect to 360 model services' },
-  20: {
-    descriptionKey: 'Access models from multiple providers through OpenRouter',
-  },
-  22: { descriptionKey: 'Connect to FastGPT applications' },
-  23: { descriptionKey: 'Connect to Tencent Hunyuan model services' },
   24: { descriptionKey: 'Connect to models through the Google Gemini API' },
-  25: { descriptionKey: 'Connect to Moonshot AI model services' },
-  26: { descriptionKey: 'Access Zhipu models through the V4 API' },
-  27: { descriptionKey: 'Connect to Perplexity model services' },
-  31: { descriptionKey: 'Connect to LingYiWanWu model services' },
-  33: { descriptionKey: 'Access models through Amazon Bedrock' },
-  34: { descriptionKey: 'Connect to Cohere model services' },
-  35: { descriptionKey: 'Connect to MiniMax model services' },
-  36: { descriptionKey: 'Generate music and lyrics through SunoAPI' },
-  37: { descriptionKey: 'Connect to Dify applications and workflows' },
-  38: { descriptionKey: 'Connect to Jina embedding and reranking services' },
-  39: { descriptionKey: 'Access models through Cloudflare Workers AI' },
   40: { descriptionKey: 'Connect to SiliconFlow model inference services' },
-  41: { descriptionKey: 'Access models through Google Cloud Vertex AI' },
-  42: { descriptionKey: 'Connect to Mistral AI model services' },
-  43: { descriptionKey: 'Connect to DeepSeek model services' },
-  44: { descriptionKey: 'Access model services through MokaAI' },
-  45: { descriptionKey: 'Connect to Volcengine Ark model services' },
-  46: { descriptionKey: 'Access Baidu Qianfan models through the V2 API' },
-  47: { descriptionKey: 'Connect to self-hosted models served by Xinference' },
-  48: { descriptionKey: 'Connect to xAI Grok model services' },
-  49: { descriptionKey: 'Connect to Coze bots' },
-  50: { descriptionKey: 'Connect to Kling video generation services' },
-  51: {
-    descriptionKey: 'Connect to Jimeng image and video generation services',
-  },
-  52: { descriptionKey: 'Connect to Vidu video generation services' },
-  53: { descriptionKey: 'Connect to Submodel model services' },
-  54: {
-    descriptionKey:
-      'Connect to Doubao Seedance video and Seedream image generation through Volcengine Ark',
-  },
-  55: { descriptionKey: 'Connect to OpenAI Sora video generation services' },
-  56: { descriptionKey: 'Access hosted model predictions through Replicate' },
-  57: { descriptionKey: 'Access Codex using ChatGPT subscription credentials' },
   58: {
     descriptionKey:
       'Configure endpoint routing, authentication and protocol conversion for different upstream services',
@@ -190,18 +185,13 @@ export const CHANNEL_PROVIDER_PRESENTATION: Partial<
     descriptionKey:
       'Connect to New API model services with support for multiple task plugins',
   },
-  62: { descriptionKey: 'Connect to self-hosted models served by vLLM' },
-  63: { descriptionKey: 'Connect to self-hosted models served by SGLang' },
-} satisfies Record<
-  Exclude<keyof typeof CHANNEL_TYPES, 0 | typeof CHANNEL_TYPE_TASK_PLUGIN>,
-  ChannelProviderPresentation
->
+}
 
-const CHANNEL_TYPE_DISPLAY_ORDER: number[] = [
-  1, 14, 24, 33, 43, 3, 41, 17, 45, 25, 26, 23, 48, 60, 58, 59, 61, 42, 34, 20,
-  4, 62, 40, 27, 15, 46, 18, 31, 35, 49, 19, 47, 37, 38, 39, 11, 8, 57, 22, 21,
-  44, 2, 5, 36, 50, 51, 52, 53, 54, 55, 56,
-]
+export const CHANNEL_PROVIDER_PRESENTATION: Partial<
+  Record<number, ChannelProviderPresentation>
+> = RETAINED_CHANNEL_PRESENTATION
+
+const CHANNEL_TYPE_DISPLAY_ORDER: number[] = [1, 14, 24, 40, 58, 59, 60]
 
 export const CHANNEL_TYPE_OPTIONS: { value: number; label: string }[] = (() => {
   const ordered: { value: number; label: string }[] = []

@@ -25,11 +25,6 @@ func TestChannelOwnerNameUsesAdaptorChannelName(t *testing.T) {
 			expected:    "openai",
 		},
 		{
-			name:        "codex",
-			channelType: constant.ChannelTypeCodex,
-			expected:    "codex",
-		},
-		{
 			name:        "openrouter",
 			channelType: constant.ChannelTypeOpenRouter,
 			expected:    "openrouter",

@@ -119,7 +119,6 @@ import { handleServerError } from '@/lib/handle-server-error'
 import { ROLE } from '@/lib/roles'
 import {
   requireServerSuccess,
-  createServerError,
   getServerErrorMessage,
 } from '@/lib/server-error-message'
 import { cn } from '@/lib/utils'
@@ -131,7 +130,6 @@ import {
   getChannelDefaultBaseURLs,
   getGroups,
   getPrefillGroups,
-  refreshCodexCredential,
 } from '../../api'
 import {
   ADD_MODE_OPTIONS,
@@ -405,8 +403,6 @@ export function ChannelMutateDrawer({
     ADMIN_PERMISSION_ACTIONS.OPERATE
   )
   const canRevealChannelKey = currentUser?.role === ROLE.SUPER_ADMIN
-  const [isCodexCredentialRefreshing, setIsCodexCredentialRefreshing] =
-    useState(false)
   const initialModelsRef = useRef<string[]>([])
   const initialModelMappingRef = useRef<string>('')
   const initialStatusCodeMappingRef = useRef<string>('')
@@ -1044,25 +1040,6 @@ export function ChannelMutateDrawer({
       )
     }
   }
-
-  const handleRefreshCodexCredential = useCallback(async () => {
-    if (!channelId) return
-    setIsCodexCredentialRefreshing(true)
-    try {
-      const res = await refreshCodexCredential(channelId)
-      if (!res.success) {
-        throw createServerError(res, t('Failed to refresh credential'))
-      }
-      toast.success(t('Credential refreshed'))
-      queryClient.invalidateQueries({
-        queryKey: channelsQueryKeys.detail(channelId),
-      })
-    } catch (error) {
-      handleServerError(error, t('Refresh failed'))
-    } finally {
-      setIsCodexCredentialRefreshing(false)
-    }
-  }, [channelId, queryClient, t])
 
   // Unified function to update models
   const updateModels = useCallback(
@@ -4141,47 +4118,6 @@ export function ChannelMutateDrawer({
                   )
                 }}
               />
-
-              {currentType === 57 && (
-                <div className='border-border/60 flex flex-col gap-3 border-y py-4'>
-                  <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
-                    <div className='text-muted-foreground text-xs'>
-                      {t(
-                        'Codex channels use an OAuth JSON credential as the key.'
-                      )}
-                    </div>
-                    <div className='flex flex-wrap items-center gap-2'>
-                      {isEditing && channelId && (
-                        <Button
-                          type='button'
-                          variant='outline'
-                          size='sm'
-                          onClick={handleRefreshCodexCredential}
-                          disabled={
-                            sensitiveLocked || isCodexCredentialRefreshing
-                          }
-                        >
-                          {isCodexCredentialRefreshing ? (
-                            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                          ) : (
-                            <RefreshCw className='mr-2 h-4 w-4' />
-                          )}
-                          {isCodexCredentialRefreshing
-                            ? t('Refreshing...')
-                            : t('Refresh credential')}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <Alert className='border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-50'>
-                    <AlertDescription>
-                      {t(
-                        "Disclaimer: Personal use only. Do not distribute or share any credentials. This channel has prerequisites and requires prior setup; use it only if you understand the flow and risks, and comply with OpenAI's terms and policies. Credentials and configuration are for Codex CLI integration only, and are not intended for any other client, platform, or channel."
-                      )}
-                    </AlertDescription>
-                  </Alert>
-                </div>
-              )}
 
               {isEditing && isMultiKeyChannel && (
                 <FormField

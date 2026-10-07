@@ -54,14 +54,11 @@ import {
 } from '@/lib/currency'
 import { formatTimestampToDate } from '@/lib/format'
 import { handleServerError } from '@/lib/handle-server-error'
-import { createServerError } from '@/lib/server-error-message'
 import { truncateText } from '@/lib/utils'
 
-import { getCodexUsage, updateChannelBalance } from '../api'
+import { updateChannelBalance } from '../api'
 import {
   CHANNEL_STATUS_CONFIG,
-  CHANNEL_TYPE_VLLM,
-  CHANNEL_TYPE_SGLANG,
   MODEL_FETCHABLE_TYPES,
 } from '../constants'
 import {
@@ -89,10 +86,6 @@ import { useChannels } from './channels-provider'
 import { DataTableRowActions } from './data-table-row-actions'
 import { DataTableTagRowActions } from './data-table-tag-row-actions'
 import { BalanceQueryDialog } from './dialogs/balance-query-dialog'
-import {
-  CodexUsageDialog,
-  type CodexUsageDialogData,
-} from './dialogs/codex-usage-dialog'
 import { NumericSpinnerInput } from './numeric-spinner-input'
 
 function parseIonetMeta(otherInfo: string | null | undefined): null | {
@@ -337,7 +330,7 @@ export function BalanceCell({ channel }: { channel: Channel }) {
   const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
   const layout = useContext(ChannelRowActionsLayoutContext)
-  const { sensitiveVisible, setCurrentRow, setOpen } = useChannels()
+  const { sensitiveVisible, setCurrentRow } = useChannels()
   const isTagRow = isTagAggregateRow(channel)
   const balance = channel.balance || 0
   const usedQuota = channel.used_quota || 0
@@ -345,9 +338,6 @@ export function BalanceCell({ channel }: { channel: Channel }) {
   const [rawBalanceResponse, setRawBalanceResponse] = useState<string | null>(
     null
   )
-  const [codexUsageOpen, setCodexUsageOpen] = useState(false)
-  const [codexUsageResponse, setCodexUsageResponse] =
-    useState<CodexUsageDialogData | null>(null)
   const currencyLabel = getCurrencyLabel()
   const tokenSuffix = currencyLabel === 'Tokens' ? ' Tokens' : ''
   const withSuffix = (value: string) =>
@@ -428,37 +418,17 @@ export function BalanceCell({ channel }: { channel: Channel }) {
 
   // Regular channel row: show used and remaining with click to update
   const variant = getBalanceVariant(balance)
-  const isInferenceChannel =
-    channel.type === CHANNEL_TYPE_VLLM || channel.type === CHANNEL_TYPE_SGLANG
-  const inferenceStatusLabel =
-    channel.type === CHANNEL_TYPE_SGLANG ? t('SGLang status') : t('vLLM status')
+  // vLLM / SGLang channels are no longer offered in this fork. The flag stays
+  // as a constant so the balance column keeps rendering its normal path.
+  const isInferenceChannel = false
+  const inferenceStatusLabel = t('vLLM status')
 
   const handleClickUpdate = async () => {
-    if (isInferenceChannel) {
-      setCurrentRow(channel)
-      setOpen('inference-status')
-      return
-    }
     if (isUpdating) {
       return
     }
 
     setIsUpdating(true)
-    if (channel.type === 57) {
-      try {
-        const res = await getCodexUsage(channel.id)
-        if (!res.success) {
-          throw createServerError(res, t('Failed to fetch usage'))
-        }
-        setCodexUsageResponse(res)
-        setCodexUsageOpen(true)
-      } catch (error) {
-        handleServerError(error, t('Failed to fetch usage'))
-      } finally {
-        setIsUpdating(false)
-      }
-      return
-    }
 
     try {
       const response = await updateChannelBalance(channel.id)
@@ -568,33 +538,6 @@ export function BalanceCell({ channel }: { channel: Channel }) {
         </Tooltip>
       </div>
 
-      <CodexUsageDialog
-        open={codexUsageOpen}
-        onOpenChange={setCodexUsageOpen}
-        channelName={channel.name}
-        channelId={channel.id}
-        channelDisplayName={sensitiveVisible ? undefined : SENSITIVE_MASK}
-        channelDisplayId={sensitiveVisible ? undefined : SENSITIVE_MASK}
-        response={codexUsageResponse}
-        onRefresh={async () => {
-          if (isUpdating) {
-            return
-          }
-          setIsUpdating(true)
-          try {
-            const res = await getCodexUsage(channel.id)
-            if (!res.success) {
-              throw createServerError(res, t('Failed to fetch usage'))
-            }
-            setCodexUsageResponse(res)
-          } catch (error) {
-            handleServerError(error, t('Failed to fetch usage'))
-          } finally {
-            setIsUpdating(false)
-          }
-        }}
-        isRefreshing={isUpdating}
-      />
       {rawBalanceResponse !== null && (
         <BalanceQueryDialog
           initialRawResponse={rawBalanceResponse}

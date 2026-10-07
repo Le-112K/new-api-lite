@@ -288,29 +288,3 @@ func TestGeminiThinkingControlsConvertBestEffort(t *testing.T) {
 		assert.True(t, hasHostDiagnosticCode(info.ConversionDiagnostics(), "gemini_budget_to_level"))
 	})
 }
-
-// An Ali image model the alibaba task plugin does not claim is rejected by the
-// adaptor with a classified 400 that skips retries. ImageHelper must surface
-// that classification unchanged instead of wrapping it into a retryable
-// conversion failure that other channels would then be asked to serve.
-func TestImageHelperKeepsAdaptorClassifiedConvertError(t *testing.T) {
-	c, _ := gin.CreateTestContext(httptest.NewRecorder())
-	c.Request = httptest.NewRequest(http.MethodPost, "/v1/images/generations", strings.NewReader(`{"model":"wanx-style-repaint-v1","prompt":"a cat"}`))
-	c.Request.Header.Set("Content-Type", "application/json")
-	common.SetContextKey(c, constant.ContextKeyChannelType, constant.ChannelTypeAli)
-	common.SetContextKey(c, constant.ContextKeyChannelBaseUrl, "https://dashscope.invalid")
-	request, err := helper.GetAndValidOpenAIImageRequest(c, relayconstant.RelayModeImagesGenerations)
-	require.NoError(t, err)
-	info := &relaycommon.RelayInfo{Request: request, OriginModelName: "wanx-style-repaint-v1", RelayMode: relayconstant.RelayModeImagesGenerations,
-		RequestURLPath: c.Request.URL.Path, Billing: &imageReservation{limit: 500000},
-		PriceData: hosttypes.PriceData{UsePrice: true, ModelPrice: 0.04, GroupRatioInfo: hosttypes.GroupRatioInfo{GroupRatio: 1}},
-	}
-
-	apiErr := ImageHelper(c, info)
-
-	require.NotNil(t, apiErr)
-	assert.Equal(t, http.StatusBadRequest, apiErr.StatusCode)
-	assert.Equal(t, types.ErrorCodeInvalidRequest, apiErr.GetErrorCode())
-	assert.True(t, types.IsSkipRetryError(apiErr), "other channels must not be asked to serve the same name")
-	assert.Contains(t, apiErr.Error(), "is not supported by the Ali channel")
-}

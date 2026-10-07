@@ -7,7 +7,6 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/model"
-	"github.com/QuantumNous/new-api/relay/channel/ali"
 	"github.com/QuantumNous/new-api/relay/channel/openai"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relay/helper"
@@ -59,11 +58,7 @@ func convertChatCompatibilityRequest(t *testing.T, request *dto.GeneralOpenAIReq
 	require.NoError(t, helper.ApplyReasoningModelSuffix(c, info, request))
 	var converted any
 	var err error
-	if channelType == constant.ChannelTypeAli {
-		converted, err = (&ali.Adaptor{}).ConvertOpenAIRequest(c, info, request)
-	} else {
-		converted, err = (&openai.Adaptor{}).ConvertOpenAIRequest(c, info, request)
-	}
+	converted, err = (&openai.Adaptor{}).ConvertOpenAIRequest(c, info, request)
 	require.NoError(t, err)
 	encoded, err := common.Marshal(converted)
 	require.NoError(t, err)
@@ -85,7 +80,6 @@ func TestChannelTestOpenAIChatCompatibility(t *testing.T) {
 		{name: "GPT6 sol", model: "gpt-6-sol", upstream: "gpt-6-sol", channelType: constant.ChannelTypeOpenAI, wantLimit: "max_completion_tokens"},
 		{name: "GPT6 luna", model: "gpt-6-luna", upstream: "gpt-6-luna", channelType: constant.ChannelTypeOpenAI, wantLimit: "max_completion_tokens"},
 		{name: "alias maps to GPT6", model: "customer-model", upstream: "gpt-6-astra", channelType: constant.ChannelTypeOpenAI, wantLimit: "max_completion_tokens"},
-		{name: "GPT5 alias maps to Qwen", model: "gpt-5.6-luna", upstream: "qwen-turbo", channelType: constant.ChannelTypeAli, wantLimit: "max_tokens"},
 		{name: "GPT5 stream", model: "gpt-5.6-luna", upstream: "gpt-5.6-luna", channelType: constant.ChannelTypeOpenAI, stream: true, wantLimit: "max_completion_tokens"},
 		{name: "GPT4 explicit", model: "gpt-4.1", upstream: "gpt-4.1", endpoint: string(constant.EndpointTypeOpenAI), channelType: constant.ChannelTypeOpenAI, wantLimit: "max_tokens"},
 		{name: "o series", model: "o3-mini", upstream: "o3-mini", channelType: constant.ChannelTypeAzure, wantLimit: "max_completion_tokens"},
