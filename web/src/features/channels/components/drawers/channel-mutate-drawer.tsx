@@ -141,6 +141,7 @@ import {
   CHANNEL_TYPE_VLLM,
   CHANNEL_TYPE_SGLANG,
   CHANNEL_TYPE_WARNINGS,
+  CHANNEL_TYPES,
   ERROR_MESSAGES,
   FIELD_PASSTHROUGH_TYPES,
   FIELD_DESCRIPTIONS,
@@ -732,7 +733,11 @@ export function ChannelMutateDrawer({
   const currentTypeLabel = useMemo(
     () =>
       CHANNEL_TYPE_OPTIONS.find((option) => option.value === currentType)
-        ?.label || `#${currentType}`,
+        ?.label ||
+      // Fall back to the full type table so channels created before a type was
+      // removed still show their real name instead of a bare "#N".
+      CHANNEL_TYPES[currentType as keyof typeof CHANNEL_TYPES] ||
+      `#${currentType}`,
     [currentType]
   )
   const providerLabel = t(currentTypeLabel)

@@ -38,6 +38,7 @@ import {
   CHANNEL_TYPE_NEW_API,
   CHANNEL_TYPE_OPTIONS,
   CHANNEL_TYPE_SUB2API,
+  REMOVED_CHANNEL_TYPES,
   type ChannelProviderPresentation,
 } from '../../constants'
 import { CHANNEL_TYPE_ADVANCED_CUSTOM } from '../../lib/advanced-custom'
@@ -105,7 +106,12 @@ export function ChannelProviderPicker(props: ChannelProviderPickerProps) {
     /^\d+$/.test(search.trim()) &&
     Number.isSafeInteger(customType) &&
     customType > 0 &&
-    !CHANNEL_TYPE_OPTIONS.some((option) => option.value === customType)
+    !CHANNEL_TYPE_OPTIONS.some((option) => option.value === customType) &&
+    // Types removed in this fork stay selectable only while they are the
+    // channel's current type, so existing rows keep rendering correctly while
+    // new channels cannot be created with them (the API rejects those too).
+    (!REMOVED_CHANNEL_TYPES.has(customType) ||
+      customType === props.currentProvider?.type)
   const currentProviderId =
     props.currentProvider?.kind === 'builtin'
       ? `builtin:${props.currentProvider.type}`
