@@ -24,20 +24,11 @@ import type { PolicyEvent } from '@/features/system-settings/request-policies/ap
 
 import type { UsageLog } from './data/schema'
 // ============================================================================
-// Log Category Types
-// ============================================================================
-
-/**
- * Log category for different log types
- */
-export type LogCategory = 'common' | 'drawing'
-
-// ============================================================================
 // Filter Types
 // ============================================================================
 
 /**
- * Common filters (shared across all log types)
+ * Filters shared by every log query
  */
 export interface CommonFilters {
   startTime?: Date
@@ -46,7 +37,7 @@ export interface CommonFilters {
 }
 
 /**
- * Common logs specific filters
+ * Usage log filters
  */
 export interface CommonLogFilters extends CommonFilters {
   model?: string
@@ -58,16 +49,9 @@ export interface CommonLogFilters extends CommonFilters {
 }
 
 /**
- * Drawing logs specific filters
+ * Alias kept for call sites that build query params from a filter object.
  */
-export interface DrawingLogFilters extends CommonFilters {
-  mjId?: string
-}
-
-/**
- * Union type for all log filters
- */
-export type LogFilters = CommonLogFilters | DrawingLogFilters
+export type LogFilters = CommonLogFilters
 
 // ============================================================================
 // Common Logs Additional Types
@@ -268,32 +252,8 @@ export interface LogStatistics {
 }
 
 // ============================================================================
-// Drawing Logs (MjProxy) Types
+// Audio Types
 // ============================================================================
-
-export interface MidjourneyLog {
-  id: number
-  user_id: number
-  channel_id: number
-  code: number
-  mj_id: string
-  action: string // IMAGINE, UPSCALE, VARIATION, etc. (backend field name)
-  submit_time: number // milliseconds
-  finish_time?: number // milliseconds
-  start_time?: number // milliseconds
-  fail_reason?: string
-  progress: string
-  prompt: string
-  prompt_en?: string
-  description?: string
-  buttons?: string
-  properties?: string
-  image_url?: string
-  status: string // NOT_START, SUBMITTED, IN_PROGRESS, SUCCESS, FAILURE, MODAL
-  other?: string
-  created_at?: number
-  updated_at?: number
-}
 
 export interface AudioClip {
   clip_id?: string
@@ -333,7 +293,7 @@ export interface GetLogsResponse {
   success: boolean
   message?: string
   data?: {
-    items: UsageLog[] | MidjourneyLog[]
+    items: UsageLog[]
     total: number
     page: number
     page_size: number
@@ -360,27 +320,13 @@ export interface GetLogStatsResponse {
 }
 
 // ============================================================================
-// Drawing Log Types
-// ============================================================================
-
-export interface GetMidjourneyLogsParams {
-  p?: number
-  page_size?: number
-  channel_id?: string
-  mj_id?: string
-  start_timestamp?: number
-  end_timestamp?: number
-}
-
-// ============================================================================
 // Fetch Logs Configuration
 // ============================================================================
 
 /**
- * Configuration for fetching logs by category
+ * Configuration for fetching usage logs
  */
 export interface FetchLogsConfig {
-  logCategory: LogCategory
   isAdmin: boolean
   page: number
   pageSize: number

@@ -212,7 +212,7 @@ export function CommonLogsFilterBar<TData>(
 
   const handleApply = useCallback(
     (nextFilters: CommonLogFilters = filters) => {
-      const filterParams = buildSearchParams(nextFilters, 'common')
+      const filterParams = buildSearchParams(nextFilters)
       navigate({
         to: '/usage-logs/$section',
         params: { section: 'common' },

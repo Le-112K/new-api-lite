@@ -20,16 +20,14 @@ import { createSectionRegistry } from '@/features/system-settings/utils/section-
 
 /**
  * Usage logs page section definitions
+ *
+ * Only the common (request) logs remain. The drawing / task log section was
+ * removed together with the `/api/mj` listing endpoints.
  */
 const USAGE_LOGS_SECTIONS = [
   {
     id: 'common',
     titleKey: 'Common Logs',
-    build: () => null, // Content is rendered directly in the page component
-  },
-  {
-    id: 'drawing',
-    titleKey: 'Drawing Logs',
     build: () => null, // Content is rendered directly in the page component
   },
 ] as const
@@ -54,4 +52,3 @@ export const USAGE_LOGS_DEFAULT_SECTION = usageLogsRegistry.defaultSection
 export function isUsageLogsSectionId(s: string): s is UsageLogsSectionId {
   return (USAGE_LOGS_SECTION_IDS as readonly string[]).includes(s)
 }
-export const getUsageLogsSectionNavItems = usageLogsRegistry.getSectionNavItems

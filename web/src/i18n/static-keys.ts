@@ -639,8 +639,6 @@ export const STATIC_I18N_KEYS = [
   'API token management',
   'Usage Logs',
   'API usage records',
-  'Drawing Logs',
-  'Drawing task records',
   'Task Logs',
   'System task records',
   'Personal Center Area',

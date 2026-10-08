@@ -47,7 +47,7 @@ function LogsFixture() {
       >
         Switch scope
       </button>
-      <UsageLogsTable logCategory='common' />
+      <UsageLogsTable />
     </>
   )
 }

@@ -21,7 +21,7 @@ For commercial licensing, please contact support@quantumnous.com
  */
 import type { StatusBadgeProps } from '@/components/status-badge'
 
-import type { LogStatistics, LogCategory } from './types'
+import type { LogStatistics } from './types'
 
 // ============================================================================
 // Default Values
@@ -119,57 +119,6 @@ export const LOG_TYPE_FILTERS = [
 ] as const
 
 // ============================================================================
-// Drawing Logs (MjProxy) Constants
-// ============================================================================
-
-/**
- * MjProxy task types
- * Must match backend constants in constant/midjourney.go
- */
-export const MJ_TASK_TYPES = {
-  IMAGINE: 'IMAGINE', // 绘图
-  UPSCALE: 'UPSCALE', // 放大
-  VIDEO: 'VIDEO', // 视频
-  EDITS: 'EDITS', // 编辑
-  VARIATION: 'VARIATION', // 变换
-  HIGH_VARIATION: 'HIGH_VARIATION', // 强变换
-  LOW_VARIATION: 'LOW_VARIATION', // 弱变换
-  PAN: 'PAN', // 平移
-  DESCRIBE: 'DESCRIBE', // 图生文
-  BLEND: 'BLEND', // 图混合
-  UPLOAD: 'UPLOAD', // 上传文件
-  SHORTEN: 'SHORTEN', // 缩词
-  REROLL: 'REROLL', // 重绘
-  INPAINT: 'INPAINT', // 局部重绘
-  SWAP_FACE: 'SWAP_FACE', // 换脸
-  ZOOM: 'ZOOM', // 缩放
-  CUSTOM_ZOOM: 'CUSTOM_ZOOM', // 自定义缩放
-  MODAL: 'MODAL', // 窗口
-} as const
-
-/**
- * MjProxy task status
- */
-export const MJ_TASK_STATUS = {
-  NOT_START: 'NOT_START', // 未启动
-  SUBMITTED: 'SUBMITTED', // 队列中
-  IN_PROGRESS: 'IN_PROGRESS', // 执行中
-  SUCCESS: 'SUCCESS', // 成功
-  FAILURE: 'FAILURE', // 失败
-  MODAL: 'MODAL', // 窗口等待
-} as const
-
-/**
- * MjProxy submit result codes
- */
-export const MJ_SUBMIT_RESULT_CODES = {
-  NOT_SUBMITTED: 0, // 未提交
-  SUBMITTED: 1, // 已提交
-  WAITING: 21, // 等待中
-  DUPLICATE: 22, // 重复任务
-} as const
-
-// ============================================================================
 // Task Logs Constants
 // ============================================================================
 
@@ -228,63 +177,6 @@ export interface StatusMapping {
 }
 
 /**
- * MjProxy task type mappings
- */
-export const MJ_TASK_TYPE_MAPPINGS: Record<string, StatusMapping> = {
-  [MJ_TASK_TYPES.IMAGINE]: { label: 'Draw', variant: 'blue' },
-  [MJ_TASK_TYPES.UPSCALE]: { label: 'Upscale', variant: 'orange' },
-  [MJ_TASK_TYPES.VIDEO]: { label: 'Video', variant: 'orange' },
-  [MJ_TASK_TYPES.EDITS]: { label: 'Edit', variant: 'orange' },
-  [MJ_TASK_TYPES.VARIATION]: { label: 'Vary', variant: 'violet' },
-  [MJ_TASK_TYPES.HIGH_VARIATION]: { label: 'Vary (Strong)', variant: 'violet' },
-  [MJ_TASK_TYPES.LOW_VARIATION]: { label: 'Vary (Subtle)', variant: 'violet' },
-  [MJ_TASK_TYPES.PAN]: { label: 'Pan', variant: 'cyan' },
-  [MJ_TASK_TYPES.DESCRIBE]: { label: 'Describe', variant: 'yellow' },
-  [MJ_TASK_TYPES.BLEND]: { label: 'Blend', variant: 'lime' },
-  [MJ_TASK_TYPES.UPLOAD]: { label: 'Upload', variant: 'blue' },
-  [MJ_TASK_TYPES.SHORTEN]: { label: 'Shorten', variant: 'pink' },
-  [MJ_TASK_TYPES.REROLL]: { label: 'Reroll', variant: 'indigo' },
-  [MJ_TASK_TYPES.INPAINT]: { label: 'Inpaint', variant: 'teal' },
-  [MJ_TASK_TYPES.SWAP_FACE]: { label: 'Swap Face', variant: 'purple' },
-  [MJ_TASK_TYPES.ZOOM]: { label: 'Zoom', variant: 'green' },
-  [MJ_TASK_TYPES.CUSTOM_ZOOM]: { label: 'Custom Zoom', variant: 'green' },
-}
-
-/**
- * MjProxy task status mappings
- */
-export const MJ_STATUS_MAPPINGS: Record<string, StatusMapping> = {
-  [MJ_TASK_STATUS.SUCCESS]: { label: 'Success', variant: 'green' },
-  [MJ_TASK_STATUS.NOT_START]: { label: 'Not Started', variant: 'neutral' },
-  [MJ_TASK_STATUS.SUBMITTED]: { label: 'Queued', variant: 'yellow' },
-  [MJ_TASK_STATUS.IN_PROGRESS]: { label: 'In Progress', variant: 'blue' },
-  [MJ_TASK_STATUS.FAILURE]: { label: 'Failed', variant: 'red' },
-  [MJ_TASK_STATUS.MODAL]: { label: 'Waiting', variant: 'amber' },
-}
-
-/**
- * MjProxy submit result mappings
- */
-export const MJ_SUBMIT_RESULT_MAPPINGS: Record<string, StatusMapping> = {
-  [String(MJ_SUBMIT_RESULT_CODES.SUBMITTED)]: {
-    label: 'Submitted',
-    variant: 'green',
-  },
-  [String(MJ_SUBMIT_RESULT_CODES.WAITING)]: {
-    label: 'Waiting',
-    variant: 'lime',
-  },
-  [String(MJ_SUBMIT_RESULT_CODES.DUPLICATE)]: {
-    label: 'Duplicate',
-    variant: 'orange',
-  },
-  [String(MJ_SUBMIT_RESULT_CODES.NOT_SUBMITTED)]: {
-    label: 'Not Submitted',
-    variant: 'yellow',
-  },
-}
-
-/**
  * Task action type mappings
  */
 export const TASK_ACTION_MAPPINGS: Record<string, StatusMapping> = {
@@ -329,18 +221,6 @@ export const TASK_PLATFORM_MAPPINGS: Record<string, StatusMapping> = {
   [TASK_PLATFORMS.RUNWAY]: { label: 'runway', variant: 'violet' },
   [TASK_PLATFORMS.LUMA]: { label: 'luma', variant: 'orange' },
   [TASK_PLATFORMS.VIGGLE]: { label: 'viggle', variant: 'pink' },
-}
-
-// ============================================================================
-// Log Category Labels
-// ============================================================================
-
-/**
- * Log category display labels
- */
-export const LOG_CATEGORY_LABELS: Record<LogCategory, string> = {
-  common: 'Common',
-  drawing: 'Drawing',
 }
 
 // ============================================================================

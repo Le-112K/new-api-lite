@@ -74,11 +74,7 @@ function Fixture(props: {
       <button type='button' onClick={() => context.setSensitiveVisible(false)}>
         Hide sensitive data
       </button>
-      <UsageLogsMobileList
-        table={table}
-        logCategory='common'
-        isLoading={props.loading}
-      />
+      <UsageLogsMobileList table={table} isLoading={props.loading} />
     </>
   )
 }

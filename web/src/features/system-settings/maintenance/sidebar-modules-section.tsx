@@ -100,10 +100,6 @@ export function SidebarModulesSection({
         title: t('Audit Logs'),
         description: t('Login, security and access records'),
       },
-      midjourney: {
-        title: t('Drawing logs'),
-        description: t('History of MjProxy-style image tasks.'),
-      },
       task: {
         title: t('Task logs'),
         description: t('Background job tracker for queued work.'),
