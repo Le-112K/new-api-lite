@@ -238,11 +238,6 @@ export interface LogOtherData {
     end_error?: string
     errors?: string[]
   }
-  // Violation fee fields
-  violation_fee?: boolean
-  violation_fee_code?: string
-  violation_fee_marker?: string
-  fee_quota?: number
   // Task-related fields (for refund logs, type=6)
   is_task?: boolean
   // The submitting request returned the task result itself (an immediate

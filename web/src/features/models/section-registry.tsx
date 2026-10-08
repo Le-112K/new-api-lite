@@ -32,11 +32,6 @@ const MODELS_SECTIONS = [
     titleKey: 'Vendors',
     build: () => null,
   },
-  {
-    id: 'deployments',
-    titleKey: 'Deployments',
-    build: () => null, // Content is rendered directly in the page component
-  },
 ] as const
 
 export type ModelsSectionId = (typeof MODELS_SECTIONS)[number]['id']

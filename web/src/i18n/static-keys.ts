@@ -667,14 +667,6 @@ export const STATIC_I18N_KEYS = [
   'No models available in this category',
   'Copied: {{model}}',
 
-  // Grok settings
-  'Grok Settings',
-  'Enable violation deduction',
-  'When enabled, violation requests will incur additional charges.',
-  'Official documentation',
-  'Violation deduction amount',
-  'Base amount. Actual deduction = base amount × system group rate.',
-
   // Chat2Link
   'No available Web chat links',
   'No enabled tokens available',
@@ -850,9 +842,6 @@ export const STATIC_I18N_KEYS = [
   'Complete top-up orders and manage subscription plans and user subscriptions.',
   'View models and vendors, and preview upstream sync.',
   'Edit models and vendors, and sync them from upstream.',
-  'Deployments',
-  'View deployments and price estimates.',
-  'Create, edit, and delete deployments, and test connections.',
   'Logs',
   "View all users' usage logs, statistics, and tasks.",
   'Redemption codes',

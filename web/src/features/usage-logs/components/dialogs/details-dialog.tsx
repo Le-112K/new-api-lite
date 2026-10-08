@@ -75,7 +75,6 @@ import {
   decodeBillingExprB64,
   getTieredBillingSummary,
   hasAnyCacheTokens,
-  isViolationFeeLog,
   getFirstResponseTimeColor,
   getResponseTimeColor,
   getReasoningEffortVariant,
@@ -479,7 +478,6 @@ export function DetailsDialog(props: DetailsDialogProps) {
   const other = parseLogOther(props.log.other)
   const typeConfig = getLogTypeConfig(props.log.type)
 
-  const isViolation = isViolationFeeLog(other)
   const isRefund = props.log.type === 6
   const isConsume = props.log.type === 2
   const isTopup = props.log.type === 1
@@ -487,7 +485,6 @@ export function DetailsDialog(props: DetailsDialogProps) {
   const isSubscription = other?.billing_source === 'subscription'
   const isTieredBilling =
     isConsume &&
-    !isViolation &&
     other?.billing_mode === 'tiered_expr' &&
     !!other?.expr_b64
   const pricingData = usePricingData(props.open && isTieredBilling)
@@ -839,34 +836,6 @@ export function DetailsDialog(props: DetailsDialogProps) {
           </DetailSection>
         )}
 
-        {/* Violation fee info */}
-        {isViolation && other && (
-          <DetailSection
-            icon={<AlertTriangle className='size-3.5' aria-hidden='true' />}
-            label={t('Violation Fee')}
-            variant='danger'
-          >
-            {other.violation_fee_code && (
-              <DetailRow
-                label={t('Violation Code')}
-                value={other.violation_fee_code}
-                mono
-              />
-            )}
-            {other.violation_fee_marker && (
-              <DetailRow
-                label={t('Violation Marker')}
-                value={other.violation_fee_marker}
-              />
-            )}
-            <DetailRow
-              label={t('Fee Amount')}
-              value={formatLogQuota(other.fee_quota ?? props.log.quota)}
-              mono
-            />
-          </DetailSection>
-        )}
-
         {/* Refund details (type=6) */}
         {isRefund && other && (other.task_id || other.reason) && (
           <DetailSection label={t('Refund Details')}>
@@ -1110,7 +1079,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
         )}
 
         {/* Billing breakdown (consume type) */}
-        {isConsume && other && !isViolation && (
+        {isConsume && other && (
           <BillingBreakdown
             log={props.log}
             other={other}

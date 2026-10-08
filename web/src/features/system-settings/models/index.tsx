@@ -41,8 +41,6 @@ const defaultModelSettings: ModelSettings = {
   'claude.default_max_tokens': '',
   'claude.thinking_adapter_enabled': true,
   'claude.thinking_adapter_budget_tokens_percentage': 0.8,
-  'grok.violation_deduction_enabled': true,
-  'grok.violation_deduction_amount': 0.05,
   ModelPrice: '',
   ModelRatio: '',
   CacheRatio: '',
@@ -64,8 +62,6 @@ const defaultModelSettings: ModelSettings = {
   MaxTokenAutoGroups: 5,
   DefaultUseAutoGroup: false,
   'group_ratio_setting.group_special_usable_group': '{}',
-  'model_deployment.ionet.api_key': '',
-  'model_deployment.ionet.enabled': false,
 }
 
 export function ModelSettings() {

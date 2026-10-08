@@ -47,14 +47,6 @@ func TestAttachQuotaSaturationNestsUnderAdminInfo(t *testing.T) {
 	require.Equal(t, common.MaxQuota, sat["clamped"])
 }
 
-func TestCalcViolationFeeQuotaSaturates(t *testing.T) {
-	oldQuotaPerUnit := common.QuotaPerUnit
-	common.QuotaPerUnit = 500_000
-	t.Cleanup(func() { common.QuotaPerUnit = oldQuotaPerUnit })
-
-	require.Equal(t, common.MaxQuota, calcViolationFeeQuota(1e20, 1))
-}
-
 func TestCalcOpenRouterCacheCreateTokensDoesNotWrap(t *testing.T) {
 	oldQuotaPerUnit := common.QuotaPerUnit
 	common.QuotaPerUnit = 500_000

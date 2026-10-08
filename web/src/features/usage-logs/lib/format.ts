@@ -82,18 +82,6 @@ export function parseAuditLine(
   }
 }
 
-/**
- * Check if the log is a violation fee log
- */
-export function isViolationFeeLog(other: LogOtherData | null): boolean {
-  if (!other) return false
-  return (
-    other.violation_fee === true ||
-    Boolean(other.violation_fee_code) ||
-    Boolean(other.violation_fee_marker)
-  )
-}
-
 function isPositiveFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0
 }
@@ -548,10 +536,6 @@ const AUDIT_TEMPLATES: Record<string, string> = {
   'model.update': 'Updated a model',
   'model.delete': 'Deleted a model',
   'model.sync_upstream': 'Synced upstream models',
-  // Deployments
-  'deployment.create': 'Created a deployment',
-  'deployment.update': 'Updated a deployment',
-  'deployment.delete': 'Deleted a deployment',
   // Subscriptions
   'subscription.plan_create': 'Created a subscription plan',
   'subscription.plan_update': 'Updated a subscription plan',

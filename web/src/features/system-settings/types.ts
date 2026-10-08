@@ -248,8 +248,6 @@ export type ModelSettings = {
   'claude.default_max_tokens': string
   'claude.thinking_adapter_enabled': boolean
   'claude.thinking_adapter_budget_tokens_percentage': number
-  'grok.violation_deduction_enabled': boolean
-  'grok.violation_deduction_amount': number
   ModelPrice: string
   ModelRatio: string
   CacheRatio: string
@@ -271,8 +269,6 @@ export type ModelSettings = {
   MaxTokenAutoGroups: number
   DefaultUseAutoGroup: boolean
   'group_ratio_setting.group_special_usable_group': string
-  'model_deployment.ionet.api_key': string
-  'model_deployment.ionet.enabled': boolean
 }
 
 export type BillingSettings = {

@@ -49,7 +49,7 @@ import { taskUsageUnitLabel } from '@/features/pricing/lib/task-price-display'
 import type { BillingUsageSchema } from '@/features/pricing/types'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
 import { formatBillingCurrencyFromUSD } from '@/lib/currency'
-import { formatLogQuota, formatTimestampToDate } from '@/lib/format'
+import { formatTimestampToDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { useSystemConfigStore } from '@/stores/system-config-store'
 
@@ -61,7 +61,6 @@ import {
   getTieredBillingSummary,
   hasAnyCacheTokens,
   parseLogOther,
-  isViolationFeeLog,
   renderAuditContent,
 } from '../../lib/format'
 import {
@@ -146,23 +145,6 @@ function buildTypeDetailSegments(
   }
 
   if (log.type !== 2) return []
-
-  const isViolation = isViolationFeeLog(other)
-  if (isViolation) {
-    const segments: DetailSegment[] = []
-    segments.push({ text: t('Violation Fee'), danger: true })
-    if (other?.violation_fee_code) {
-      segments.push({
-        text: other.violation_fee_code,
-        muted: true,
-      })
-    }
-    segments.push({
-      text: `${t('Fee')}: ${formatLogQuota(other?.fee_quota ?? log.quota)}`,
-      muted: true,
-    })
-    return segments
-  }
 
   if (!other) return []
 

@@ -85,9 +85,6 @@ func rootAPIError(apiErr *types.NewAPIError) *types.NewAPIError {
 func classifyFailure(local bool, code, errorType string, status int) Outcome {
 	code, errorType = strings.ToLower(code), strings.ToLower(errorType)
 	if local {
-		if strings.HasPrefix(code, "violation_fee.") {
-			return OutcomeIgnored
-		}
 		switch types.ErrorCode(code) {
 		case types.ErrorCodeInvalidRequest, types.ErrorCodeSensitiveWordsDetected, types.ErrorCodeReadRequestBodyFailed,
 			types.ErrorCodeConvertRequestFailed, types.ErrorCodeAccessDenied, types.ErrorCodeBadRequestBody,
@@ -108,9 +105,6 @@ func classifyFailure(local bool, code, errorType string, status int) Outcome {
 			return OutcomeFailure
 		case "context_length_exceeded", "invalid_request", "invalid_request_error", "invalid_argument",
 			"sensitive_words_detected", "prompt_blocked", "content_filter", "content_policy_violation", "safety":
-			return OutcomeIgnored
-		}
-		if strings.HasPrefix(value, "violation_fee.") {
 			return OutcomeIgnored
 		}
 	}

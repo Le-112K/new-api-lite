@@ -28,7 +28,6 @@ export {
   formatDuration,
   getParamOverrideActionLabel,
   parseAuditLine,
-  isViolationFeeLog,
 } from './format'
 
 // Response model diagnostics

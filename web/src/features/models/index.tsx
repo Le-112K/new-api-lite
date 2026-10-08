@@ -16,28 +16,20 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useQueryClient } from '@tanstack/react-query'
 import { getRouteApi, useNavigate } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { SectionPageLayout } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { requireServerSuccess } from '@/lib/server-error-message'
 
-import { listDeployments } from './api'
-import { DeploymentAccessGuard } from './components/deployment-access-guard'
-import { DeploymentsTable } from './components/deployments-table'
-import { CreateDeploymentDrawer } from './components/dialogs/create-deployment-drawer'
 import { ModelsDialogs } from './components/models-dialogs'
 import { ModelsPrimaryButtons } from './components/models-primary-buttons'
 import { ModelsProvider, useModels } from './components/models-provider'
 import { ModelsTable } from './components/models-table'
 import { VendorsTable } from './components/vendors-table'
-import { useModelDeploymentSettings } from './hooks/use-model-deployment-settings'
-import { deploymentsQueryKeys } from './lib'
 import {
   type ModelsSectionId,
   MODELS_DEFAULT_SECTION,
@@ -55,10 +47,6 @@ const SECTION_META: Record<
     tabKey: 'Models',
   },
   vendors: { titleKey: 'Vendor management', tabKey: 'Vendors' },
-  deployments: {
-    titleKey: 'Deployments',
-    tabKey: 'Deployments',
-  },
 }
 
 function ModelsContent() {
@@ -68,9 +56,6 @@ function ModelsContent() {
   const params = route.useParams()
   const activeSection = (params.section ??
     MODELS_DEFAULT_SECTION) as ModelsSectionId
-
-  // Deployment create dialog state
-  const [createDeploymentOpen, setCreateDeploymentOpen] = useState(false)
 
   // keep context state in sync (for components that rely on it)
   useEffect(() => {
@@ -108,14 +93,6 @@ function ModelsContent() {
       </Button>
     )
     content = <VendorsTable />
-  } else if (activeSection === 'deployments') {
-    actions = (
-      <Button onClick={() => setCreateDeploymentOpen(true)} size='sm'>
-        <Plus className='size-4' />
-        {t('Create deployment')}
-      </Button>
-    )
-    content = <DeploymentsSection />
   }
 
   return (
@@ -143,51 +120,7 @@ function ModelsContent() {
       </SectionPageLayout>
 
       <ModelsDialogs />
-      <CreateDeploymentDrawer
-        open={createDeploymentOpen}
-        onOpenChange={setCreateDeploymentOpen}
-      />
     </>
-  )
-}
-
-function DeploymentsSection() {
-  const queryClient = useQueryClient()
-  const {
-    loading: deploymentLoading,
-    loadingPhase,
-    isIoNetEnabled,
-    connectionLoading,
-    connectionOk,
-    connectionError,
-    testConnection,
-  } = useModelDeploymentSettings()
-
-  // Prefetch deployments list while connection check is in progress.
-  useEffect(() => {
-    if (isIoNetEnabled && loadingPhase === 'connection') {
-      const defaultParams = { p: 1, page_size: 10 }
-      queryClient.prefetchQuery({
-        queryKey: deploymentsQueryKeys.list(defaultParams),
-        queryFn: async () =>
-          requireServerSuccess(await listDeployments(defaultParams)),
-        staleTime: 30 * 1000,
-      })
-    }
-  }, [isIoNetEnabled, loadingPhase, queryClient])
-
-  return (
-    <DeploymentAccessGuard
-      loading={deploymentLoading}
-      loadingPhase={loadingPhase}
-      isEnabled={isIoNetEnabled}
-      connectionLoading={connectionLoading}
-      connectionOk={connectionOk}
-      connectionError={connectionError}
-      onRetry={testConnection}
-    >
-      <DeploymentsTable />
-    </DeploymentAccessGuard>
   )
 }
 
