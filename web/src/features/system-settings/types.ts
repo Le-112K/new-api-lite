@@ -231,46 +231,6 @@ export type ContentSettings = {
   MjActionCheckSuccessEnabled: boolean
 }
 
-export type ModelSettings = {
-  'global.pass_through_request_enabled': boolean
-  'global.thinking_model_blacklist': string
-  'global.chat_completions_to_responses_policy': string
-  'general_setting.ping_interval_enabled': boolean
-  'general_setting.ping_interval_seconds': number
-  'gemini.safety_settings': string
-  'gemini.version_settings': string
-  'gemini.supported_imagine_models': string
-  'gemini.thinking_adapter_enabled': boolean
-  'gemini.thinking_adapter_budget_tokens_percentage': number
-  'gemini.function_call_thought_signature_enabled': boolean
-  'gemini.remove_function_response_id_enabled': boolean
-  'claude.model_headers_settings': string
-  'claude.default_max_tokens': string
-  'claude.thinking_adapter_enabled': boolean
-  'claude.thinking_adapter_budget_tokens_percentage': number
-  ModelPrice: string
-  ModelRatio: string
-  CacheRatio: string
-  CreateCacheRatio: string
-  CompletionRatio: string
-  ImageRatio: string
-  AudioRatio: string
-  AudioCompletionRatio: string
-  ExposeRatioEnabled: boolean
-  'billing_setting.billing_mode': string
-  'billing_setting.billing_expr': string
-  'billing_setting.plugin_billing_expr': string
-  'tool_price_setting.prices': string
-  TopupGroupRatio: string
-  GroupRatio: string
-  UserUsableGroups: string
-  GroupGroupRatio: string
-  AutoGroups: string
-  MaxTokenAutoGroups: number
-  DefaultUseAutoGroup: boolean
-  'group_ratio_setting.group_special_usable_group': string
-}
-
 export type BillingSettings = {
   QuotaForNewUser: number
   QuotaForInviter: number

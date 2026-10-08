@@ -38,7 +38,6 @@ const legacySettingsTabs: Record<string, string> = {
   payment: '/system-settings/billing/payment',
   ratio: '/system-settings/billing/model-pricing',
   ratelimit: '/system-settings/security/rate-limit',
-  models: '/system-settings/models/global',
   performance: '/system-settings/operations/performance',
   system: '/system-settings/site/system-info',
   other: '/system-settings/site/system-info',
@@ -86,6 +85,22 @@ export function resolveLegacyRoute(rawHref: string): string | null {
   }
   if (pathname.startsWith('/console/chat/')) {
     return buildTargetHref('/dashboard', source)
+  }
+
+  // The system-settings "Models" group was removed. Two of its former sections
+  // had already been superseded by the request-policies group, so keep pointing
+  // those at their new home and send every other stale path to the settings root.
+  if (pathname === '/system-settings/models/channel-affinity') {
+    return buildTargetHref('/system-settings/request-policies/routing', source)
+  }
+  if (pathname === '/system-settings/models/routing-reliability') {
+    return buildTargetHref('/system-settings/request-policies/routing', source)
+  }
+  if (
+    pathname === '/system-settings/models' ||
+    pathname.startsWith('/system-settings/models/')
+  ) {
+    return buildTargetHref('/system-settings', source)
   }
 
   const target = legacyConsoleRoutes[pathname]

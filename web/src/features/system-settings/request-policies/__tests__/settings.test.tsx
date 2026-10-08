@@ -36,7 +36,6 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '@/lib/api'
-import { Route as ModelsRoute } from '@/routes/_authenticated/system-settings/models/$section'
 import { Route as OperationsRoute } from '@/routes/_authenticated/system-settings/operations/$section'
 import { Route as PoliciesRoute } from '@/routes/_authenticated/system-settings/request-policies/$section'
 import { Route as PolicyIndexRoute } from '@/routes/_authenticated/system-settings/request-policies/index'
@@ -81,11 +80,6 @@ async function renderPolicies(path: string) {
       getParentRoute: () => authenticated,
       path: '/system-settings/request-policies/',
       beforeLoad: PolicyIndexRoute.options.beforeLoad as () => void,
-    }),
-    createRoute({
-      getParentRoute: () => authenticated,
-      path: '/system-settings/models/$section',
-      beforeLoad: ModelsRoute.options.beforeLoad as PolicyBeforeLoad,
     }),
     createRoute({
       getParentRoute: () => authenticated,
@@ -350,8 +344,6 @@ describe('request policy settings', () => {
   })
 
   it.each([
-    ['/system-settings/models/channel-affinity', 'routing'],
-    ['/system-settings/models/routing-reliability', 'routing'],
     ['/system-settings/security/sensitive-words', 'filtering'],
     ['/system-settings/operations/monitoring', 'health'],
     ['/system-settings/request-policies/', 'routing'],

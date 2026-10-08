@@ -60,7 +60,6 @@ describe('legacy frontend route migration', () => {
       payment: '/system-settings/billing/payment',
       ratio: '/system-settings/billing/model-pricing',
       ratelimit: '/system-settings/security/rate-limit',
-      models: '/system-settings/models/global',
       performance: '/system-settings/operations/performance',
       system: '/system-settings/site/system-info',
       other: '/system-settings/site/system-info',
@@ -74,6 +73,36 @@ describe('legacy frontend route migration', () => {
     expect(resolveLegacyRoute('/console/setting?tab=unknown')).toBe(
       '/system-settings?tab=unknown'
     )
+    // The "models" tab target no longer exists, so it falls back like any other
+    // unknown tab.
+    expect(resolveLegacyRoute('/console/setting?tab=models')).toBe(
+      '/system-settings?tab=models'
+    )
+  })
+
+  test('retires the removed system-settings "Models" group', () => {
+    // Former sub-sections keep pointing at their request-policies home.
+    expect(resolveLegacyRoute('/system-settings/models/channel-affinity')).toBe(
+      '/system-settings/request-policies/routing'
+    )
+    expect(
+      resolveLegacyRoute(
+        '/system-settings/models/routing-reliability?view=1#top'
+      )
+    ).toBe('/system-settings/request-policies/routing?view=1#top')
+    // Every other stale path lands on the settings root.
+    expect(resolveLegacyRoute('/system-settings/models')).toBe(
+      '/system-settings'
+    )
+    expect(resolveLegacyRoute('/system-settings/models/')).toBe(
+      '/system-settings'
+    )
+    expect(resolveLegacyRoute('/system-settings/models/global')).toBe(
+      '/system-settings'
+    )
+    expect(
+      resolveLegacyRoute('/system-settings/models/claude?tab=advanced')
+    ).toBe('/system-settings?tab=advanced')
   })
 
   test('safely redirects unknown console locations without touching new routes', () => {
