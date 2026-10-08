@@ -8,10 +8,7 @@
 
 <p align="center">
   <a href="./README.zh_CN.md">简体中文</a> |
-  <a href="./README.zh_TW.md">繁體中文</a> |
-  <strong>English</strong> |
-  <a href="./README.fr.md">Français</a> |
-  <a href="./README.ja.md">日本語</a>
+  <strong>English</strong>
 </p>
 
 <p align="center">
