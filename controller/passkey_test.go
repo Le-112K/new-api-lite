@@ -674,7 +674,6 @@ func TestPasskeyDomainErrorsRespectRequestLanguage(t *testing.T) {
 		language, invalid, unavailable, removal string
 	}{
 		{"zh-CN", "通行密钥域名无效。请填写域名，不包含协议、端口、路径或通配符。", "此通行密钥域名无法在当前网站使用。请前往原网站或选择其他验证方式。", "请核对受影响的通行密钥并确认删除域名。配置或影响范围发生变化后，需要重新确认。"},
-		{"zh-TW", "通行金鑰網域無效。請填寫網域，不包含通訊協定、連接埠、路徑或萬用字元。", "此通行金鑰網域無法在目前網站使用。請前往原網站或選擇其他驗證方式。", "請核對受影響的通行金鑰並確認刪除網域。設定或影響範圍變更後，需要重新確認。"},
 		{"en", "Invalid Passkey domain. Enter a domain without a scheme, port, path or wildcard.", "This Passkey domain is not available on this website. Use its original website or another verification method.", "Review the affected Passkeys and confirm the domain removal. If the settings or impact have changed, confirmation is required again."},
 	} {
 		t.Run(locale.language, func(t *testing.T) {

@@ -48,7 +48,6 @@ import type {
 import { pricingOptions } from '@/features/model-pricing/pricing'
 import { usePricingColumns } from '@/features/pricing/components/pricing-columns'
 import type { PricingModel } from '@/features/pricing/types'
-import fr from '@/i18n/locales/fr.json'
 import zhCN from '@/i18n/locales/zh.json'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
@@ -61,6 +60,18 @@ import { ModelsDialogs } from '../components/models-dialogs'
 import { ModelsProvider } from '../components/models-provider'
 import { ModelsTable } from '../components/models-table'
 import type { Model } from '../types'
+
+// Test-only pseudo-locale with deliberately long labels: truncation and wrapping
+// must hold up for any language, not just the shipped English one. Kept inline
+// so the layout tests do not depend on which locales the app ships.
+const LONG_LABEL_LNG = 'long-label'
+const LONG_LABEL_TRANSLATIONS = {
+  'Channels {{channels}} · Groups {{groups}}':
+    'Canaux {{channels}} · Groupes {{groups}}',
+  Unavailable: 'Indisponible',
+  'No channel is configured. This model will not appear in the model square.':
+    'Aucun canal configuré. Ce modèle ne figurera pas dans le catalogue.',
+}
 
 const metadata: Model = {
   id: 7,
@@ -195,7 +206,13 @@ beforeEach(() => {
     currency: { ...DEFAULT_CURRENCY_CONFIG, quotaDisplayType: 'USD' },
   })
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
-  i18n.addResourceBundle('fr', 'translation', fr.translation, true, true)
+  i18n.addResourceBundle(
+    LONG_LABEL_LNG,
+    'translation',
+    LONG_LABEL_TRANSLATIONS,
+    true,
+    true
+  )
   i18n.addResourceBundle('zhCN', 'translation', zhCN.translation, true, true)
 })
 
@@ -308,7 +325,7 @@ it('keeps long model names and translated channel labels truncated inside their 
   expect(screen.getByText(longName)).toHaveClass('truncate')
   expect(screen.getByText('Add metadata')).toHaveClass('truncate')
   await act(async () => {
-    await i18n.changeLanguage('fr')
+    await i18n.changeLanguage(LONG_LABEL_LNG)
   })
   const label = screen.getAllByText(
     i18n.t('Channels {{channels}} · Groups {{groups}}', {
@@ -516,7 +533,7 @@ it('opens a long translated reason by touch in the mobile card without requiring
   }))
   await renderList([metadata])
   await act(async () => {
-    await i18n.changeLanguage('fr')
+    await i18n.changeLanguage(LONG_LABEL_LNG)
   })
   const user = userEvent.setup()
   const trigger = screen.getByRole('button', {

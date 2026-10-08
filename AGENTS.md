@@ -31,7 +31,7 @@ This is an AI API gateway/proxy built with Go. It aggregates 40+ upstream AI pro
 
 ### Frontend (`web/src/i18n/`)
 - Library: `i18next` + `react-i18next` + `i18next-browser-languagedetector`
-- Languages: en (base), zh (fallback), zh-TW, fr, ru, ja, vi
+- Languages: en (base), zh (Simplified Chinese)
 - Translation files: `web/src/i18n/locales/{lang}.json` — flat JSON, keys are English source strings
 - Usage: `useTranslation()` hook, call `t('English key')` in components
 - CLI tools: `bun run i18n:sync` (from `web/`)
@@ -156,7 +156,7 @@ Tasks that touch none of these (for example unrelated frontend work, authenticat
   - `bun run i18n:*` for i18n tooling
 - Frontend UI text must support i18n with `i18next`/`react-i18next`. Use flat JSON locale files in `web/src/i18n/locales/{lang}.json`, with English source strings as keys.
 - In React components, use `useTranslation()` and call `t('English key')` for user-facing text.
-- **Number formatting and Intl locales (mandatory):** Reuse `@/lib/format` for ordinary number/compact-number display and `@/lib/currency` for monetary values; preserve each formatter's precision and unit semantics. Interface language codes such as `zhCN` / `zhTW` are NOT valid Intl locales. Any interface language passed to `Intl.*`, `toLocaleString` / `toLocaleDateString` / `toLocaleTimeString`, or a locale-aware formatting helper MUST first pass through `toIntlLocale` from `@/i18n/languages`. Do not duplicate language mappings or pass raw language codes through aliases. Follow `web/AGENTS.md` for the lint rule and regression requirements.
+- **Number formatting and Intl locales (mandatory):** Reuse `@/lib/format` for ordinary number/compact-number display and `@/lib/currency` for monetary values; preserve each formatter's precision and unit semantics. Interface language codes such as `zhCN` are NOT valid Intl locales. Any interface language passed to `Intl.*`, `toLocaleString` / `toLocaleDateString` / `toLocaleTimeString`, or a locale-aware formatting helper MUST first pass through `toIntlLocale` from `@/i18n/languages`. Do not duplicate language mappings or pass raw language codes through aliases. Follow `web/AGENTS.md` for the lint rule and regression requirements.
 - Follow `web/AGENTS.md` for detailed frontend conventions, including TypeScript, component structure, styling, accessibility, testing, and build checks.
 
 ### Project Governance

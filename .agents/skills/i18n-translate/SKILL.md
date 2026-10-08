@@ -3,7 +3,7 @@ name: i18n-translate
 description: >-
   Complete and maintain frontend i18n translations for this project. Covers
   finding missing translation keys, detecting untranslated entries, and adding
-  translations for all supported locales (en, zh, zh-TW, fr, ja, ru, vi). Use for any
+  translations for both supported locales (en, zh). Use for any
   task involving frontend locale files, missing translation keys, untranslated
   UI text, `t(...)` keys, `useTranslation()`, static i18n keys, button/label/
   toast/dialog/placeholder/validation copy, or adding/fixing even a single
@@ -25,12 +25,13 @@ description: >-
 ### Hard Constraint: Locale Writes Go Through the Script
 
 - You MUST NOT edit `web/src/i18n/locales/*.json` directly with text-editing tools (StrReplace, Write, search-and-replace, manual JSON edits, etc.). This applies even to a single key.
-- ALL locale writes MUST go through the `add-missing-keys.mjs` script, followed by `bun run i18n:sync`. The script is the only sanctioned way to add or change locale values.
+- ALL locale writes MUST go through a script, followed by `bun run i18n:sync`. Scripts are the only sanctioned way to add, change, or delete locale values.
 - Why this is mandatory, not optional:
-  - Hand-editing reliably drops one or more of the seven locales (`en`, `zh`, `zh-TW`, `fr`, `ja`, `ru`, `vi`), leaving keys missing in some languages.
+  - Hand-editing reliably drops one of the two locales (`en`, `zh`), leaving keys missing in one language.
   - Hand-editing breaks the required alphabetical key order and introduces JSON syntax errors (trailing commas, mismatched quotes).
-  - The script writes all seven files atomically with consistent sorting, so the locale set stays in sync by construction.
+  - The script writes both files in one pass with consistent sorting, so the locale set stays in sync by construction.
 - The script does not do the translation for you. You still must reason out each locale's copy and populate the script's `newKeys` object; the script only handles insertion, sorting, and writing. Do not skip the script just because the thinking happens regardless.
+- Deleting keys is a script job too: load both files, drop the key, re-sort, and write back with the strict formatting below. A Python/Node one-liner with a byte-for-byte round-trip check is acceptable — a hand edit is not.
 
 ## Scope Checklist
 
@@ -45,18 +46,19 @@ Do not skip this workflow because the fix is "just one key".
 
 ## Overview
 
-- Locale files: `web/src/i18n/locales/{en,zh,zh-TW,fr,ja,ru,vi}.json`
+- Locale files: `web/src/i18n/locales/{en,zh}.json`
 - Format: flat JSON under `"translation"` key, keys are English source strings
-- Base locale: `en.json` (most keys), fallback: `zh` (Chinese)
+- Base locale: `en.json`, Chinese: `zh.json`
 - Sync script: `bun run i18n:sync` (from `web/`)
-- All `t()` calls must have corresponding keys in every locale file
+- All `t()` calls must have corresponding keys in both locale files
+- Only two locales ship. `fr` / `ja` / `ru` / `vi` / `zh-TW` were removed on purpose — do not re-add them, and do not treat their absence as a gap.
 
 ## Small Fix Path
 
 For a single known missing key (still script-only, no direct JSON edits):
 
-1. Confirm the exact key at the call site and verify it is absent from all locale files.
-2. Add the key via `add-missing-keys.mjs`, populating its `newKeys` object for every supported locale: `en`, `zh`, `zh-TW`, `fr`, `ja`, `ru`, `vi`. Even one key goes through the script; do not hand-edit the JSON.
+1. Confirm the exact key at the call site and verify it is absent from both locale files.
+2. Add the key via a script, populating its `newKeys` object for both supported locales: `en`, `zh`. Even one key goes through the script; do not hand-edit the JSON.
 3. The script preserves the flat `"translation"` object and keeps keys alphabetically sorted automatically.
 4. Run a targeted search for the key in code and locale files.
 5. Run `bun run i18n:sync` to normalize file order. This step is mandatory, not optional.
@@ -167,7 +169,7 @@ const brandNames = new Set([
   'WeChat','Xinference','Xunfei','AI Proxy','One API',
 ])
 
-const locales = ['fr', 'ja', 'ru', 'zh', 'zh-TW', 'vi']
+const locales = ['zh']
 
 for (const locale of locales) {
   const locFile = JSON.parse(await fs.readFile(path.join(LOCALES_DIR, `${locale}.json`), 'utf8'))
@@ -196,7 +198,7 @@ for (const locale of locales) {
 
 ### Step 4: Add translations
 
-This script is the ONLY sanctioned way to write locale values. You MUST NOT bypass it by hand-filling the JSON files. Create `web/scripts/add-missing-keys.mjs` with this exact structure:
+A script is the ONLY sanctioned way to write locale values. You MUST NOT bypass it by hand-filling the JSON files. Create `web/scripts/add-missing-keys.mjs` with this exact structure:
 
 ```javascript
 import fs from 'node:fs/promises'
@@ -211,11 +213,6 @@ function stableStringify(obj) {
 const newKeys = {
   en: { /* "key": "English value" */ },
   zh: { /* "key": "中文翻译" */ },
-  'zh-TW': { /* "key": "繁體中文翻譯" */ },
-  fr: { /* "key": "Traduction française" */ },
-  ja: { /* "key": "日本語翻訳" */ },
-  ru: { /* "key": "Русский перевод" */ },
-  vi: { /* "key": "Bản dịch tiếng Việt" */ },
 }
 
 async function main() {
@@ -278,19 +275,16 @@ Delete temporary scripts after completion.
 ### Length and Layout Awareness
 
 - Consider whether translated text may overflow the UI before choosing final wording, especially for buttons, table headers, menu items, labels, toasts, dialog titles, tabs, badges, and empty states.
-- For languages that often expand relative to English, especially French, Russian, and Vietnamese, prefer natural but compact wording.
+- The only bundled translation is Chinese, which is normally *shorter* than the English source. Layout risk therefore sits on the English side (`en` is the source text), so keep English copy compact rather than trimming the Chinese.
 - Do not sacrifice meaning just to shorten text. When the call site has limited space, choose the shortest clear translation that preserves the UI intent.
 - For interpolated variables, counts, model names, provider names, quotas, and dates, consider the longest realistic rendered text, not only the translation string itself.
 
 | Language | Code | Notes |
 |----------|------|-------|
 | English | en | Base locale, key = value |
-| Chinese | zh | Fallback locale, must be complete |
-| Traditional Chinese | zh-TW | Use natural Traditional Chinese wording |
-| French | fr | Many English cognates are valid (e.g., "Configuration") |
-| Japanese | ja | Use katakana for technical loanwords |
-| Russian | ru | Use formal register |
-| Vietnamese | vi | Use standard Vietnamese |
+| Chinese | zh | Simplified Chinese, must be complete |
+
+> `zh-TW` (Traditional Chinese) is no longer bundled. If a source string arrives carrying a `zh-TW` BCP-47 tag — model metadata, vendor payloads — it is *data*, handled by `lib/localized-text.ts`, not a UI locale. Do not add a `zh-TW.json` for it.
 
 **Keep as English (do not translate):**
 - Brand/product names (OpenAI, Claude, Gemini, etc.)
@@ -312,3 +306,6 @@ Delete temporary scripts after completion.
 5. Delete temporary scripts after completion
 6. The `{{variable}}` placeholders in keys must be preserved in all translations
 7. NEVER edit `locales/*.json` directly. Any non-script write to a locale file (StrReplace, Write, manual JSON edit) is non-compliant, including single-key fixes.
+8. On-disk format is byte-exact and enforced by `stableStringify`: `JSON.stringify(obj, null, 2)`, **raw UTF-8** (Chinese characters are not `\u`-escaped), plus one trailing newline. The single exception is `footer.newapi.projectAttributionSuffix`, which is serialized as `footer.new\u0061pi.projectAttributionSuffix` to keep the brand string out of the diff. Reproduce this exactly or the diff will show thousands of unrelated lines.
+9. `sync-i18n.mjs` auto-picks the base locale as the file with the **most leaf keys** and rewrites every other file in that file's key order. `en.json` is the intended base, so never let another locale outgrow it — if `en` accumulates fewer keys than `zh`, key ordering silently flips. Verify with a quick leaf-key count before running sync.
+10. `_reports/` is gitignored; `_extras/*.extras.json` is written only when a locale has keys the base lacks (a sign the base is stale). Neither should be committed.

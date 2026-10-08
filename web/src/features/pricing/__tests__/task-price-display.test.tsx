@@ -241,9 +241,12 @@ it('updates count unit labels across cards, table cells and breakdowns with loca
       </div>
     </>
   )
+  // `zh-TW` is a BCP-47 tag carried by model metadata, not a UI locale: it must
+  // still resolve from the data map even though no Traditional-Chinese interface
+  // language ships. `fr` proves the same for an unmapped language (falls to `en`).
   for (const [language, unit] of [
     ['en', 'image'],
-    ['zhTW', '張'],
+    ['zh-TW', '張'],
     ['zhCN', '张'],
     ['fr', 'image'],
   ]) {

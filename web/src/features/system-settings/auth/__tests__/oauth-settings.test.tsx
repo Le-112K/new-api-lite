@@ -32,7 +32,6 @@ import { I18nextProvider } from 'react-i18next'
 import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import zhTW from '@/i18n/locales/zh-TW.json'
 import zh from '@/i18n/locales/zh.json'
 import { api } from '@/lib/api'
 
@@ -107,7 +106,7 @@ beforeEach(async () => {
   await testI18n.init({
     lng: 'en',
     fallbackLng: 'en',
-    resources: { en: { translation: {} }, zh, 'zh-TW': zhTW },
+    resources: { en: { translation: {} }, zh },
     interpolation: { escapeValue: false },
   })
   vi.spyOn(api, 'put').mockResolvedValue({ data: { success: true } })
@@ -279,30 +278,25 @@ describe('OAuth settings saves', () => {
     )
   })
 
-  it.each(['zh', 'zh-TW'])(
-    'uses the Well-Known technical term in %s validation',
-    async (language) => {
-      await testI18n.changeLanguage(language)
-      const user = userEvent.setup()
-      await renderSettings()
-      await user.click(screen.getByRole('tab', { name: 'OIDC' }))
-      await user.type(
-        screen.getByRole('textbox', { name: 'Well-Known URL' }),
-        'invalid'
-      )
-      await user.click(
-        screen.getByRole('button', { name: testI18n.t('Save Changes') })
-      )
+  it('uses the Well-Known technical term in zh validation', async () => {
+    await testI18n.changeLanguage('zh')
+    const user = userEvent.setup()
+    await renderSettings()
+    await user.click(screen.getByRole('tab', { name: 'OIDC' }))
+    await user.type(
+      screen.getByRole('textbox', { name: 'Well-Known URL' }),
+      'invalid'
+    )
+    await user.click(
+      screen.getByRole('button', { name: testI18n.t('Save Changes') })
+    )
 
-      const url = screen.getByRole('textbox', { name: 'Well-Known URL' })
-      expect(url).toHaveAccessibleDescription(
-        expect.stringContaining('Well-Known URL')
-      )
-      expect(url).not.toHaveAccessibleDescription(
-        expect.stringContaining('知名')
-      )
-    }
-  )
+    const url = screen.getByRole('textbox', { name: 'Well-Known URL' })
+    expect(url).toHaveAccessibleDescription(
+      expect.stringContaining('Well-Known URL')
+    )
+    expect(url).not.toHaveAccessibleDescription(expect.stringContaining('知名'))
+  })
 
   it('keeps edits available for retry when OIDC discovery fails', async () => {
     const client = axios.create()

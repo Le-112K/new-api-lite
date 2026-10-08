@@ -51,15 +51,9 @@ describe('resolveLocalizedText', () => {
       expected: '可靈影片生成',
     },
     {
-      name: 'matches zh-TW case-insensitively when i18next language is zh-tw',
+      name: 'matches a hyphenated zh-TW tag regardless of case',
       value: KLING,
       language: 'zh-tw',
-      expected: '可靈影片生成',
-    },
-    {
-      name: 'maps the project i18next code zhTW onto the zh-TW map key',
-      value: KLING,
-      language: 'zhTW',
       expected: '可靈影片生成',
     },
     {
