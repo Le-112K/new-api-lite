@@ -55,6 +55,23 @@ func seedUser(t *testing.T, id int, quota int) {
 	require.NoError(t, model.DB.Create(user).Error)
 }
 
+// seedToken inserts an enabled API token with a generous remaining quota.
+// Billing tests that focus on the wallet/funding path need a token that can
+// absorb the pre-consumption, otherwise the token-quota shortfall masks the
+// behaviour under test.
+func seedToken(t *testing.T, userID int, key string, quota int) *model.Token {
+	t.Helper()
+	token := &model.Token{
+		UserId:      userID,
+		Key:         key,
+		Name:        "billing-test",
+		RemainQuota: quota,
+		Status:      common.TokenStatusEnabled,
+	}
+	require.NoError(t, model.DB.Create(token).Error)
+	return token
+}
+
 // truncate registers a cleanup that wipes the core tables after each test.
 func truncate(t *testing.T) {
 	t.Helper()

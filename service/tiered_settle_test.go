@@ -372,10 +372,12 @@ func TestPrepareTieredBillingForSelectedGroupStartsBillingAfterFreeGroup(t *test
 
 	const userID = 700
 	seedUser(t, userID, 500_000)
+	token := seedToken(t, userID, "tiered-free-group", 500_000)
 
 	relayInfo := &relaycommon.RelayInfo{
 		UserId:          userID,
-		IsPlayground:    true,
+		TokenId:         token.Id,
+		TokenKey:        token.Key,
 		ForcePreConsume: true,
 		OriginModelName: "gpt-test",
 		UserSetting: dto.UserSetting{
@@ -447,10 +449,12 @@ func TestPrepareTieredBillingForSelectedGroupTopUpArrearsAllowsNegativeBalance(t
 	// uncovered 30k becomes arrears (negative balance), mirroring how
 	// settlement charges a positive delta unconditionally.
 	seedUser(t, userID, 20_000)
+	token := seedToken(t, userID, "tiered-topup-arrears", 500_000)
 
 	relayInfo := &relaycommon.RelayInfo{
 		UserId:                userID,
-		IsPlayground:          true,
+		TokenId:               token.Id,
+		TokenKey:              token.Key,
 		FinalPreConsumedQuota: 50_000,
 		TieredBillingSnapshot: &billingexpr.BillingSnapshot{
 			BillingMode:               "tiered_expr",
@@ -495,10 +499,12 @@ func TestBillingSessionReserveWalletTopUpDecrementsBalance(t *testing.T) {
 
 	const userID = 702
 	seedUser(t, userID, 500_000)
+	token := seedToken(t, userID, "wallet-topup-reserve", 500_000)
 
 	relayInfo := &relaycommon.RelayInfo{
-		UserId:       userID,
-		IsPlayground: true,
+		UserId:   userID,
+		TokenId:  token.Id,
+		TokenKey: token.Key,
 	}
 	session := &BillingSession{
 		relayInfo:        relayInfo,

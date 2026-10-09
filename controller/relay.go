@@ -318,4 +318,3 @@ func RelayNotFound(c *gin.Context) {
 		"error": err,
 	})
 }
-

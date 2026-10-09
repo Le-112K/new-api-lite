@@ -183,9 +183,6 @@ func PreviewModelPricingConversion(name string, draft PricingValues) (*ModelPric
 		if !slices.Contains(channel.GetModels(), name) {
 			continue
 		}
-		if channel.Type == constant.ChannelTypeTaskPlugin {
-			return &ModelPricingConversion{UnsupportedReason: "Task pricing must be converted manually using the task usage schema."}, nil
-		}
 		if slices.Contains(common.GetEndpointTypesByChannelType(channel.Type, name), constant.EndpointTypeOpenAIVideo) {
 			return &ModelPricingConversion{UnsupportedReason: "Video pricing must be converted manually."}, nil
 		}

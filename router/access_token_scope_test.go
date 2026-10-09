@@ -100,7 +100,7 @@ func TestAccessTokenRouteRulesCoverEveryDashboardRoute(t *testing.T) {
 	registered := map[string]bool{}
 	panel := map[string]bool{}
 	for _, route := range engine.Routes() {
-		if !strings.HasPrefix(route.Path, "/api/") && !strings.HasPrefix(route.Path, "/pg/") {
+		if !strings.HasPrefix(route.Path, "/api/") {
 			continue
 		}
 		key := route.Method + " " + route.Path
