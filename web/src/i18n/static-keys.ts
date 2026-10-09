@@ -32,10 +32,8 @@ export const STATIC_I18N_KEYS = [
   // Channel provider labels, descriptions and presentation badges.
   'Zhipu GLM',
   'Connect to the OpenAI API or compatible services',
-  'Generate Midjourney images through MjProxy',
   'Connect to OpenAI models deployed on Azure',
   'Connect to local or self-hosted Ollama models',
-  'Generate Midjourney images through MjProxyPlus',
   'Access model services through the OhMyGPT gateway',
   'Legacy full-URL integration; use Advanced Custom for new channels',
   'Deprecated',
@@ -209,7 +207,6 @@ export const STATIC_I18N_KEYS = [
   'stale',
   'Master instances run scheduled background tasks.',
   'Worker instances do not run master-only background tasks.',
-  'Drawing task polling',
 
   // Pricing constants
   'Name',

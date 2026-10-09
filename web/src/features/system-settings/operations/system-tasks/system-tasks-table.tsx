@@ -69,10 +69,6 @@ const PROGRESS_BAR_CLASS_NAME: Record<SystemTaskStatus, string> = {
   failed: '[&_[data-slot=progress-indicator]]:bg-destructive',
 }
 
-const TYPE_DISPLAY_ID: Record<string, string> = {
-  midjourney_poll: 'drawing_task_poll',
-}
-
 function getProgress(task: SystemTask): number | null {
   const progress = (task.state as { progress?: unknown } | undefined)?.progress
   if (typeof progress !== 'number' || Number.isNaN(progress)) return null
@@ -119,7 +115,7 @@ export function SystemTasksTable(props: SystemTasksTableProps) {
                     {t(SYSTEM_TASK_TYPE_LABEL[task.type] ?? task.type)}
                   </div>
                   <div className='text-muted-foreground font-mono text-[11px]'>
-                    {TYPE_DISPLAY_ID[task.type] ?? task.type}
+                    {task.type}
                   </div>
                 </div>
               </TableCell>

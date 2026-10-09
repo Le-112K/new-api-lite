@@ -18,20 +18,6 @@ import (
 	"github.com/QuantumNous/new-api/relaykit/types"
 )
 
-func MidjourneyErrorWrapper(code int, desc string) *taskdto.MidjourneyResponse {
-	return &taskdto.MidjourneyResponse{
-		Code:        code,
-		Description: desc,
-	}
-}
-
-func MidjourneyErrorWithStatusCodeWrapper(code int, desc string, statusCode int) *taskdto.MidjourneyResponseWithStatusCode {
-	return &taskdto.MidjourneyResponseWithStatusCode{
-		StatusCode: statusCode,
-		Response:   *MidjourneyErrorWrapper(code, desc),
-	}
-}
-
 //// OpenAIErrorWrapper wraps an error into an OpenAIErrorWithStatusCode
 //func OpenAIErrorWrapper(err error, code string, statusCode int) *dto.OpenAIErrorWithStatusCode {
 //	text := err.Error()

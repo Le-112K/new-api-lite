@@ -10,6 +10,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// retiredThemeOptionKey belonged to the Classic dashboard frontend, which no
+// longer exists. The row is deleted on startup instead of being normalized so
+// the options table stops carrying a setting nothing can read.
 const retiredThemeOptionKey = "theme.frontend"
 
 type legacyOptionTransform func(string) (string, error)
@@ -23,8 +26,8 @@ func MigrateRetiredFrontendOptions() error {
 	}
 
 	var migrationErrors []error
-	if err := normalizeRetiredThemeOption(); err != nil {
-		migrationErrors = append(migrationErrors, fmt.Errorf("normalize %s: %w", retiredThemeOptionKey, err))
+	if err := deleteRetiredThemeOption(); err != nil {
+		migrationErrors = append(migrationErrors, fmt.Errorf("delete %s: %w", retiredThemeOptionKey, err))
 	}
 
 	migrations := []struct {
@@ -47,20 +50,13 @@ func MigrateRetiredFrontendOptions() error {
 	return errors.Join(migrationErrors...)
 }
 
-func normalizeRetiredThemeOption() error {
+func deleteRetiredThemeOption() error {
 	return DB.Transaction(func(tx *gorm.DB) error {
-		var option Option
-		err := tx.Where(&Option{Key: retiredThemeOptionKey}).First(&option).Error
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return tx.Create(&Option{Key: retiredThemeOptionKey, Value: "default"}).Error
-		}
+		err := tx.Where(&Option{Key: retiredThemeOptionKey}).Delete(&Option{}).Error
 		if err != nil {
 			return err
 		}
-		if option.Value == "default" {
-			return nil
-		}
-		return tx.Model(&option).Update("value", "default").Error
+		return nil
 	})
 }
 

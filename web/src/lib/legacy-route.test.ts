@@ -55,7 +55,6 @@ describe('legacy frontend route migration', () => {
     const settingsTabs = {
       operation: '/system-settings/operations/behavior',
       dashboard: '/system-settings/content/dashboard',
-      drawing: '/system-settings/content/drawing',
       payment: '/system-settings/billing/payment',
       ratio: '/system-settings/billing/model-pricing',
       ratelimit: '/system-settings/security/rate-limit',

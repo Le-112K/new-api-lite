@@ -238,10 +238,6 @@ const providers = [
   },
   { category: 'Nous Research', models: ['nousresearch/hermes-3', 'hermes-3'] },
   { category: '360 AI', models: ['360gpt-pro', '360zhinao'] },
-  {
-    category: 'Midjourney',
-    models: ['midjourney', 'mj_imagine', 'mj-blend', 'swap_face'],
-  },
   { category: 'Kling', models: ['kling-v2'] },
   { category: 'Vidu', models: ['vidu-q2'] },
   { category: 'Suno', models: ['suno-v4'] },
@@ -278,6 +274,12 @@ it.each([
   'wan',
   'aqa-extra',
   't2v-02',
+  // Midjourney models are no longer relayed, so their names are unclassified
+  // too. Only legacy log rows can still carry them.
+  'midjourney',
+  'mj_imagine',
+  'mj-blend',
+  'swap_face',
 ])('keeps unknown model %s in Other with the dot fallback', (model) => {
   expect(getModelCategory(model)).toBe('Other')
   const { container } = render(<ModelBadge modelName={model} />)

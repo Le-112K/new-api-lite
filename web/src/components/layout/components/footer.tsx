@@ -207,10 +207,6 @@ export function Footer(props: FooterProps) {
             href: 'https://github.com/songquanpeng/one-api',
           },
           {
-            text: t('footer.columns.related.links.midjourney'),
-            href: 'https://github.com/novicezk/midjourney-proxy',
-          },
-          {
             text: t('footer.columns.related.links.newApiKeyTool'),
             href: 'https://github.com/Calcium-Ion/new-api-key-tool',
           },

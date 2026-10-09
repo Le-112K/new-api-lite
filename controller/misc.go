@@ -64,7 +64,6 @@ func GetStatus(c *gin.Context) {
 		"telegram_oauth":              common.TelegramOAuthEnabled,
 		"telegram_oauth_configured":   oauth.TelegramConfigurationError() == nil,
 		"telegram_bot_name":           common.TelegramBotName,
-		"theme":                       "default",
 		"system_name":                 common.SystemName,
 		"logo":                        common.Logo,
 		"footer_html":                 common.Footer,
@@ -81,12 +80,10 @@ func GetStatus(c *gin.Context) {
 		"custom_currency_symbol":        operation_setting.GetGeneralSetting().CustomCurrencySymbol,
 		"custom_currency_exchange_rate": operation_setting.GetGeneralSetting().CustomCurrencyExchangeRate,
 		"enable_batch_update":           common.BatchUpdateEnabled,
-		"enable_drawing":                common.DrawingEnabled,
 		"enable_task":                   common.TaskEnabled,
 		"enable_data_export":            common.DataExportEnabled,
 		"data_export_default_time":      common.DataExportDefaultTime,
 		"default_collapse_sidebar":      common.DefaultCollapseSidebar,
-		"mj_notify_enabled":             setting.MjNotifyEnabled,
 		"demo_site_enabled":             operation_setting.DemoSiteEnabled,
 		"self_use_mode_enabled":         operation_setting.SelfUseModeEnabled,
 		"register_enabled":              common.RegisterEnabled,
@@ -194,17 +191,6 @@ func GetUserAgreement(c *gin.Context) {
 
 func GetPrivacyPolicy(c *gin.Context) {
 	serveRevalidatedJSON(c, system_setting.GetLegalSettings().PrivacyPolicy)
-}
-
-func GetMidjourney(c *gin.Context) {
-	common.OptionMapRWMutex.RLock()
-	defer common.OptionMapRWMutex.RUnlock()
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data":    common.OptionMap["Midjourney"],
-	})
-	return
 }
 
 func GetHomePageContent(c *gin.Context) {

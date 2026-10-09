@@ -50,14 +50,6 @@ func init() {
 			})
 		}
 	}
-	for modelName, _ := range constant.MidjourneyModel2Action {
-		openAIModels = append(openAIModels, dto.OpenAIModels{
-			Id:      modelName,
-			Object:  "model",
-			Created: 1626777600,
-			OwnedBy: "midjourney",
-		})
-	}
 	openAIModelsMap = make(map[string]dto.OpenAIModels)
 	for _, aiModel := range openAIModels {
 		openAIModelsMap[aiModel.Id] = aiModel

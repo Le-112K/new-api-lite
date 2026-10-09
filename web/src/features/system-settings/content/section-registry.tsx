@@ -21,7 +21,6 @@ import { createSectionRegistry } from '../utils/section-registry'
 import { AnnouncementsSection } from './announcements-section'
 import { ApiInfoSection } from './api-info-section'
 import { DashboardSection } from './dashboard-section'
-import { DrawingSettingsSection } from './drawing-settings-section'
 import { FAQSection } from './faq-section'
 import { UptimeKumaSection } from './uptime-kuma-section'
 
@@ -89,22 +88,6 @@ const CONTENT_SECTIONS = [
       <UptimeKumaSection
         enabled={settings['console_setting.uptime_kuma_enabled']}
         data={settings['console_setting.uptime_kuma_groups']}
-      />
-    ),
-  },
-  {
-    id: 'drawing',
-    titleKey: 'Drawing',
-    build: (settings: ContentSettings) => (
-      <DrawingSettingsSection
-        defaultValues={{
-          DrawingEnabled: settings.DrawingEnabled,
-          MjNotifyEnabled: settings.MjNotifyEnabled,
-          MjAccountFilterEnabled: settings.MjAccountFilterEnabled,
-          MjForwardUrlEnabled: settings.MjForwardUrlEnabled,
-          MjModeClearEnabled: settings.MjModeClearEnabled,
-          MjActionCheckSuccessEnabled: settings.MjActionCheckSuccessEnabled,
-        }}
       />
     ),
   },

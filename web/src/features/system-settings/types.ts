@@ -223,12 +223,6 @@ export type ContentSettings = {
   DataExportEnabled: boolean
   DataExportDefaultTime: string
   DataExportInterval: number
-  DrawingEnabled: boolean
-  MjNotifyEnabled: boolean
-  MjAccountFilterEnabled: boolean
-  MjForwardUrlEnabled: boolean
-  MjModeClearEnabled: boolean
-  MjActionCheckSuccessEnabled: boolean
 }
 
 export type BillingSettings = {

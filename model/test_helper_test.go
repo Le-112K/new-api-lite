@@ -45,7 +45,6 @@ func TestMain(m *testing.M) {
 		&Redemption{},
 		&Ability{},
 		&Log{},
-		&Midjourney{},
 		&TopUp{},
 		&QuotaData{},
 		&Model{},

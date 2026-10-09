@@ -97,8 +97,6 @@ export function getChannelTypeIcon(type: number): string {
     20: 'OpenRouter', // OpenRouter
 
     // Image/Video generation
-    2: 'Midjourney', // MjProxy
-    5: 'Midjourney', // MjProxyPlus
     50: 'Kling', // Kling
     51: 'Jimeng', // Jimeng
     52: 'Vidu', // Vidu

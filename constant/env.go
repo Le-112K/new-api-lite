@@ -14,7 +14,6 @@ var ForceStreamOption bool
 var CountToken bool
 var GetMediaToken bool
 var GetMediaTokenNotStream bool
-var UpdateTask bool
 var MaxRequestBodyMB int
 var AnonymousRequestBodyLimitKB int
 var AzureDefaultAPIVersion string

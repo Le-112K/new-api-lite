@@ -188,7 +188,6 @@ func initConstantEnv() {
 	constant.CountToken = GetEnvOrDefaultBool("CountToken", true)
 	constant.GetMediaToken = GetEnvOrDefaultBool("GET_MEDIA_TOKEN", true)
 	constant.GetMediaTokenNotStream = GetEnvOrDefaultBool("GET_MEDIA_TOKEN_NOT_STREAM", false)
-	constant.UpdateTask = GetEnvOrDefaultBool("UPDATE_TASK", true)
 	constant.AzureDefaultAPIVersion = GetEnvOrDefaultString("AZURE_DEFAULT_API_VERSION", "2025-04-01-preview")
 	constant.NotifyLimitCount = GetEnvOrDefault("NOTIFY_LIMIT_COUNT", 2)
 	constant.NotificationLimitDurationMinute = GetEnvOrDefault("NOTIFICATION_LIMIT_DURATION_MINUTE", 10)

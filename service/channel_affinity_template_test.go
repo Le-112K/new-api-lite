@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/model"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relaykit/types"
@@ -337,48 +336,6 @@ func TestChannelAffinityHitCodexTemplatePassHeadersEffective(t *testing.T) {
 	require.False(t, exists)
 	_, exists = info.RuntimeHeadersOverride["x-codex-turn-metadata"]
 	require.False(t, exists)
-}
-
-func TestMidjourneyPolicyAcceptance(t *testing.T) {
-	for _, tc := range []struct {
-		name       string
-		status     int
-		code       int
-		properties map[string]any
-		requestErr error
-		accepted   bool
-		reason     string
-	}{
-		{name: "submitted", status: 200, code: 1, accepted: true},
-		{name: "existing task", status: 200, code: 21, accepted: true},
-		{name: "queued", status: 200, code: 22, accepted: true},
-		{name: "HTTP 200 with rejected prompt", status: 200, code: 24, reason: "non_retryable_error"},
-		{name: "failed existing task", status: 200, code: 21, properties: map[string]any{"status": "FAILURE"}, reason: "task_accepted"},
-		{name: "HTTP failure", status: 502, code: 1, reason: "non_retryable_error"},
-		{name: "ambiguous transport failure", status: 502, requestErr: errors.New("connection reset"), reason: "non_retryable_error"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
-			ctx.Request = httptest.NewRequest(http.MethodPost, "/mj/submit/imagine", strings.NewReader(`{}`))
-			ctx.Set("channel_id", 7)
-			state := RequestPolicy(ctx)
-			state.BeginAttempt(&model.Channel{Id: 7}, "default")
-			response := &dto.MidjourneyResponseWithStatusCode{StatusCode: tc.status, Response: dto.MidjourneyResponse{Code: tc.code, Properties: tc.properties}}
-			accepted := RecordMidjourneyPolicyResponse(ctx, response, tc.requestErr)
-			assert.Equal(t, tc.accepted, accepted)
-			assert.False(t, state.Successful, "acceptance alone must not bind before local processing finishes")
-			if accepted {
-				MarkRequestPolicySuccess(ctx, nil)
-				assert.True(t, state.Successful)
-				return
-			}
-			events := state.Events()
-			require.Len(t, events, 3)
-			assert.Equal(t, PolicyDecision{Action: "failure", Reason: "upstream_failure", Source: "upstream"}, events[1].Decision)
-			assert.Equal(t, tc.status, events[1].Status)
-			assert.Equal(t, PolicyDecision{Action: "stop", Reason: tc.reason, Source: "system"}, events[2].Decision, "submissions are never replayed")
-		})
-	}
 }
 
 func TestSessionRulesInheritOrOverrideGlobalDefault(t *testing.T) {

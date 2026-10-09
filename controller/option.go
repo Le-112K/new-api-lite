@@ -85,7 +85,7 @@ func GetOptions(c *gin.Context) {
 	optionValues := make(map[string]string)
 	common.OptionMapRWMutex.Lock()
 	for k, v := range common.OptionMap {
-		if k == "theme.frontend" || k == "billing_setting.billing_mode" || k == "billing_setting.billing_expr" {
+		if k == "billing_setting.billing_mode" || k == "billing_setting.billing_expr" {
 			continue
 		}
 		value := common.Interface2String(v)
@@ -279,13 +279,14 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "theme.frontend":
-		if option.Value != "default" {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "Classic 前端已移除，主题只能设置为 default",
-			})
-			return
-		}
+		// The Classic dashboard frontend is gone. Its theme setting is retired:
+		// the startup migration deletes any leftover row, and writes are refused
+		// so the key cannot be resurrected through the option API.
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Classic 前端已移除，theme.frontend 不可再写入",
+		})
+		return
 	case "GroupRatio":
 		err = ratio_setting.CheckGroupRatio(option.Value.(string))
 		if err != nil {

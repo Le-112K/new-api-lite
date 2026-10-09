@@ -125,11 +125,11 @@ func main() {
 	// Subscription quota reset task (daily/weekly/monthly/custom)
 	service.StartSubscriptionQuotaResetTask()
 
-	// Register the periodic channel test, upstream model update, and
-	// Midjourney polling jobs as scheduled system tasks (DB-lease dedup across
-	// masters + run history), then start the runner that schedules and executes
-	// them. Master-only execution and the UpdateTask switch are enforced inside
-	// the runner and each handler's Enabled().
+	// Register the periodic channel test and upstream model update jobs as
+	// scheduled system tasks (DB-lease dedup across masters + run history), then
+	// start the runner that schedules and executes them. Master-only execution
+	// and the UpdateTask switch are enforced inside the runner and each
+	// handler's Enabled().
 	controller.RegisterScheduledSystemTasks()
 	service.StartSystemTaskRunner()
 

@@ -240,37 +240,8 @@ func getJSONStringValue(result gjson.Result, field string) (string, error) {
 func getModelRequest(c *gin.Context) (*ModelRequest, bool, error) {
 	var modelRequest ModelRequest
 	shouldSelectChannel := true
-	var err error
 	if modelName := c.GetString("resolved_task_model"); modelName != "" {
 		modelRequest.Model = modelName
-	} else if strings.Contains(c.Request.URL.Path, "/mj/") {
-		relayMode := relayconstant.Path2RelayModeMidjourney(c.Request.URL.Path)
-		if relayMode == relayconstant.RelayModeMidjourneyTaskFetch ||
-			relayMode == relayconstant.RelayModeMidjourneyTaskFetchByCondition ||
-			relayMode == relayconstant.RelayModeMidjourneyNotify ||
-			relayMode == relayconstant.RelayModeMidjourneyTaskImageSeed {
-			shouldSelectChannel = false
-		} else {
-			midjourneyRequest := taskdto.MidjourneyRequest{}
-			err = common.UnmarshalBodyReusable(c, &midjourneyRequest)
-			if err != nil {
-				return nil, false, errors.New(i18n.T(c, i18n.MsgDistributorInvalidMidjourney, map[string]any{"Error": err.Error()}))
-			}
-			midjourneyModel, mjErr, success := service.GetMjRequestModel(relayMode, &midjourneyRequest)
-			if mjErr != nil {
-				return nil, false, fmt.Errorf("%s", mjErr.Description)
-			}
-			if midjourneyModel == "" {
-				if !success {
-					return nil, false, fmt.Errorf("%s", i18n.T(c, i18n.MsgDistributorInvalidParseModel))
-				} else {
-					// task fetch, task fetch by condition, notify
-					shouldSelectChannel = false
-				}
-			}
-			modelRequest.Model = midjourneyModel
-		}
-		c.Set("relay_mode", relayMode)
 	} else if strings.Contains(c.Request.URL.Path, "/v1/videos/") && strings.HasSuffix(c.Request.URL.Path, "/remix") {
 		relayMode := relayconstant.RelayModeVideoSubmit
 		c.Set("relay_mode", relayMode)

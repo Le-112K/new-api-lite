@@ -212,11 +212,6 @@ const MODEL_PROVIDER_RULES: readonly ModelProviderRule[] = [
     icon: 'NousResearch',
     keywords: ['nousresearch', 'hermes-'],
   },
-  {
-    name: 'Midjourney',
-    icon: 'Midjourney',
-    keywords: ['midjourney', 'mj_', 'mj-', 'swap_face'],
-  },
   { name: 'Kling', icon: 'Kling.Color', keywords: ['kling'] },
   { name: 'Vidu', icon: 'Vidu.Color', keywords: ['vidu'] },
   { name: 'Suno', icon: 'Suno', keywords: ['suno'] },

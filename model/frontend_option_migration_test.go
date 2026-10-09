@@ -53,7 +53,7 @@ func TestMigrateRetiredFrontendOptionsMigratesValidValuesIdempotently(t *testing
 	require.NoError(t, db.Create(&legacy).Error)
 
 	require.NoError(t, MigrateRetiredFrontendOptions())
-	assert.Equal(t, "default", requireOptionValue(t, db, retiredThemeOptionKey))
+	requireOptionMissing(t, db, retiredThemeOptionKey)
 	assert.JSONEq(t, legacy[1].Value, requireOptionValue(t, db, "console_setting.api_info"))
 	assert.Equal(t, legacy[2].Value, requireOptionValue(t, db, "console_setting.announcements"))
 	assert.JSONEq(t, `[{"question":"Question","answer":"Answer"}]`, requireOptionValue(t, db, "console_setting.faq"))
@@ -167,14 +167,14 @@ func TestMigrateRetiredFrontendOptionsKeepsEmptyAuthoritativeTargets(t *testing.
 	}
 }
 
-func TestRetiredThemeOptionIsPersistedButNotPublished(t *testing.T) {
+func TestRetiredThemeOptionRowIsRemoved(t *testing.T) {
 	db := useFrontendOptionMigrationDB(t)
-	previousMap := common.OptionMap
-	t.Cleanup(func() { common.OptionMap = previousMap })
-	common.OptionMap = map[string]string{}
+	require.NoError(t, db.Create(&Option{Key: retiredThemeOptionKey, Value: "classic"}).Error)
 
-	require.NoError(t, UpdateOption(retiredThemeOptionKey, "default"))
-	assert.Equal(t, "default", requireOptionValue(t, db, retiredThemeOptionKey))
-	_, published := common.OptionMap[retiredThemeOptionKey]
-	assert.False(t, published)
+	require.NoError(t, MigrateRetiredFrontendOptions())
+	requireOptionMissing(t, db, retiredThemeOptionKey)
+
+	// Running again must stay a no-op instead of resurrecting the row.
+	require.NoError(t, MigrateRetiredFrontendOptions())
+	requireOptionMissing(t, db, retiredThemeOptionKey)
 }

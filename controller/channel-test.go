@@ -75,8 +75,6 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 	}
 	tik := time.Now()
 	var unsupportedTestChannelTypes = []int{
-		constant.ChannelTypeMidjourney,
-		constant.ChannelTypeMidjourneyPlus,
 		constant.ChannelTypeSunoAPI,
 		constant.ChannelTypeKling,
 		constant.ChannelTypeJimeng,
