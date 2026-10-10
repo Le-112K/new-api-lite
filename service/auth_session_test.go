@@ -439,6 +439,6 @@ func TestUserAuthVersionInvalidatesExistingSession(t *testing.T) {
 	require.NoError(t, err)
 	_, _, err = ValidateLoginSession(identity)
 	assert.ErrorIs(t, err, ErrLoginSessionRevoked)
-	_, err = CreateLoginSessionAtAuthVersion(user.Id, identity.UserAuthVersion, "2fa", "127.0.0.1", "test-agent")
-	assert.ErrorIs(t, err, ErrLoginSessionRevoked, "a pending 2FA flow must not survive an auth-version change")
+	_, err = CreateLoginSessionAtAuthVersion(user.Id, identity.UserAuthVersion, "password", "127.0.0.1", "test-agent")
+	assert.ErrorIs(t, err, ErrLoginSessionRevoked, "a pending login flow must not survive an auth-version change")
 }

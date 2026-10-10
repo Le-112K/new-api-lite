@@ -173,35 +173,6 @@ export async function adjustUserQuota(
 }
 
 /**
- * Reset user's Passkey registration; requires an `admin.user.passkey.reset` proof
- */
-export async function resetUserPasskey(
-  id: number,
-  proofToken: string
-): Promise<ApiResponse> {
-  const res = await api.delete(
-    `/api/user/${id}/reset_passkey`,
-    securityProofConfig(proofToken)
-  )
-  return res.data
-}
-
-/**
- * Reset user's Two-Factor Authentication setup; requires an
- * `admin.user.2fa.disable` proof
- */
-export async function resetUserTwoFA(
-  id: number,
-  proofToken: string
-): Promise<ApiResponse> {
-  const res = await api.delete(
-    `/api/user/${id}/2fa`,
-    securityProofConfig(proofToken)
-  )
-  return res.data
-}
-
-/**
  * Get all available groups
  */
 export async function getGroups(): Promise<ApiResponse<string[]>> {

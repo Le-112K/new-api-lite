@@ -86,17 +86,6 @@ beforeEach(() => {
     if (url === '/api/user/self') {
       return { data: { success: true, data: profile } }
     }
-    if (url === '/api/user/passkey') {
-      return { data: { success: true, data: { enabled: false } } }
-    }
-    if (url === '/api/user/2fa/status') {
-      return {
-        data: {
-          success: true,
-          data: { enabled: false, locked: false, backup_codes_remaining: 0 },
-        },
-      }
-    }
     if (url === '/api/user/sessions') {
       return { data: { success: true, data: [] } }
     }

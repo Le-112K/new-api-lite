@@ -44,7 +44,7 @@ beforeEach(() => {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  client.setQueryData(STATUS_QUERY_KEY, { passkey_rp_ids: ['localhost'] })
+  client.setQueryData(STATUS_QUERY_KEY, {})
 })
 
 afterEach(() => {

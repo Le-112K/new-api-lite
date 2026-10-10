@@ -94,7 +94,7 @@ function renderInProvider(children: React.ReactNode) {
   )
 }
 
-async function completeTwoFactorVerification() {
+async function completePasswordVerification() {
   await userEvent.type(
     await screen.findByLabelText('Password', { selector: 'input' }),
     '123456'
@@ -123,7 +123,7 @@ it('deleting a user sends the request only with a single-use proof for that user
   await screen.findByLabelText('Password', { selector: 'input' })
   expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   expect(del).not.toHaveBeenCalled()
-  await completeTwoFactorVerification()
+  await completePasswordVerification()
   await waitFor(() =>
     expect(del).toHaveBeenCalledWith(
       '/api/user/2/',
@@ -178,7 +178,7 @@ it('disabling a user from the row menu binds the proof to the user and action', 
     expect.anything(),
     expect.anything()
   )
-  await completeTwoFactorVerification()
+  await completePasswordVerification()
   await waitFor(() =>
     expect(post).toHaveBeenCalledWith(
       '/api/user/manage',

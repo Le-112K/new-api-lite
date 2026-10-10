@@ -34,7 +34,7 @@ func TestAccessTokenRoundTripAndPurposeIsolation(t *testing.T) {
 
 	binding, err := BindVerificationOperation(VerificationOperation{Scope: "channel.key.read", Context: []byte(`{"channel_id":123}`)})
 	require.NoError(t, err)
-	proof, _, err := IssueSecurityProof(identity, "2fa", binding)
+	proof, _, err := IssueSecurityProof(identity, "password", binding)
 	require.NoError(t, err)
 	_, err = ParseAccessToken(proof)
 	assert.ErrorIs(t, err, ErrAuthTokenInvalid)
@@ -96,7 +96,7 @@ func TestDashboardAccessTokenClassification(t *testing.T) {
 	require.NoError(t, err)
 	proof, _, err := IssueSecurityProof(AuthIdentity{
 		UserID: 42, SessionID: "session-1", UserAuthVersion: 1, SessionVersion: 1,
-	}, "2fa", binding)
+	}, "password", binding)
 	require.NoError(t, err)
 	_, internal, err = ParseDashboardAccessToken(proof)
 	assert.True(t, internal)
