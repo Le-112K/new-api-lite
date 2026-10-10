@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { KeyRound, Loader2, ShieldCheck } from 'lucide-react'
+import { Loader2, ShieldCheck } from 'lucide-react'
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -26,8 +26,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-import type { PasskeyDomains } from '../../passkey/assertion'
-import { PasskeyDomainSelector } from '../../passkey/components/passkey-domain-selector'
 import type {
   SecureVerificationState,
   VerificationInput,
@@ -36,7 +34,6 @@ import type {
 
 interface SecureVerificationDialogProps {
   state: SecureVerificationState
-  passkeyDomains?: PasskeyDomains | null
   onVerify: (input?: VerificationInput) => void | Promise<void>
   onCancel: () => void
   onRetry: () => void
@@ -44,8 +41,6 @@ interface SecureVerificationDialogProps {
 }
 
 const methodLabels: Record<VerificationMethod, string> = {
-  '2fa': 'Authenticator code',
-  passkey: 'Passkey',
   password: 'Password',
   oauth: 'Linked account',
   session: 'Login session',
@@ -60,15 +55,9 @@ export function SecureVerificationDialog(props: SecureVerificationDialogProps) {
     state.phase === 'ready' || state.phase === 'verifying' ? state : null
   const input = ready?.input
   const verifying = state.phase === 'verifying'
-  const login = state.request.scope === 'auth.login'
-  const acceptsBackupCode =
-    state.request.scope !== '2fa.backup_codes.regenerate'
   let canVerify = state.phase === 'ready' && Boolean(input)
   if (input?.method === 'password') {
     canVerify = canVerify && input.password.length > 0
-  }
-  if (input?.method === '2fa') {
-    canVerify = canVerify && input.code.trim().length >= 6
   }
   // Linked-account verification starts from the provider button itself.
   const showSubmit = state.phase !== 'error' && input?.method !== 'oauth'
@@ -77,14 +66,8 @@ export function SecureVerificationDialog(props: SecureVerificationDialogProps) {
 
   const selectMethod = (method: string) => {
     switch (method) {
-      case '2fa':
-        props.onInputChange({ method, code: '' })
-        break
       case 'password':
         props.onInputChange({ method, password: '' })
-        break
-      case 'passkey':
-        props.onInputChange({ method })
         break
       case 'oauth':
         props.onInputChange({
@@ -104,15 +87,12 @@ export function SecureVerificationDialog(props: SecureVerificationDialogProps) {
       title={
         <>
           <ShieldCheck className='size-5' />
-          {state.request.title ??
-            (login ? t('Complete sign-in') : t('Security verification'))}
+          {state.request.title ?? t('Security verification')}
         </>
       }
       description={
         state.request.description ??
-        (login
-          ? t('Verify your identity to finish signing in.')
-          : t('Confirm your identity before accessing this sensitive action.'))
+        t('Confirm your identity before accessing this sensitive action.')
       }
       contentClassName='sm:max-w-md'
       contentHeight='auto'
@@ -197,50 +177,6 @@ export function SecureVerificationDialog(props: SecureVerificationDialogProps) {
                     })
                   }
                 />
-              </TabsContent>
-              <TabsContent value='2fa' className='space-y-2'>
-                <Label htmlFor={inputId}>
-                  {acceptsBackupCode
-                    ? t('Authenticator code or backup code')
-                    : t('Authenticator code')}
-                </Label>
-                <Input
-                  id={inputId}
-                  autoComplete='one-time-code'
-                  maxLength={acceptsBackupCode ? 9 : 6}
-                  autoFocus
-                  disabled={verifying}
-                  value={input.method === '2fa' ? input.code : ''}
-                  onChange={(event) =>
-                    props.onInputChange({
-                      method: '2fa',
-                      code: event.target.value,
-                    })
-                  }
-                />
-                <p className='text-muted-foreground text-sm'>
-                  {acceptsBackupCode
-                    ? t(
-                        'Enter the 6-digit authenticator code or an unused backup code.'
-                      )
-                    : t('Enter the 6-digit authenticator code.')}
-                </p>
-              </TabsContent>
-              <TabsContent value='passkey' className='space-y-3'>
-                <PasskeyDomainSelector
-                  domains={props.passkeyDomains}
-                  value={input.method === 'passkey' ? input.rpID : undefined}
-                  onChange={(rpID) =>
-                    props.onInputChange({ method: 'passkey', rpID })
-                  }
-                  disabled={verifying}
-                />
-                <p className='text-muted-foreground flex items-center gap-2 text-sm'>
-                  <KeyRound className='size-5' />
-                  {t(
-                    'We will prompt your device to confirm using biometrics or your hardware key.'
-                  )}
-                </p>
               </TabsContent>
               <TabsContent value='oauth' className='space-y-2'>
                 <p className='text-muted-foreground text-sm'>

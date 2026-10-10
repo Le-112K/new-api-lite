@@ -23,7 +23,6 @@ import { useState } from 'react'
 import { afterEach, expect, it, vi } from 'vitest'
 
 import { api } from '@/lib/api'
-import type { AuthBundle } from '@/stores/auth-store'
 
 import { OAUTH_POPUP_CALLBACK_MESSAGE } from '../../constants'
 import { SecureVerificationDialog } from '../components/secure-verification-dialog'
@@ -35,14 +34,14 @@ import type {
 } from '../types'
 
 const passwordRequirements: VerificationRequirements = {
-  scope: 'passkey.register',
+  scope: 'account.password.set',
   methods: [{ method: 'password', available: true }],
   oauth_providers: [],
   password_encryption_enabled: false,
 }
 
 const linkedAccountRequirements: VerificationRequirements = {
-  scope: '2fa.setup',
+  scope: 'account.password.set',
   methods: [{ method: 'oauth', available: true }],
   oauth_providers: [{ slug: 'linuxdo', name: 'Linux DO' }],
   password_encryption_enabled: false,
@@ -76,7 +75,7 @@ function Harness(props: {
           props.onResult(
             await verification.requestVerification(
               props.operation ?? {
-                scope: 'passkey.register',
+                scope: 'account.password.set',
               }
             )
           )
@@ -103,89 +102,6 @@ afterEach(() => {
   window.sessionStorage.clear()
 })
 
-function LoginHarness(props: {
-  onResult: (bundle: AuthBundle | null) => void
-}) {
-  const verification = useSecureVerification()
-  const [client] = useState(
-    () => new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  )
-  return (
-    <QueryClientProvider client={client}>
-      <button
-        type='button'
-        onClick={async () =>
-          props.onResult(
-            await verification.requestLoginVerification({
-              require_verification: true,
-              flow_token: 'pending-login',
-              expires_at: Math.floor(Date.now() / 1000) + 300,
-              methods: [
-                { method: '2fa', available: true },
-                { method: 'passkey', available: true },
-              ],
-            })
-          )
-        }
-      >
-        Continue sign-in
-      </button>
-      <SecureVerificationDialog {...verification.dialogProps} />
-    </QueryClientProvider>
-  )
-}
-
-it('lets a pending login switch from Passkey to 2FA without using authenticated verification endpoints', async () => {
-  const get = vi
-    .spyOn(api, 'get')
-    .mockResolvedValue({ data: { success: true, data: {} } })
-  vi.stubGlobal('PublicKeyCredential', class {})
-  const bundle: AuthBundle = {
-    access_token: 'verified-login',
-    token_type: 'Bearer',
-    access_expires_at: Math.floor(Date.now() / 1000) + 900,
-    user: { id: 42, username: 'user', role: 1 },
-    session: {
-      sid: 'new-session',
-      current: true,
-      login_method: 'password',
-      ip: '',
-      user_agent: '',
-      created_at: 1,
-      last_active_at: 1,
-      expires_at: Math.floor(Date.now() / 1000) + 3600,
-    },
-  }
-  const post = vi
-    .spyOn(api, 'post')
-    .mockResolvedValue({ data: { success: true, data: bundle } })
-  const result = vi.fn()
-  const user = userEvent.setup()
-  render(<LoginHarness onResult={result} />)
-  await user.click(screen.getByRole('button', { name: 'Continue sign-in' }))
-  expect(await screen.findByRole('tab', { name: 'Passkey' })).toHaveAttribute(
-    'aria-selected',
-    'true'
-  )
-  expect(result).not.toHaveBeenCalled()
-  await user.click(screen.getByRole('tab', { name: 'Authenticator code' }))
-  await user.type(
-    screen.getByLabelText('Authenticator code or backup code'),
-    '123456'
-  )
-  await user.click(screen.getByRole('button', { name: 'Verify' }))
-  await waitFor(() => expect(result).toHaveBeenCalledExactlyOnceWith(bundle))
-  expect(post).toHaveBeenCalledExactlyOnceWith(
-    '/api/user/login/verify',
-    { flow_token: 'pending-login', method: '2fa', code: '123456' },
-    expect.objectContaining({
-      skipAuthRefresh: true,
-      signal: expect.any(AbortSignal),
-    })
-  )
-  expect(get.mock.calls.every(([url]) => url === '/api/status')).toBe(true)
-})
-
 it.each(['success', 'cancel', 'retry'] as const)(
   'automatically obtains the first-enrollment session proof and handles %s',
   async (outcome) => {
@@ -201,7 +117,7 @@ it.each(['success', 'cancel', 'retry'] as const)(
     const proof: SecurityProof = {
       proof_token: 'session-proof',
       method: 'session',
-      scope: 'passkey.register',
+      scope: 'account.password.set',
       expires_at: Math.floor(Date.now() / 1000) + 300,
     }
     const reply = pendingResponse<{
@@ -226,7 +142,7 @@ it.each(['success', 'cancel', 'retry'] as const)(
     )
     expect(post).toHaveBeenLastCalledWith(
       '/api/verify',
-      { method: 'session', scope: 'passkey.register' },
+      { method: 'session', scope: 'account.password.set' },
       expect.objectContaining({ signal: expect.any(AbortSignal) })
     )
     expect(screen.getByRole('button', { name: 'Verify' })).toBeDisabled()
@@ -253,7 +169,7 @@ it('keeps the requested channel context fixed while verification is open', async
       success: true,
       data: {
         scope: 'channel.key.read',
-        methods: [{ method: '2fa', available: true }],
+        methods: [{ method: 'password', available: true }],
         oauth_providers: [],
         password_encryption_enabled: false,
       },
@@ -265,7 +181,7 @@ it('keeps the requested channel context fixed while verification is open', async
       data: {
         proof_token: 'channel-proof',
         scope: 'channel.key.read',
-        method: '2fa',
+        method: 'password',
         expires_at: Math.floor(Date.now() / 1000) + 60,
       },
     },
@@ -279,7 +195,7 @@ it('keeps the requested channel context fixed while verification is open', async
   render(<Harness operation={operation} onResult={result} />)
   await user.click(screen.getByText('Protected action'))
   await user.type(
-    await screen.findByLabelText('Authenticator code or backup code'),
+    await screen.findByLabelText('Password', { selector: 'input' }),
     '123456'
   )
   operation.context.channel_id = 456
@@ -290,8 +206,8 @@ it('keeps the requested channel context fixed while verification is open', async
     {
       scope: 'channel.key.read',
       context: { channel_id: 123 },
-      method: '2fa',
-      code: '123456',
+      method: 'password',
+      password: '123456',
     },
     expect.anything()
   )
@@ -328,7 +244,7 @@ it('returns a proof only after successful verification and clears a rejected pas
   const proof: SecurityProof = {
     proof_token: 'proof',
     method: 'password',
-    scope: 'passkey.register',
+    scope: 'account.password.set',
     expires_at: Math.floor(Date.now() / 1000) + 300,
   }
   const posts = vi
@@ -359,7 +275,7 @@ it('returns a proof only after successful verification and clears a rejected pas
   await waitFor(() => expect(result).toHaveBeenCalledWith(proof))
   expect(posts).toHaveBeenLastCalledWith(
     '/api/verify',
-    { method: 'password', scope: 'passkey.register', password: 'correct' },
+    { method: 'password', scope: 'account.password.set', password: 'correct' },
     expect.objectContaining({ signal: expect.any(AbortSignal) })
   )
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -395,7 +311,7 @@ it('discards a late proof after cancellation and prevents a duplicate submission
         data: {
           proof_token: 'late-proof',
           method: 'password',
-          scope: 'passkey.register',
+          scope: 'account.password.set',
           expires_at: Math.floor(Date.now() / 1000) + 300,
         },
       },
@@ -427,35 +343,12 @@ it('does not reopen after a cancelled method query finishes', async () => {
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
 
-it('keeps an enrolled Passkey unavailable when this browser cannot use it', async () => {
-  vi.stubGlobal('PublicKeyCredential', undefined)
-  vi.spyOn(api, 'get').mockResolvedValue({
-    data: {
-      success: true,
-      data: {
-        ...passwordRequirements,
-        methods: [{ method: 'passkey', available: true }],
-      },
-    },
-  })
-  const user = userEvent.setup()
-  render(<Harness onResult={vi.fn()} />)
-  await user.click(screen.getByText('Protected action'))
-  expect(
-    await screen.findByText(
-      'This device does not support Passkey verification.'
-    )
-  ).toBeVisible()
-  expect(screen.getByRole('button', { name: 'Verify' })).toBeDisabled()
-  expect(screen.queryByLabelText('Password')).not.toBeInTheDocument()
-})
-
 it('starts linked-account verification from the provider button without a separate Verify button', async () => {
   const popup = stubOAuthPopup()
   const proof: SecurityProof = {
     proof_token: 'oauth-proof',
     method: 'oauth',
-    scope: '2fa.setup',
+    scope: 'account.password.set',
     expires_at: Math.floor(Date.now() / 1000) + 300,
   }
   vi.spyOn(api, 'get').mockImplementation((url) => {
@@ -480,7 +373,9 @@ it('starts linked-account verification from the provider button without a separa
   })
   const result = vi.fn()
   const user = userEvent.setup()
-  render(<Harness operation={{ scope: '2fa.setup' }} onResult={result} />)
+  render(
+    <Harness operation={{ scope: 'account.password.set' }} onResult={result} />
+  )
   await user.click(screen.getByText('Protected action'))
   const providerButton = await screen.findByRole('button', {
     name: 'Continue with Linux DO',
@@ -502,7 +397,7 @@ it('starts linked-account verification from the provider button without a separa
     expect.objectContaining({
       provider: 'linuxdo',
       intent: 'verify',
-      scope: '2fa.setup',
+      scope: 'account.password.set',
     }),
     expect.anything()
   )
@@ -550,7 +445,9 @@ it('verifies with the clicked provider when several linked accounts are availabl
     },
   })
   const user = userEvent.setup()
-  render(<Harness operation={{ scope: '2fa.setup' }} onResult={vi.fn()} />)
+  render(
+    <Harness operation={{ scope: 'account.password.set' }} onResult={vi.fn()} />
+  )
   await user.click(screen.getByText('Protected action'))
   await user.click(
     await screen.findByRole('button', { name: 'Continue with GitHub' })

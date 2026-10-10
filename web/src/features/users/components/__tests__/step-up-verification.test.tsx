@@ -50,7 +50,7 @@ function mockVerification(scope: string, proofToken: string) {
           success: true,
           data: {
             scope,
-            methods: [{ method: '2fa', available: true }],
+            methods: [{ method: 'password', available: true }],
             oauth_providers: [],
             password_encryption_enabled: false,
           },
@@ -64,7 +64,7 @@ function mockVerification(scope: string, proofToken: string) {
       success: true,
       data: {
         proof_token: proofToken,
-        method: '2fa',
+        method: 'password',
         scope,
         expires_at: Math.floor(Date.now() / 1000) + 60,
       },
@@ -96,7 +96,7 @@ function renderInProvider(children: React.ReactNode) {
 
 async function completeTwoFactorVerification() {
   await userEvent.type(
-    await screen.findByLabelText('Authenticator code or backup code'),
+    await screen.findByLabelText('Password', { selector: 'input' }),
     '123456'
   )
   await userEvent.click(screen.getByRole('button', { name: 'Verify' }))
@@ -120,7 +120,7 @@ it('deleting a user sends the request only with a single-use proof for that user
     </>
   )
   await userEvent.click(await screen.findByRole('button', { name: 'Delete' }))
-  await screen.findByLabelText('Authenticator code or backup code')
+  await screen.findByLabelText('Password', { selector: 'input' })
   expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   expect(del).not.toHaveBeenCalled()
   await completeTwoFactorVerification()
@@ -153,7 +153,7 @@ it('cancelling verification leaves the user untouched and returns to the confirm
     </>
   )
   await userEvent.click(await screen.findByRole('button', { name: 'Delete' }))
-  await screen.findByLabelText('Authenticator code or backup code')
+  await screen.findByLabelText('Password', { selector: 'input' })
   await userEvent.keyboard('{Escape}')
   await screen.findByRole('alertdialog')
   expect(del).not.toHaveBeenCalled()

@@ -17,7 +17,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 
@@ -80,7 +86,7 @@ function renderPermissions(viewerRole: number, allowed?: boolean) {
           success: true,
           data: {
             scope: 'admin.user.update',
-            methods: [{ method: '2fa', available: true }],
+            methods: [{ method: 'password', available: true }],
             oauth_providers: [],
             password_encryption_enabled: false,
           },
@@ -132,7 +138,7 @@ it.each([undefined, true])(
         success: true,
         data: {
           proof_token: 'update-proof',
-          method: '2fa',
+          method: 'password',
           scope: 'admin.user.update',
           expires_at: Math.floor(Date.now() / 1000) + 60,
         },
@@ -149,8 +155,11 @@ it.each([undefined, true])(
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
     // The permission matrix changed, so the save waits for verification.
     expect(put).not.toHaveBeenCalled()
+    const verification = await screen.findByRole('dialog', {
+      name: 'Verify to update user credentials',
+    })
     await userEvent.type(
-      await screen.findByLabelText('Authenticator code or backup code'),
+      within(verification).getByLabelText('Password', { selector: 'input' }),
       '123456'
     )
     await userEvent.click(screen.getByRole('button', { name: 'Verify' }))

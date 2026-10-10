@@ -16,7 +16,6 @@ import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as UserAgreementRouteImport } from './routes/user-agreement'
 import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
 import { Route as authOauthRouteImport } from './routes/(auth)/oauth'
-import { Route as authOtpRouteImport } from './routes/(auth)/otp'
 import { Route as authRegisterRouteImport } from './routes/(auth)/register'
 import { Route as authResetRouteImport } from './routes/(auth)/reset'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
@@ -97,11 +96,6 @@ const authForgotPasswordRoute = authForgotPasswordRouteImport.update({
 const authOauthRoute = authOauthRouteImport.update({
   id: '/oauth',
   path: '/oauth',
-  getParentRoute: () => authRouteRoute,
-} as any)
-const authOtpRoute = authOtpRouteImport.update({
-  id: '/otp',
-  path: '/otp',
   getParentRoute: () => authRouteRoute,
 } as any)
 const authRegisterRoute = authRegisterRouteImport.update({
@@ -382,7 +376,6 @@ export interface FileRoutesByFullPath {
   '/system-settings': typeof AuthenticatedSystemSettingsRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/oauth': typeof authOauthRoute
-  '/otp': typeof authOtpRoute
   '/register': typeof authRegisterRoute
   '/reset': typeof authResetRoute
   '/sign-in': typeof authSignInRoute
@@ -437,7 +430,6 @@ export interface FileRoutesByTo {
   '/user-agreement': typeof UserAgreementRoute
   '/forgot-password': typeof authForgotPasswordRoute
   '/oauth': typeof authOauthRoute
-  '/otp': typeof authOtpRoute
   '/register': typeof authRegisterRoute
   '/reset': typeof authResetRoute
   '/sign-in': typeof authSignInRoute
@@ -496,7 +488,6 @@ export interface FileRoutesById {
   '/_authenticated/system-settings': typeof AuthenticatedSystemSettingsRouteRouteWithChildren
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
   '/(auth)/oauth': typeof authOauthRoute
-  '/(auth)/otp': typeof authOtpRoute
   '/(auth)/register': typeof authRegisterRoute
   '/(auth)/reset': typeof authResetRoute
   '/(auth)/sign-in': typeof authSignInRoute
@@ -554,7 +545,6 @@ export interface FileRouteTypes {
     | '/system-settings'
     | '/forgot-password'
     | '/oauth'
-    | '/otp'
     | '/register'
     | '/reset'
     | '/sign-in'
@@ -609,7 +599,6 @@ export interface FileRouteTypes {
     | '/user-agreement'
     | '/forgot-password'
     | '/oauth'
-    | '/otp'
     | '/register'
     | '/reset'
     | '/sign-in'
@@ -667,7 +656,6 @@ export interface FileRouteTypes {
     | '/_authenticated/system-settings'
     | '/(auth)/forgot-password'
     | '/(auth)/oauth'
-    | '/(auth)/otp'
     | '/(auth)/register'
     | '/(auth)/reset'
     | '/(auth)/sign-in'
@@ -785,13 +773,6 @@ declare module '@tanstack/react-router' {
       path: '/oauth'
       fullPath: '/oauth'
       preLoaderRoute: typeof authOauthRouteImport
-      parentRoute: typeof authRouteRoute
-    }
-    '/(auth)/otp': {
-      id: '/(auth)/otp'
-      path: '/otp'
-      fullPath: '/otp'
-      preLoaderRoute: typeof authOtpRouteImport
       parentRoute: typeof authRouteRoute
     }
     '/(auth)/register': {
@@ -1136,7 +1117,6 @@ declare module '@tanstack/react-router' {
 interface authRouteRouteChildren {
   authForgotPasswordRoute: typeof authForgotPasswordRoute
   authOauthRoute: typeof authOauthRoute
-  authOtpRoute: typeof authOtpRoute
   authRegisterRoute: typeof authRegisterRoute
   authResetRoute: typeof authResetRoute
   authSignInRoute: typeof authSignInRoute
@@ -1147,7 +1127,6 @@ interface authRouteRouteChildren {
 const authRouteRouteChildren: authRouteRouteChildren = {
   authForgotPasswordRoute: authForgotPasswordRoute,
   authOauthRoute: authOauthRoute,
-  authOtpRoute: authOtpRoute,
   authRegisterRoute: authRegisterRoute,
   authResetRoute: authResetRoute,
   authSignInRoute: authSignInRoute,

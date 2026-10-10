@@ -54,7 +54,7 @@ function channelVerification() {
       success: true,
       data: {
         scope: 'channel.key.read',
-        methods: [{ method: '2fa', available: true }],
+        methods: [{ method: 'password', available: true }],
         oauth_providers: [],
         password_encryption_enabled: false,
       },
@@ -65,7 +65,7 @@ function channelVerification() {
       success: true,
       data: {
         proof_token: 'channel-proof',
-        method: '2fa',
+        method: 'password',
         scope: 'channel.key.read',
         expires_at: Math.floor(Date.now() / 1000) + 60,
       },
@@ -91,7 +91,7 @@ it.each(['switch', 'close'] as const)(
     const view = render(<Harness open channelId={123} />)
     await user.click(screen.getByRole('button', { name: 'Reveal' }))
     await user.type(
-      await screen.findByLabelText('Authenticator code or backup code'),
+      await screen.findByLabelText('Password', { selector: 'input' }),
       '123456'
     )
     await user.click(screen.getByRole('button', { name: 'Verify' }))
@@ -129,7 +129,7 @@ it('cancels a pending verification when the selected channel changes', async () 
   const view = render(<Harness open channelId={123} />)
   await user.click(screen.getByRole('button', { name: 'Reveal' }))
   await user.type(
-    await screen.findByLabelText('Authenticator code or backup code'),
+    await screen.findByLabelText('Password', { selector: 'input' }),
     '123456'
   )
   await user.click(screen.getByRole('button', { name: 'Verify' }))
@@ -141,7 +141,7 @@ it('cancels a pending verification when the selected channel changes', async () 
         data: {
           proof_token: 'late-proof',
           scope: 'channel.key.read',
-          method: '2fa',
+          method: 'password',
           expires_at: Math.floor(Date.now() / 1000) + 60,
         },
       },

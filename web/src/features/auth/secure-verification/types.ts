@@ -18,19 +18,9 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import type { AuthBundle } from '@/stores/auth-store'
 
-export type VerificationMethod =
-  | '2fa'
-  | 'passkey'
-  | 'password'
-  | 'oauth'
-  | 'session'
+export type VerificationMethod = 'password' | 'oauth' | 'session'
 export type SecurityProofScope =
   | 'channel.key.read'
-  | 'passkey.register'
-  | 'passkey.delete'
-  | '2fa.setup'
-  | '2fa.disable'
-  | '2fa.backup_codes.regenerate'
   | 'access_token.generate'
   | 'access_token.update'
   | 'access_token.revoke'
@@ -43,8 +33,6 @@ export type SecurityProofScope =
   | 'admin.user.update'
   | 'admin.user.delete'
   | 'admin.user.manage'
-  | 'admin.user.passkey.reset'
-  | 'admin.user.2fa.disable'
   | 'admin.user.binding.clear'
 
 /** ManageUser actions that change a user's status or role and need step-up. */
@@ -59,11 +47,7 @@ export type VerificationOperation =
   | { scope: 'account.binding.unbind'; context: { provider_id: number } }
   | { scope: 'admin.user.create'; context: { role: number } }
   | {
-      scope:
-        | 'admin.user.update'
-        | 'admin.user.delete'
-        | 'admin.user.passkey.reset'
-        | 'admin.user.2fa.disable'
+      scope: 'admin.user.update' | 'admin.user.delete'
       context: { user_id: number }
     }
   | {
@@ -117,9 +101,7 @@ export interface VerificationRequirements {
 }
 
 export type VerificationInput =
-  | { method: '2fa'; code: string }
   | { method: 'password'; password: string }
-  | { method: 'passkey'; rpID?: string }
   | { method: 'oauth'; provider: string }
   | { method: 'session' }
 
@@ -128,24 +110,8 @@ export type RequestVerificationOptions = VerificationOperation & {
   description?: string
 }
 
-export interface LoginChallenge {
-  require_verification: true
-  flow_token: string
-  expires_at: number
-  methods: VerificationRequirements['methods']
-}
-
-export interface RequestLoginVerificationOptions {
-  scope: 'auth.login'
-  challenge: LoginChallenge
-  title?: string
-  description?: string
-}
-
-export type VerificationRequest =
-  | RequestVerificationOptions
-  | RequestLoginVerificationOptions
-export type LoginResult = AuthBundle | LoginChallenge
+export type VerificationRequest = RequestVerificationOptions
+export type LoginResult = AuthBundle
 
 export type SecureVerificationState =
   | { phase: 'idle' }

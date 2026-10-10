@@ -16,23 +16,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
+import { useCallback, useEffect, useReducer, useRef } from 'react'
 
 import { AuthOperationError } from '@/lib/secure-verification'
-import type { AuthBundle } from '@/stores/auth-store'
 
-import type { PasskeyDomains } from '../../passkey/assertion'
-import {
-  checkVerificationMethods,
-  getLoginVerificationRequirements,
-  verify,
-  verifyLogin,
-} from '../api'
+import { checkVerificationMethods, verify } from '../api'
 import type {
   RequestVerificationOptions,
-  RequestLoginVerificationOptions,
   VerificationRequest,
-  LoginChallenge,
   SecureVerificationState,
   SecurityProof,
   VerificationInput,
@@ -61,18 +52,11 @@ function verificationReducer(
       const methods = action.requirements.methods.filter(
         (option) => option.available
       )
-      const preferred =
-        methods.find((option) => option.method === 'passkey') ?? methods[0]
+      const preferred = methods[0]
       let input: VerificationInput | null = null
       switch (preferred?.method) {
-        case '2fa':
-          input = { method: '2fa', code: '' }
-          break
         case 'password':
           input = { method: 'password', password: '' }
-          break
-        case 'passkey':
-          input = { method: 'passkey' }
           break
         case 'oauth':
           input = {
@@ -104,7 +88,6 @@ function verificationReducer(
       if (input?.method === 'password') {
         input = { method: 'password', password: '' }
       }
-      if (input?.method === '2fa') input = { method: '2fa', code: '' }
       return { ...state, phase: 'verifying', input, error: undefined }
     }
     case 'error':
@@ -123,35 +106,22 @@ interface PendingVerificationBase {
 }
 
 type PendingVerification = PendingVerificationBase &
-  (
-    | {
-        kind: 'operation'
-        request: RequestVerificationOptions
-        resolve: (proof: SecurityProof | null) => void
-        initialPassword?: string
-      }
-    | {
-        kind: 'login'
-        request: RequestLoginVerificationOptions
-        resolve: (bundle: AuthBundle | null) => void
-        initialPassword?: never
-      }
-  )
+  {
+    kind: 'operation'
+    request: RequestVerificationOptions
+    resolve: (proof: SecurityProof | null) => void
+    initialPassword?: string
+  }
 
 export function useSecureVerification() {
   const [state, dispatch] = useReducer(verificationReducer, { phase: 'idle' })
   const pending = useRef<PendingVerification | null>(null)
-  const [passkeyDomains, setPasskeyDomains] = useState<PasskeyDomains | null>(
-    null
-  )
-
   const cancel = useCallback(() => {
     const current = pending.current
     pending.current = null
     current?.controller.abort()
     if (current) current.initialPassword = undefined
     current?.resolve(null)
-    setPasskeyDomains(null)
     dispatch({ type: 'reset' })
   }, [])
 
@@ -160,16 +130,10 @@ export function useSecureVerification() {
   const loadRequirements = useCallback(async (current: PendingVerification) => {
     dispatch({ type: 'loading', request: current.request })
     try {
-      const requirements =
-        current.kind === 'login'
-          ? await getLoginVerificationRequirements(
-              current.request.challenge,
-              current.controller.signal
-            )
-          : await checkVerificationMethods(
-              current.request.scope,
-              current.controller.signal
-            )
+      const requirements = await checkVerificationMethods(
+        current.request.scope,
+        current.controller.signal
+      )
       if (pending.current !== current) return
       const initialPassword = current.initialPassword
       current.initialPassword = undefined
@@ -247,30 +211,6 @@ export function useSecureVerification() {
           submitting: false,
         }
         pending.current = current
-        setPasskeyDomains(null)
-        void loadRequirements(current)
-      })
-    },
-    [loadRequirements]
-  )
-
-  const requestLoginVerification = useCallback(
-    (challenge: LoginChallenge): Promise<AuthBundle | null> => {
-      if (pending.current) return Promise.resolve(null)
-      return new Promise((resolve, reject) => {
-        const current: PendingVerification = {
-          kind: 'login',
-          request: {
-            scope: 'auth.login',
-            challenge: structuredClone(challenge),
-          },
-          resolve,
-          reject,
-          controller: new AbortController(),
-          submitting: false,
-        }
-        pending.current = current
-        setPasskeyDomains(null)
         void loadRequirements(current)
       })
     },
@@ -291,30 +231,14 @@ export function useSecureVerification() {
       if (override) dispatch({ type: 'input', input })
       dispatch({ type: 'submit' })
       try {
-        if (current.kind === 'login') {
-          const bundle = await verifyLogin(
-            input,
-            current.request.challenge,
-            current.controller.signal,
-            (domains) => {
-              if (pending.current === current) setPasskeyDomains(domains)
-            }
-          )
-          if (pending.current !== current) return
-          current.resolve(bundle)
-        } else {
-          const proof = await verify(
-            input,
-            current.request,
-            state.requirements.password_encryption_enabled,
-            current.controller.signal,
-            (domains) => {
-              if (pending.current === current) setPasskeyDomains(domains)
-            }
-          )
-          if (pending.current !== current) return
-          current.resolve(proof)
-        }
+        const proof = await verify(
+          input,
+          current.request,
+          state.requirements.password_encryption_enabled,
+          current.controller.signal
+        )
+        if (pending.current !== current) return
+        current.resolve(proof)
         pending.current = null
         dispatch({ type: 'reset' })
       } catch (error) {
@@ -344,12 +268,10 @@ export function useSecureVerification() {
 
   return {
     requestVerification,
-    requestLoginVerification,
     cancel,
     isActive: state.phase !== 'idle',
     dialogProps: {
       state,
-      passkeyDomains,
       onCancel: cancel,
       onRetry: retry,
       onInputChange: setInput,

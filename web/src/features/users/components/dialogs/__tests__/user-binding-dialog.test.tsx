@@ -85,7 +85,7 @@ const verificationMethods = {
     success: true,
     data: {
       scope: 'admin.user.binding.clear',
-      methods: [{ method: '2fa', available: true }],
+      methods: [{ method: 'password', available: true }],
       oauth_providers: [],
       password_encryption_enabled: false,
     },
@@ -94,7 +94,7 @@ const verificationMethods = {
 
 // Every unbind is gated by the shared step-up ceremony mounted in UsersProvider.
 async function completeUnbindVerification() {
-  const code = await screen.findByLabelText('Authenticator code or backup code')
+  const code = await screen.findByLabelText('Password', { selector: 'input' })
   fireEvent.change(code, { target: { value: '123456' } })
   fireEvent.click(screen.getByRole('button', { name: 'Verify' }))
 }
@@ -197,7 +197,7 @@ describe('UserBindingDialog built-in bindings', () => {
           success: true,
           data: {
             proof_token: 'binding-proof',
-            method: '2fa',
+            method: 'password',
             scope: 'admin.user.binding.clear',
             expires_at: Math.floor(Date.now() / 1000) + 60,
           },

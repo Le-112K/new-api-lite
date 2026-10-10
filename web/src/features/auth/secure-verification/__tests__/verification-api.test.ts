@@ -43,30 +43,6 @@ import type { SecurityProof } from '../types'
 const originalAdapter = api.defaults.adapter
 const originalLocation = window.location.href
 
-it('allows a security key when the browser has WebAuthn but no platform authenticator', async () => {
-  vi.stubGlobal(
-    'PublicKeyCredential',
-    class {
-      static isUserVerifyingPlatformAuthenticatorAvailable() {
-        return Promise.resolve(false)
-      }
-    }
-  )
-  vi.spyOn(api, 'get').mockResolvedValue({
-    data: {
-      success: true,
-      data: {
-        scope: 'passkey.delete',
-        methods: [{ method: 'passkey', available: true }],
-        oauth_providers: [],
-        password_encryption_enabled: false,
-      },
-    },
-  })
-  const requirements = await checkVerificationMethods('passkey.delete')
-  expect(requirements.methods).toEqual([{ method: 'passkey', available: true }])
-})
-
 it.each([false, true])(
   'retains the Telegram verification request after popup close and honors caller cancellation: %s',
   async (cancel) => {
@@ -90,7 +66,7 @@ it.each([false, true])(
     const proof: SecurityProof = {
       proof_token: 'telegram-proof',
       method: 'oauth',
-      scope: '2fa.setup',
+      scope: 'account.password.set',
       expires_at: Math.floor(Date.now() / 1000) + 300,
     }
     let resolve!: (response: {
@@ -111,7 +87,7 @@ it.each([false, true])(
     const controller = new AbortController()
     const result = verify(
       { method: 'oauth', provider: 'telegram' },
-      { scope: '2fa.setup' },
+      { scope: 'account.password.set' },
       false,
       controller.signal
     )
@@ -342,7 +318,7 @@ it('refreshes an expiring login token before submitting a one-time proof', async
 it('binds a channel verification to the requested channel context', async () => {
   const proof = {
     proof_token: 'channel-proof',
-    method: '2fa',
+    method: 'password',
     scope: 'channel.key.read',
     expires_at: Math.floor(Date.now() / 1000) + 60,
   }
@@ -351,7 +327,7 @@ it('binds a channel verification to the requested channel context', async () => 
   })
   await expect(
     verify(
-      { method: '2fa', code: '123456' },
+      { method: 'password', password: 'secret123' },
       { scope: 'channel.key.read', context: { channel_id: 123 } },
       false,
       new AbortController().signal
@@ -360,71 +336,13 @@ it('binds a channel verification to the requested channel context', async () => 
   expect(post).toHaveBeenCalledWith(
     '/api/verify',
     {
-      method: '2fa',
-      code: '123456',
+      method: 'password',
+      password: 'secret123',
       scope: 'channel.key.read',
       context: { channel_id: 123 },
     },
     expect.anything()
   )
-})
-
-it('passes the operation context to Passkey begin and completes with only its flow and assertion', async () => {
-  vi.stubGlobal('navigator', {
-    credentials: {
-      get: vi.fn().mockResolvedValue({
-        id: 'credential',
-        rawId: new Uint8Array([1, 2, 3]).buffer,
-        type: 'public-key',
-        response: {
-          clientDataJSON: new Uint8Array([1]).buffer,
-          authenticatorData: new Uint8Array([2]).buffer,
-          signature: new Uint8Array([3]).buffer,
-          userHandle: null,
-        },
-        getClientExtensionResults: () => ({}),
-      }),
-    },
-  })
-  const proof = {
-    proof_token: 'passkey-proof',
-    scope: 'channel.key.read',
-    method: 'passkey',
-    expires_at: Math.floor(Date.now() / 1000) + 60,
-  }
-  const post = vi
-    .spyOn(api, 'post')
-    .mockResolvedValueOnce({
-      data: {
-        success: true,
-        data: {
-          flow_token: 'flow',
-          options: { publicKey: { challenge: 'AQID', allowCredentials: [] } },
-        },
-      },
-    })
-    .mockResolvedValueOnce({ data: { success: true, data: proof } })
-  await expect(
-    verify(
-      { method: 'passkey' },
-      { scope: 'channel.key.read', context: { channel_id: 123 } },
-      false,
-      new AbortController().signal
-    )
-  ).resolves.toEqual(proof)
-  expect(post).toHaveBeenNthCalledWith(
-    1,
-    '/api/user/passkey/verify/begin',
-    {
-      scope: 'channel.key.read',
-      context: { channel_id: 123 },
-    },
-    expect.anything()
-  )
-  expect(post.mock.calls[1]?.[1]).toEqual({
-    flow_token: 'flow',
-    credential: expect.anything(),
-  })
 })
 
 it('passes an enrollment operation through OAuth state creation', async () => {
@@ -433,7 +351,7 @@ it('passes an enrollment operation through OAuth state creation', async () => {
   })
   await expect(
     createOAuthFlow('github', 'verify', {
-      scope: 'passkey.register',
+      scope: 'account.password.set',
       context: {},
     })
   ).resolves.toBe('oauth-flow')
@@ -442,7 +360,7 @@ it('passes an enrollment operation through OAuth state creation', async () => {
     expect.objectContaining({
       provider: 'github',
       intent: 'verify',
-      scope: 'passkey.register',
+      scope: 'account.password.set',
       context: {},
     }),
     expect.anything()
@@ -472,9 +390,9 @@ it('reports a failed method query instead of treating the account as unenrolled'
   vi.spyOn(api, 'get').mockRejectedValue(
     new Error('Unable to load verification methods')
   )
-  await expect(checkVerificationMethods('passkey.register')).rejects.toThrow(
-    'Unable to load verification methods'
-  )
+  await expect(
+    checkVerificationMethods('account.password.set')
+  ).rejects.toThrow('Unable to load verification methods')
 })
 
 it('displays a generic internal error even if the server includes database details', async () => {

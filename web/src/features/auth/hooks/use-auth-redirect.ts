@@ -28,8 +28,6 @@ import { applyAuthBundle, isAuthBundle } from '@/lib/api'
 import { AuthOperationError } from '@/lib/secure-verification'
 import { useAuthStore, type AuthBundle } from '@/stores/auth-store'
 
-import { isLoginChallenge } from '../secure-verification/api'
-
 /**
  * Hook for handling authentication redirects and user data management
  */
@@ -85,21 +83,7 @@ export function useAuthRedirect() {
         await handleLoginSuccess(result, redirectTo)
         return true
       }
-      if (!isLoginChallenge(result)) {
-        throw new AuthOperationError('Login failed')
-      }
-      if (result.expires_at * 1000 <= Date.now()) {
-        throw new AuthOperationError(
-          'Login flow expired. Please sign in again.'
-        )
-      }
-      useAuthStore.getState().auth.setPendingLoginVerification({
-        challenge: result,
-        redirectTo:
-          sanitizeAuthRedirect(redirectTo, window.location.origin) ?? undefined,
-      })
-      await navigate({ to: '/otp', replace: true })
-      return false
+      throw new AuthOperationError('Login failed')
     },
     [handleLoginSuccess, navigate, sessionID]
   )
