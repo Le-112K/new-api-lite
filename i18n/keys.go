@@ -222,27 +222,6 @@ const (
 	MsgCheckinQuotaFailed  = "checkin.quota_failed"
 )
 
-// Passkey related messages
-const (
-	MsgPasskeyCreateFailed            = "passkey.create_failed"
-	MsgPasskeyLoginAbnormal           = "passkey.login_abnormal"
-	MsgPasskeyUpdateFailed            = "passkey.update_failed"
-	MsgPasskeyInvalidUserId           = "passkey.invalid_user_id"
-	MsgPasskeyVerifyFailed            = "passkey.verify_failed"
-	MsgPasskeyRPIDInvalid             = "passkey.rp_id_invalid"
-	MsgPasskeyRPIDUnavailable         = "passkey.rp_id_unavailable"
-	MsgPasskeyRPIDRemovalConfirmation = "passkey.rp_id_removal_confirmation"
-)
-
-// 2FA related messages
-const (
-	MsgTwoFANotEnabled    = "twofa.not_enabled"
-	MsgTwoFAUserIdEmpty   = "twofa.user_id_empty"
-	MsgTwoFAAlreadyExists = "twofa.already_exists"
-	MsgTwoFARecordIdEmpty = "twofa.record_id_empty"
-	MsgTwoFACodeInvalid   = "twofa.code_invalid"
-)
-
 // Rate limit related messages
 const (
 	MsgRateLimitReached      = "rate_limit.reached"

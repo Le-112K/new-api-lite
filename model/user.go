@@ -1032,11 +1032,8 @@ func deleteUserAuthenticationData(tx *gorm.DB, userId int) error {
 		return err
 	}
 	for _, authenticationData := range []any{
-		&TwoFABackupCode{},
-		&TwoFA{},
 		&UserSession{},
 		&AuthFlow{},
-		&PasskeyCredential{},
 		&Token{},
 	} {
 		if err := tx.Unscoped().Where("user_id = ?", userId).Delete(authenticationData).Error; err != nil {

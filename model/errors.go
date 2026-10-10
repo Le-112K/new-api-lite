@@ -25,6 +25,3 @@ var (
 // Redemption errors
 var ErrRedeemFailed = errors.New("redeem.failed")
 
-// 2FA errors
-var ErrTwoFANotEnabled = errors.New("2fa not enabled")
-var ErrTwoFAAlreadyEnabled = errors.New("2fa already enabled")

@@ -397,7 +397,7 @@ func TestTelegramOAuthConfigurationAndLegacyEndpoints(t *testing.T) {
 			response := securityEnrollmentRequest("POST", "/api/oauth/state", `{"provider":"telegram","intent":"login"}`, "", service.AuthIdentity{}, GenerateOAuthCode)
 			assert.Contains(t, response.Body.String(), `"success":false`)
 			assert.NotContains(t, response.Body.String(), "flow_token")
-			for _, scope := range []string{"2fa.setup", "passkey.register"} {
+			for _, scope := range []string{"account.password.set", "account.delete"} {
 				requirements, err := service.GetVerificationRequirements(fixture.identity, scope)
 				require.NoError(t, err)
 				require.Len(t, requirements.Methods, 1)
@@ -408,7 +408,7 @@ func TestTelegramOAuthConfigurationAndLegacyEndpoints(t *testing.T) {
 				_, err = service.StartOAuthVerification(fixture.identity, service.VerificationOperation{Scope: scope}, "telegram")
 				assert.Error(t, err)
 			}
-			for _, handler := range []gin.HandlerFunc{Setup2FA, PasskeyRegisterBegin} {
+			for _, handler := range []gin.HandlerFunc{ResetPassword, SendPasswordResetEmail} {
 				response := securityEnrollmentRequest("POST", "/setup", `{}`, "", fixture.identity, handler)
 				assert.Contains(t, response.Body.String(), `"success":false`)
 				assert.NotContains(t, response.Body.String(), "flow_token")

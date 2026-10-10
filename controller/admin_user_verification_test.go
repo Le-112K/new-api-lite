@@ -1,22 +1,117 @@
 package controller
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm/logger"
 )
 
-// setupAdminUserTest promotes the enrolled operator to root and creates a
-// managed common user for the administrative endpoints to act on.
+type securityEnrollmentResponse struct {
+	Success bool            `json:"success"`
+	Message string          `json:"message"`
+	Code    string          `json:"code"`
+	Data    json.RawMessage `json:"data"`
+}
+
+func decodeSecurityEnrollmentResponse(t *testing.T, response *httptest.ResponseRecorder) securityEnrollmentResponse {
+	t.Helper()
+	var body securityEnrollmentResponse
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &body), response.Body.String())
+	return body
+}
+
+func securityEnrollmentRequest(method, path, body, proof string, identity service.AuthIdentity, handler gin.HandlerFunc) *httptest.ResponseRecorder {
+	response := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(response)
+	c.Request = httptest.NewRequest(method, path, strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request.Header.Set("X-Security-Proof", proof)
+	c.Set("id", identity.UserID)
+	c.Set("role", common.RoleCommonUser)
+	c.Set("session_id", identity.SessionID)
+	c.Set("auth_version", identity.UserAuthVersion)
+	c.Set("session_version", identity.SessionVersion)
+	handler(c)
+	return response
+}
+
+// setupSecurityEnrollmentTest creates an enrolled operator for the tests that
+// exercise the shared security-verification endpoints.
+func setupSecurityEnrollmentTest(t *testing.T) (*model.User, service.AuthIdentity) {
+	t.Helper()
+	require.NoError(t, i18n.Init())
+	gin.SetMode(gin.TestMode)
+	previousDB, previousLogDB := model.DB, model.LOG_DB
+	previousMain, previousLog := common.MainDatabaseType(), common.LogDatabaseType()
+	previousRedis, previousSecret := common.RedisEnabled, common.SessionSecret
+	previousEncryption := common.PasswordLoginEncryptionEnabled
+	dialect := os.Getenv("TEST_SECURITY_DIALECT")
+	if dialect == "" {
+		dialect = "sqlite"
+	}
+	dsn := os.Getenv("TEST_" + strings.ToUpper(dialect) + "_DSN")
+	db, _ := newAuditTestDatabase(t, dialect, dsn)
+	logDB, _ := newAuditTestDatabase(t, dialect, dsn)
+	db.Logger = logger.Default.LogMode(logger.Silent)
+	logDB.Logger = logger.Default.LogMode(logger.Silent)
+	versionQuery := "SELECT VERSION()"
+	if dialect == "sqlite" {
+		versionQuery = "SELECT sqlite_version()"
+	}
+	var version string
+	require.NoError(t, db.Raw(versionQuery).Scan(&version).Error)
+	t.Logf("database: %s %s", dialect, version)
+	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserSession{}, &model.AuthFlow{}, &model.UserOAuthBinding{}, &model.Option{}, &model.UserAccessToken{}))
+	require.NoError(t, logDB.AutoMigrate(&model.AuditLog{}))
+	model.DB, model.LOG_DB = db, logDB
+	require.NoError(t, model.EnsureLegacyAccessTokenRetireAt(time.Now().Unix()))
+	dbType := common.DatabaseTypeSQLite
+	if dialect == "mysql" {
+		dbType = common.DatabaseTypeMySQL
+	}
+	if dialect == "postgres" {
+		dbType = common.DatabaseTypePostgreSQL
+	}
+	common.SetDatabaseTypes(dbType, dbType)
+	common.PasswordLoginEncryptionEnabled = false
+	common.RedisEnabled = false
+	common.SessionSecret = "security-enrollment-test-secret"
+	t.Cleanup(func() {
+		model.DB, model.LOG_DB = previousDB, previousLogDB
+		common.SetDatabaseTypes(previousMain, previousLog)
+		common.RedisEnabled, common.SessionSecret = previousRedis, previousSecret
+		common.PasswordLoginEncryptionEnabled = previousEncryption
+		connection, err := db.DB()
+		if err == nil {
+			_ = connection.Close()
+		}
+	})
+	password, err := common.Password2Hash("enrollment-password")
+	require.NoError(t, err)
+	user := &model.User{Username: "enrollment-user", Password: password, Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1}
+	require.NoError(t, db.Create(user).Error)
+	require.NoError(t, model.PublishUserAuthCache(user.Id))
+	bundle, err := service.CreateLoginSession(user.Id, "password", "127.0.0.1", "enrollment-test")
+	require.NoError(t, err)
+	identity, err := service.ParseAccessToken(bundle.AccessToken)
+	require.NoError(t, err)
+	return user, identity
+}
+
 func setupAdminUserTest(t *testing.T) (*model.User, service.AuthIdentity, *model.User) {
 	t.Helper()
 	operator, identity := setupSecurityEnrollmentTest(t)
@@ -124,23 +219,6 @@ func TestAdminUserRiskOperationsRequireProofBeforeMutation(t *testing.T) {
 			},
 		},
 		{
-			name: "passkey reset", method: http.MethodDelete, path: "/api/user/:id/reset_passkey", handler: AdminResetPasskey,
-			params: func(target *model.User) gin.Params { return gin.Params{{Key: "id", Value: fmt.Sprint(target.Id)}} },
-			unchanged: func(t *testing.T, target *model.User) {
-				_, err := model.GetPasskeyByUserID(target.Id)
-				assert.NoError(t, err)
-			},
-		},
-		{
-			name: "two-factor disable", method: http.MethodDelete, path: "/api/user/:id/2fa", handler: AdminDisable2FA,
-			params: func(target *model.User) gin.Params { return gin.Params{{Key: "id", Value: fmt.Sprint(target.Id)}} },
-			unchanged: func(t *testing.T, target *model.User) {
-				twoFA, err := model.GetTwoFAByUserId(target.Id)
-				require.NoError(t, err)
-				assert.True(t, twoFA.IsEnabled)
-			},
-		},
-		{
 			name: "built-in binding clear", method: http.MethodDelete, path: "/api/user/:id/bindings/:binding_type", handler: AdminClearUserBinding,
 			params: func(target *model.User) gin.Params {
 				return gin.Params{{Key: "id", Value: fmt.Sprint(target.Id)}, {Key: "binding_type", Value: "github"}}
@@ -165,8 +243,6 @@ func TestAdminUserRiskOperationsRequireProofBeforeMutation(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			_, identity, target := setupAdminUserTest(t)
-			require.NoError(t, model.DB.Create(&model.PasskeyCredential{UserID: target.Id, CredentialID: "managed-passkey", PublicKey: "public-key"}).Error)
-			require.NoError(t, model.DB.Create(&model.TwoFA{UserId: target.Id, Secret: "JBSWY3DPEHPK3PXP", IsEnabled: true}).Error)
 			require.NoError(t, model.DB.Create(&model.UserOAuthBinding{UserId: target.Id, ProviderId: 7, ProviderUserId: "provider-user"}).Error)
 			var body string
 			if test.body != nil {
@@ -328,18 +404,17 @@ func TestAdminUserVerificationPolicy(t *testing.T) {
 		_, err := service.GetVerificationRequirements(identity, service.VerificationScopeAdminUserDelete)
 		assert.ErrorIs(t, err, service.ErrVerificationForbidden)
 	})
-	t.Run("falls back to the password without a second factor", func(t *testing.T) {
+	t.Run("falls back to the password", func(t *testing.T) {
 		_, identity, _ := setupAdminUserTest(t)
 		requirements, err := service.GetVerificationRequirements(identity, service.VerificationScopeAdminUserDelete)
 		require.NoError(t, err)
 		assert.Equal(t, []service.VerificationMethodOption{{Method: service.VerificationMethodPassword, Available: true}}, requirements.Methods)
 	})
-	t.Run("prefers an enrolled second factor", func(t *testing.T) {
-		operator, identity, _ := setupAdminUserTest(t)
-		require.NoError(t, model.DB.Create(&model.TwoFA{UserId: operator.Id, Secret: "JBSWY3DPEHPK3PXP", IsEnabled: true}).Error)
+	t.Run("falls back to the password for management too", func(t *testing.T) {
+		_, identity, _ := setupAdminUserTest(t)
 		requirements, err := service.GetVerificationRequirements(identity, service.VerificationScopeAdminUserManage)
 		require.NoError(t, err)
-		assert.Equal(t, []service.VerificationMethodOption{{Method: service.VerificationMethodTwoFA, Available: true}}, requirements.Methods)
+		assert.Equal(t, []service.VerificationMethodOption{{Method: service.VerificationMethodPassword, Available: true}}, requirements.Methods)
 	})
 	t.Run("a legacy token cannot present a proof", func(t *testing.T) {
 		operator, identity, target := setupAdminUserTest(t)

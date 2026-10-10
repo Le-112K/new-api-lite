@@ -96,7 +96,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	setupLogin(&user, nil, c)
+	setupLogin(&user, c)
 }
 
 // loginMethodFromContext 根据请求路径推导登录方式，用于登录审计日志。
@@ -107,10 +107,6 @@ func loginMethodFromContext(c *gin.Context) string {
 	switch c.FullPath() {
 	case "/api/user/login":
 		return "password"
-	case "/api/user/login/2fa":
-		return "2fa"
-	case "/api/user/passkey/login/finish":
-		return "passkey"
 	case "/api/oauth/wechat":
 		return "wechat"
 	case "/api/oauth/telegram/login":
@@ -143,21 +139,7 @@ func recordLoginAudit(user *model.User, c *gin.Context) {
 	model.RecordLoginLog(user.Id, user.Role, user.Username, content, ip, "login", params, extra, c)
 }
 
-// setupLogin evaluates the shared login policy after primary authentication.
-// Only a completed Passkey ceremony may go directly to session issuance. A
-// pending legacy GitHub binding rewrite travels inside the challenge and is
-// written only when the verification completes.
-func setupLogin(user *model.User, migration *service.LegacyGitHubMigration, c *gin.Context) {
-	challenge, err := service.StartLoginVerification(user, loginMethodFromContext(c), migration)
-	if err != nil {
-		writeSecurityOperationError(c, err)
-		return
-	}
-	if challenge != nil {
-		setAuthNoStore(c)
-		common.ApiSuccess(c, challenge)
-		return
-	}
+func setupLogin(user *model.User, c *gin.Context) {
 	setupLoginAtAuthVersion(user, user.AuthVersion, c)
 }
 

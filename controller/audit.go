@@ -1,10 +1,8 @@
 package controller
 
 import (
-	"errors"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
@@ -27,30 +25,17 @@ var auditContentTemplates = map[string]string{
 	"user.quota_subtract":       "Decreased user quota by ${quota}",
 	"user.quota_override":       "Overrode user quota from ${from} to ${to}",
 	"user.binding_clear":        "Cleared ${bindingType} binding for user ${username}",
-	"user.2fa_disable":          "Force-disabled two-factor authentication for the user",
-	"user.passkey_register":     "Registered a passkey",
 	"access_token.generate":     "Generated an access token",
 	"access_token.revoke":       "Revoked an access token",
 	"access_token.rename":       "Renamed an access token",
 	"access_token.update":       "Changed access token permissions",
-	"user.2fa_setup":            "Started two-factor authentication setup",
-	"user.2fa_enable":           "Enabled two-factor authentication",
-	"user.2fa_disable_self":     "Disabled two-factor authentication",
-	"user.2fa_backup_codes":     "Regenerated two-factor backup codes",
 	"user.security_verify":      "Completed security verification",
 	"user.password_change":      "Account password change",
 	"user.binding_start":        "Account binding request",
 	"user.binding_bind":         "Account binding",
 	"user.binding_unbind":       "Account unlinking",
 	"user.email_binding_resend": "Email confirmation code resend",
-	"user.passkey_delete":       "Deleted a passkey",
-	"user.reset_passkey":        "Reset the user passkey",
 	"option.update":             "Updated system setting ${key}",
-
-	"option.passkey_domains":           "Updated Passkey domains: removed ${domains}; affected ${known}; unknown ${unknown}",
-	"option.passkey_domains_confirmed": "Confirmed removal of Passkey domains: ${domains}; affected ${known}; unknown ${unknown}",
-	"option.passkey_domains_blocked":   "Passkey domain change blocked: ${domains}; affected ${known}; unknown ${unknown}",
-	"option.passkey_domains_failed":    "Passkey domain update failed",
 
 	"channel.create":             "Created channel ${name} (type ${type}, count ${count})",
 	"channel.update":             "Updated channel ${name} (ID: ${id})",
@@ -72,33 +57,6 @@ var auditContentTemplates = map[string]string{
 
 	"subscription.plan_reset":      "Reset active subscriptions for plan ${plan_id}",
 	"subscription.user_plan_reset": "Reset active plan ${plan_id} subscriptions for user ${target_user_id}",
-}
-
-func recordPasskeyDomainAudit(c *gin.Context, change *model.PasskeyDomainChange, confirmed bool, err error) {
-	confirmed = confirmed && err == nil && change != nil && len(change.RemovedRPIDs) > 0
-	params := map[string]any{"success": err == nil, "confirmed": confirmed}
-	if change != nil {
-		params["domains"] = strings.Join(change.RemovedRPIDs, ", ")
-		params["removed_rp_ids"] = change.RemovedRPIDs
-		params["known"] = change.AffectedCredentials
-		params["unknown"] = change.UnknownCredentials
-		params["previous_rp_id"] = change.PreviousRPID
-		params["effective_rp_id"] = change.EffectiveRPID
-	}
-	action := "option.passkey_domains"
-	if errors.Is(err, model.ErrPasskeyDomainRemovalConfirmation) {
-		action = "option.passkey_domains_blocked"
-	} else if err != nil {
-		action = "option.passkey_domains_failed"
-	} else if confirmed && change != nil && len(change.RemovedRPIDs) > 0 {
-		action = "option.passkey_domains_confirmed"
-	}
-	auditInfo := &model.AuditRequestInfo{
-		Method: c.Request.Method, Route: c.FullPath(), Path: c.FullPath(),
-		Status: c.Writer.Status(), Success: err == nil,
-	}
-	model.RecordOperationAuditLog(c.GetInt("id"), c.GetInt("role"), auditContentEN(action, params), c.ClientIP(), action, params, auditOperatorInfo(c), auditInfo, c)
-	markAuditLogged(c)
 }
 
 // auditContentEN 按 action 模板渲染英文兜底文本；未登记的 action 退回 action 本身。
@@ -158,7 +116,7 @@ func recordManageAuditFor(c *gin.Context, targetUserId int, action string, param
 	markAuditLogged(c)
 }
 
-// recordUserSecurityAudit 记录普通用户自己的安全敏感操作（如 passkey 绑定/解绑）。
+// recordUserSecurityAudit 记录普通用户自己的安全敏感操作（如绑定/解绑）。
 // 这类日志没有管理员操作者，不写 admin_info；同时不依赖 AdminAuth/RootAuth 的兜底。
 func recordUserSecurityAudit(c *gin.Context, userId int, action string, params map[string]any) {
 	if code := c.GetString("security_error_code"); code != "" {

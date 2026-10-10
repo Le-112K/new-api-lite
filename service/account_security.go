@@ -7,13 +7,11 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/oauth"
-	"github.com/QuantumNous/new-api/setting/system_setting"
 )
 
 func UnbindAccountOAuth(identity AuthIdentity, providerID int) error {
 	enabled := model.AccountLoginMethods{
 		Password: common.PasswordLoginEnabled,
-		Passkey:  system_setting.PasskeySettingsSnapshot().Enabled,
 		WeChat:   common.WeChatAuthEnabled,
 	}
 	for _, provider := range oauth.GetAllProviders() {

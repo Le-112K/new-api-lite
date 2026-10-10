@@ -11,23 +11,15 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/oauth"
-	"github.com/QuantumNous/new-api/setting/system_setting"
 	"gorm.io/gorm"
 )
 
 const (
-	VerificationMethodTwoFA              = "2fa"
-	VerificationMethodPasskey            = "passkey"
-	VerificationMethodPassword           = "password"
-	VerificationMethodOAuth              = "oauth"
-	VerificationMethodSession            = "session"
-	VerificationScopeChannelKeyRead      = "channel.key.read"
-	VerificationScopePasskeyRegister     = "passkey.register"
-	VerificationScopePasskeyDelete       = "passkey.delete"
-	VerificationScopeTwoFASetup          = "2fa.setup"
-	VerificationScopeTwoFADisable        = "2fa.disable"
-	VerificationScopeTwoFABackupCodes    = "2fa.backup_codes.regenerate"
-	VerificationScopeLogin               = "auth.login"
+	VerificationMethodPassword = "password"
+	VerificationMethodOAuth    = "oauth"
+	VerificationMethodSession  = "session"
+	VerificationScopeChannelKeyRead = "channel.key.read"
+	VerificationScopeLogin          = "auth.login"
 	VerificationScopeAccessTokenGenerate = "access_token.generate"
 	VerificationScopeAccessTokenRevoke   = "access_token.revoke"
 	VerificationScopeAccessTokenUpdate   = "access_token.update"
@@ -42,8 +34,6 @@ const (
 	VerificationScopeAdminUserUpdate       = "admin.user.update"
 	VerificationScopeAdminUserDelete       = "admin.user.delete"
 	VerificationScopeAdminUserManage       = "admin.user.manage"
-	VerificationScopeAdminUserPasskeyReset = "admin.user.passkey.reset"
-	VerificationScopeAdminUserTwoFADisable = "admin.user.2fa.disable"
 	VerificationScopeAdminUserBindingClear = "admin.user.binding.clear"
 	verificationScopeAdminUserPrefix       = "admin.user."
 )
@@ -198,7 +188,7 @@ func BindVerificationOperation(operation VerificationOperation) (VerificationBin
 			return VerificationBinding{}, ErrVerificationContextInvalid
 		}
 		normalized = context
-	case VerificationScopeAdminUserUpdate, VerificationScopeAdminUserDelete, VerificationScopeAdminUserPasskeyReset, VerificationScopeAdminUserTwoFADisable:
+	case VerificationScopeAdminUserUpdate, VerificationScopeAdminUserDelete:
 		var context AdminUserContext
 		if len(fields) != 1 || common.Unmarshal(fields["user_id"], &context.UserID) != nil || context.UserID <= 0 {
 			return VerificationBinding{}, ErrVerificationContextInvalid
@@ -259,9 +249,7 @@ func BindVerificationOperation(operation VerificationOperation) (VerificationBin
 			return VerificationBinding{}, ErrVerificationContextInvalid
 		}
 		normalized = context
-	case VerificationScopePasskeyRegister, VerificationScopePasskeyDelete, VerificationScopeTwoFASetup,
-		VerificationScopeTwoFADisable, VerificationScopeTwoFABackupCodes,
-		VerificationScopePasswordSet, VerificationScopePasswordChange, VerificationScopeAccountDelete:
+	case VerificationScopePasswordSet, VerificationScopePasswordChange, VerificationScopeAccountDelete:
 		if len(fields) != 0 {
 			return VerificationBinding{}, ErrVerificationContextInvalid
 		}
@@ -312,30 +300,18 @@ type VerificationRequirements struct {
 // support and disabled providers never turn an enrolled factor into an absent one.
 func securityVerificationPolicy(scope string, state model.UserVerificationState) ([]VerificationMethodOption, error) {
 	var methods []string
-	if state.HasTwoFA {
-		methods = append(methods, VerificationMethodTwoFA)
-	}
-	if state.HasPasskey {
-		methods = append(methods, VerificationMethodPasskey)
-	}
 	switch scope {
-	case VerificationScopeChannelKeyRead, VerificationScopePasskeyDelete, VerificationScopeLogin:
-	case VerificationScopeTwoFADisable, VerificationScopeTwoFABackupCodes:
-		if !state.HasTwoFA {
-			return nil, model.ErrTwoFANotEnabled
-		}
-	case VerificationScopePasskeyRegister, VerificationScopeTwoFASetup,
-		VerificationScopeAccessTokenGenerate, VerificationScopeAccessTokenUpdate, VerificationScopeAccessTokenRevoke,
+	case VerificationScopeChannelKeyRead, VerificationScopeLogin:
+		// Login never falls back to a lighter factor: with two-factor auth and
+		// Passkeys removed, an account without one of them resolves to no method
+		// at all, which the caller treats as "no step-up required".
+	case VerificationScopeAccessTokenGenerate, VerificationScopeAccessTokenUpdate, VerificationScopeAccessTokenRevoke,
 		VerificationScopeAccountBind, VerificationScopeAccountUnbind,
 		VerificationScopePasswordSet, VerificationScopePasswordChange, VerificationScopeAccountDelete,
 		VerificationScopeAdminUserCreate, VerificationScopeAdminUserUpdate, VerificationScopeAdminUserDelete,
-		VerificationScopeAdminUserManage, VerificationScopeAdminUserPasskeyReset,
-		VerificationScopeAdminUserTwoFADisable, VerificationScopeAdminUserBindingClear:
+		VerificationScopeAdminUserManage, VerificationScopeAdminUserBindingClear:
 		if scope == VerificationScopeAccountDelete && state.Role == common.RoleRootUser {
 			return nil, ErrVerificationForbidden
-		}
-		if scope == VerificationScopeTwoFASetup && state.HasTwoFA {
-			return nil, model.ErrTwoFAAlreadyEnabled
 		}
 		if (scope == VerificationScopePasswordSet && state.HasPassword) || (scope == VerificationScopePasswordChange && !state.HasPassword) {
 			return nil, ErrVerificationForbidden
@@ -352,14 +328,7 @@ func securityVerificationPolicy(scope string, state model.UserVerificationState)
 	}
 	options := make([]VerificationMethodOption, 0, len(methods))
 	for _, method := range methods {
-		option := VerificationMethodOption{Method: method, Available: true}
-		if method == VerificationMethodTwoFA && state.TwoFALocked {
-			option.Available, option.Reason = false, ErrVerificationLocked.Error()
-		}
-		if !system_setting.PasskeySettingsSnapshot().Enabled && (method == VerificationMethodPasskey || scope == VerificationScopePasskeyRegister) {
-			option.Available, option.Reason = false, "Passkey authentication is disabled."
-		}
-		options = append(options, option)
+		options = append(options, VerificationMethodOption{Method: method, Available: true})
 	}
 	return options, nil
 }
@@ -394,8 +363,7 @@ func GetVerificationRequirements(identity AuthIdentity, scope string) (*Verifica
 			switch scope {
 			case VerificationScopeAccountBind, VerificationScopeAccountUnbind, VerificationScopePasswordSet, VerificationScopePasswordChange, VerificationScopeAccountDelete,
 				VerificationScopeAdminUserCreate, VerificationScopeAdminUserUpdate, VerificationScopeAdminUserDelete,
-				VerificationScopeAdminUserManage, VerificationScopeAdminUserPasskeyReset,
-				VerificationScopeAdminUserTwoFADisable, VerificationScopeAdminUserBindingClear:
+				VerificationScopeAdminUserManage, VerificationScopeAdminUserBindingClear:
 				methods[i].Available, methods[i].Reason = false, "Password authentication is disabled."
 			}
 		}
@@ -595,53 +563,12 @@ func VerifySecurityInput(identity AuthIdentity, input VerificationInput) (*Secur
 		if password == "" || user.Password == "" || !common.ValidatePasswordAndHash(password, user.Password) {
 			return nil, ErrVerificationFailed
 		}
-	case VerificationMethodTwoFA:
-		if input.Scope == VerificationScopeTwoFABackupCodes {
-			if _, err := common.ValidateNumericCode(input.Code); err != nil {
-				return nil, ErrVerificationFailed
-			}
-		}
-		twoFA, err := model.GetTwoFAByUserId(identity.UserID)
-		if err != nil {
-			return nil, err
-		}
-		if err := VerifyTwoFactorCode(twoFA, input.Code); err != nil {
-			return nil, err
-		}
-	case VerificationMethodPasskey, VerificationMethodOAuth:
+	case VerificationMethodOAuth:
 		return nil, ErrVerificationFlowRequired
 	default:
 		return nil, ErrProofMethod
 	}
 	return CompleteSecurityVerification(identity, binding, input.Method)
-}
-
-// VerifyTwoFactorCode classifies the input before verification so one failed
-// submission cannot increment the failure counter for both TOTP and backup codes.
-func VerifyTwoFactorCode(twoFA *model.TwoFA, code string) error {
-	if twoFA == nil || !twoFA.IsEnabled {
-		return model.ErrTwoFANotEnabled
-	}
-	if twoFA.IsLocked() {
-		return ErrVerificationLocked
-	}
-	code = strings.TrimSpace(code)
-	var valid bool
-	var err error
-	if numeric, numericErr := common.ValidateNumericCode(code); numericErr == nil {
-		valid, err = twoFA.ValidateTOTPAndUpdateUsage(numeric)
-	} else if common.ValidateBackupCode(code) {
-		valid, err = twoFA.ValidateBackupCodeAndUpdateUsage(code)
-	} else {
-		err = twoFA.IncrementFailedAttempts()
-	}
-	if err != nil {
-		return err
-	}
-	if !valid {
-		return ErrVerificationFailed
-	}
-	return nil
 }
 
 func GetOAuthVerificationBinding(identity AuthIdentity, scope, provider string) (string, error) {

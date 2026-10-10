@@ -131,14 +131,14 @@ func TestSecurityProofBindsIdentityAndOperation(t *testing.T) {
 	operation := VerificationOperation{Scope: "channel.key.read", Context: []byte(`{"channel_id":123}`)}
 	binding, err := BindVerificationOperation(operation)
 	require.NoError(t, err)
-	proof, _, err := IssueSecurityProof(identity, "2fa", binding)
+	proof, _, err := IssueSecurityProof(identity, "password", binding)
 	require.NoError(t, err)
 
 	claims, err := verifySecurityProof(proof, identity, binding)
 	require.NoError(t, err)
-	assert.Equal(t, "2fa", claims.Method)
+	assert.Equal(t, "password", claims.Method)
 
-	wrongScope, err := BindVerificationOperation(VerificationOperation{Scope: "passkey.delete"})
+	wrongScope, err := BindVerificationOperation(VerificationOperation{Scope: VerificationScopePasswordChange})
 	require.NoError(t, err)
 	_, err = verifySecurityProof(proof, identity, wrongScope)
 	assert.ErrorIs(t, err, ErrProofScope)
@@ -166,7 +166,7 @@ func TestSecurityProofBindsAccessTokenSession(t *testing.T) {
 	setupAuthSessionTestDB(t)
 	useTestSessionSecret(t)
 	identity := AuthIdentity{UserID: 42, SessionID: model.AccessTokenSessionID(7), UserAuthVersion: 3, SessionVersion: model.AccessTokenSessionVersion}
-	binding, err := BindVerificationOperation(VerificationOperation{Scope: VerificationScopeTwoFADisable})
+	binding, err := BindVerificationOperation(VerificationOperation{Scope: VerificationScopePasswordChange})
 	require.NoError(t, err)
 	proof, _, err := IssueSecurityProof(identity, "password", binding)
 	require.NoError(t, err)

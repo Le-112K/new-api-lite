@@ -40,7 +40,7 @@ func setupAccessTokenAudit(t *testing.T) (*model.User, string) {
 	require.NoError(t, err)
 	require.NoError(t, i18n.Init())
 	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserSession{}, &model.Log{}, &model.AuditLog{}, &model.CasbinRule{}, &model.AuthzRole{}, &model.UserAccessToken{}, &model.Option{},
-		&model.AuthFlow{}, &model.TwoFA{}, &model.TwoFABackupCode{}, &model.PasskeyCredential{}, &model.UserOAuthBinding{}))
+		&model.AuthFlow{}, &model.UserOAuthBinding{}))
 	model.DB, model.LOG_DB = db, db
 	common.SetDatabaseTypes(common.DatabaseTypeSQLite, common.DatabaseTypeSQLite)
 	require.NoError(t, model.EnsureLegacyAccessTokenRetireAt(time.Now().Unix()))
@@ -81,8 +81,6 @@ func newAccessTokenTestRouter() *gin.Engine {
 	userRoute := api.Group("/user")
 	selfRoute := userRoute.Group("/", middleware.UserAuth())
 	selfRoute.GET("/self", func(c *gin.Context) { common.ApiSuccess(c, gin.H{"id": c.GetInt("id")}) })
-	selfRoute.POST("/2fa/setup", Setup2FA)
-	selfRoute.POST("/2fa/disable", Disable2FA)
 	tokenRoute := selfRoute.Group("/access_tokens")
 	tokenRoute.GET("", ListAccessTokens)
 	tokenRoute.GET("/catalog", GetAccessTokenCatalog)
@@ -130,6 +128,15 @@ func createAccessTokenTestSession(t *testing.T, userID int, sid string) (service
 	jwt, _, err := service.IssueAccessToken(identity)
 	require.NoError(t, err)
 	return identity, jwt
+}
+
+func issueSecurityEnrollmentProof(t *testing.T, identity service.AuthIdentity, operation service.VerificationOperation, method string) string {
+	t.Helper()
+	binding, err := service.BindVerificationOperation(operation)
+	require.NoError(t, err)
+	proof, _, err := service.IssueSecurityProof(identity, method, binding)
+	require.NoError(t, err)
+	return proof
 }
 
 func issueAccessTokenGenerateProof(t *testing.T, identity service.AuthIdentity, expiresAt int64, scopes ...string) string {
@@ -735,7 +742,7 @@ func TestSecurityAndOperationEventsUseAuditTable(t *testing.T) {
 	c.Set("role", user.Role)
 	c.Set(common.RequestIdKey, "correlated-request")
 	recordLoginAudit(user, c)
-	for _, action := range []string{"user.passkey_register", "user.passkey_delete", "user.2fa_setup", "user.2fa_enable", "user.2fa_disable_self", "user.2fa_backup_codes", "user.security_verify"} {
+	for _, action := range []string{"user.security_verify", "user.password_change", "user.binding_start", "user.binding_bind", "user.binding_unbind", "user.email_binding_resend", "user.binding_clear"} {
 		recordUserSecurityAudit(c, user.Id, action, nil)
 	}
 	recordManageAudit(c, "option.update", map[string]any{"key": "safe"})

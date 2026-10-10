@@ -61,7 +61,6 @@ func ChangeUserPassword(identity AuthSessionIdentity, update *User, firstPasswor
 // Enrollment is checked inside the transaction, not trusted from this snapshot.
 type AccountLoginMethods struct {
 	Password          bool
-	Passkey           bool
 	WeChat            bool
 	OAuthColumns      []string
 	CustomProviderIDs []int
@@ -90,13 +89,6 @@ func UnbindUserOAuthForSession(identity AuthSessionIdentity, providerID int, ena
 		}
 		for _, column := range enabled.OAuthColumns {
 			hasLogin = hasLogin || columns[column] != ""
-		}
-		if !hasLogin && enabled.Passkey {
-			var count int64
-			if err := tx.Model(&PasskeyCredential{}).Where("user_id = ?", identity.UserID).Count(&count).Error; err != nil {
-				return err
-			}
-			hasLogin = count > 0
 		}
 		if !hasLogin && len(enabled.CustomProviderIDs) > 0 {
 			var count int64

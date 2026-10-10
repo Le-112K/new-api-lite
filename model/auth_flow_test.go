@@ -57,16 +57,16 @@ func TestAuthFlowExpiryIsEnforced(t *testing.T) {
 	truncateTables(t)
 
 	token, flow, err := CreateAuthFlow(AuthFlowCreate{
-		Purpose:   AuthFlowPurposeTwoFALogin,
+		Purpose:   AuthFlowPurposeEmailBinding,
 		UserId:    7,
 		ExpiresAt: time.Now().Add(time.Minute),
 	})
 	require.NoError(t, err)
 	require.NoError(t, DB.Model(&AuthFlow{}).Where("id = ?", flow.Id).Update("expires_at", time.Now().Add(-time.Second)).Error)
 
-	_, err = GetAuthFlow(token, AuthFlowMatch{Purpose: AuthFlowPurposeTwoFALogin})
+	_, err = GetAuthFlow(token, AuthFlowMatch{Purpose: AuthFlowPurposeEmailBinding})
 	assert.True(t, errors.Is(err, ErrAuthFlowExpired))
-	_, err = ConsumeAuthFlow(token, AuthFlowMatch{Purpose: AuthFlowPurposeTwoFALogin})
+	_, err = ConsumeAuthFlow(token, AuthFlowMatch{Purpose: AuthFlowPurposeEmailBinding})
 	assert.True(t, errors.Is(err, ErrAuthFlowExpired))
 }
 
