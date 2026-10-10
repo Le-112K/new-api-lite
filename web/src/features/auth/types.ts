@@ -16,8 +16,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import type { AuthBundle } from '@/stores/auth-store'
-
 import type { LoginResult } from './secure-verification/types'
 
 // ============================================================================
@@ -29,11 +27,6 @@ export interface LoginPayload {
   password: string
   turnstile?: string
   passwordEncryptionEnabled?: boolean
-}
-
-export interface TwoFAPayload {
-  code: string
-  flow_token: string
 }
 
 export interface RegisterPayload {
@@ -71,12 +64,6 @@ export interface LoginResponse {
   data?: LoginResult
 }
 
-export interface Login2FAResponse {
-  success: boolean
-  message: string
-  data?: AuthBundle
-}
-
 export interface ApiResponse<T = unknown> {
   success: boolean
   message: string
@@ -107,7 +94,6 @@ export interface SystemStatus {
     telegram_oauth?: boolean
     telegram_oauth_configured?: boolean
     telegram_bot_name?: string
-    passkey_login?: boolean
     wechat_login?: boolean
     wechat_qrcode?: string
     wechat_qr_code?: string
@@ -154,7 +140,6 @@ export interface SystemStatus {
   telegram_oauth?: boolean
   telegram_oauth_configured?: boolean
   telegram_bot_name?: string
-  passkey_login?: boolean
   wechat_login?: boolean
   wechat_qrcode?: string
   wechat_qr_code?: string

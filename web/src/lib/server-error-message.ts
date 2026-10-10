@@ -34,20 +34,11 @@ const serverErrorMessageKeys = {
     'Telegram login has changed. Reload the page and start Telegram OAuth again.',
   AUTH_INTERNAL_ERROR: 'Please try again later.',
   SECURITY_VERIFICATION_FAILED: 'Verification failed. Please try again.',
-  PASSKEY_RP_ID_UNAVAILABLE:
-    'This Passkey domain is not available on this website. Use its original website or another verification method.',
-  PASSKEY_RP_ID_INVALID:
-    'Invalid Passkey domain. Enter a domain without a scheme, port, path or wildcard.',
   SECURITY_VERIFICATION_FLOW_REQUIRED:
     'This verification method requires its dedicated verification flow.',
-  SECURITY_VERIFICATION_LOCKED:
-    'Two-factor authentication is temporarily locked.',
+  SECURITY_VERIFICATION_LOCKED: 'Verification is temporarily locked.',
   OAUTH_ACCOUNT_MISMATCH:
     'The OAuth account does not match the account linked to your profile.',
-  TWOFA_CODE_INVALID: 'The authenticator code is incorrect.',
-  TWOFA_ALREADY_ENABLED: 'Two-factor authentication is already enabled.',
-  TWOFA_NOT_ENABLED: 'Two-factor authentication is not enabled.',
-  PASSKEY_NOT_FOUND: 'No Passkey is registered.',
   AUTH_FLOW_INVALID: 'Verification flow expired',
   SECURITY_PROOF_REQUIRED: 'Additional verification required',
   SECURITY_PROOF_EXPIRED:
@@ -66,8 +57,6 @@ const serverErrorMessageKeys = {
     'This verification method is not allowed for this action.',
   SECURITY_METHOD_UNAVAILABLE:
     'This verification method is currently unavailable.',
-  TWOFA_SETUP_INVALID:
-    'The two-factor setup has expired or changed. Start setup again.',
 
   AUTH_SESSION_LIMIT:
     'Too many active login sessions. On a device where you are already signed in, open Login sessions and use “Sign out other sessions” to revoke them. If you cannot access a signed-in device, reset your password to sign out all sessions.',

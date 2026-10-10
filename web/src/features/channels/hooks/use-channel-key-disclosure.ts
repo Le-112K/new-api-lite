@@ -62,7 +62,7 @@ export function useChannelKeyDisclosure(
         context: { channel_id: channelId },
         title: t('Verify to view channel key'),
         description: t(
-          'Use Passkey or 2FA to confirm your identity before revealing this channel key.'
+          'Confirm your identity before revealing this channel key.'
         ),
       })
       if (!proof || operation.current !== current) return

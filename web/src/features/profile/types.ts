@@ -177,15 +177,6 @@ export interface BindingItem {
   onBind: () => void
 }
 
-/**
- * Two-Factor Authentication Status
- */
-export interface TwoFAStatus {
-  enabled: boolean
-  locked: boolean
-  backup_codes_remaining: number
-}
-
 // ============================================================================
 // Checkin Type Definitions
 // ============================================================================

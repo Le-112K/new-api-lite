@@ -500,7 +500,7 @@ func TestSetupLoginDoesNotTouchPasswordWhenPasswordFieldOmitted(t *testing.T) {
 	hashedPassword, err := common.Password2Hash("CurrentPassword123")
 	require.NoError(t, err)
 	user := &model.User{
-		Username: "twofa-user",
+		Username: "login-user",
 		Password: hashedPassword,
 		Role:     common.RoleCommonUser,
 		Status:   common.UserStatusEnabled,

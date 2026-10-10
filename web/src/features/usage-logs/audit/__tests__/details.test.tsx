@@ -488,7 +488,7 @@ it.each([
     { method: 'password' },
     'Logged in successfully via Password',
   ],
-  ['security', 'user.2fa_enable', {}, 'Enabled two-factor authentication'],
+  ['security', 'user.password_change', {}, 'Account password change'],
   ['access_token', 'access_token.request', {}, 'Access Token'],
 ])(
   'shows summary and result for %s records',

@@ -33,8 +33,6 @@ import type { VerificationOperation } from './secure-verification/types'
 import type {
   LoginPayload,
   LoginResponse,
-  Login2FAResponse,
-  TwoFAPayload,
   RegisterPayload,
   ApiResponse,
 } from './types'
@@ -81,14 +79,6 @@ export async function login(payload: LoginPayload): Promise<LoginResponse> {
     }
     throw error
   }
-}
-
-// Two-factor authentication login
-export async function login2fa(payload: TwoFAPayload) {
-  const res = await api.post<Login2FAResponse>('/api/user/login/2fa', payload, {
-    skipAuthRefresh: true,
-  })
-  return res.data
 }
 
 interface LogoutRuntime {

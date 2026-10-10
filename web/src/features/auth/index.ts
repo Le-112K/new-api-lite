@@ -22,7 +22,6 @@ For commercial licensing, please contact support@quantumnous.com
 
 export {
   login,
-  login2fa,
   logout,
   register,
   sendPasswordResetEmail,
@@ -41,8 +40,6 @@ export {
 export type {
   LoginPayload,
   LoginResponse,
-  Login2FAResponse,
-  TwoFAPayload,
   RegisterPayload,
   PasswordResetPayload,
   EmailVerificationPayload,

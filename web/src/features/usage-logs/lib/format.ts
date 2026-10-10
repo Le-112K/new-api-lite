@@ -447,10 +447,6 @@ const AUDIT_TEMPLATES: Record<string, string> = {
   'access_token.revoke': 'Revoked an access token',
   'access_token.rename': 'Renamed an access token',
   'access_token.update': 'Changed access token permissions',
-  'user.2fa_setup': 'Started two-factor authentication setup',
-  'user.2fa_enable': 'Enabled two-factor authentication',
-  'user.2fa_disable_self': 'Disabled two-factor authentication',
-  'user.2fa_backup_codes': 'Regenerated two-factor backup codes',
   'user.security_verify': 'Completed security verification',
   'user.password_change': 'Account password change',
   'user.binding_start': 'Account binding request',
@@ -469,21 +465,10 @@ const AUDIT_TEMPLATES: Record<string, string> = {
   'user.quota_subtract': 'Decreased user quota by {{quota}}',
   'user.quota_override': 'Overrode user quota from {{from}} to {{to}}',
   'user.binding_clear': 'Cleared {{bindingType}} binding for user {{username}}',
-  'user.2fa_disable': 'Force-disabled two-factor authentication for the user',
-  'user.passkey_register': 'Registered a passkey',
-  'user.passkey_delete': 'Deleted a passkey',
   'user.topup_complete': 'Completed top-up order for the user',
-  'user.reset_passkey': 'Reset the user passkey',
   'user.oauth_unbind': 'Removed an OAuth binding for the user',
   // System settings
   'option.update': 'Updated system setting {{key}}',
-  'option.passkey_domains':
-    'Updated Passkey domains: removed {{domains}}; affected {{known}}; unknown {{unknown}}',
-  'option.passkey_domains_confirmed':
-    'Confirmed removal of Passkey domains: {{domains}}; affected {{known}}; unknown {{unknown}}',
-  'option.passkey_domains_blocked':
-    'Passkey domain change blocked: {{domains}}; affected {{known}}; unknown {{unknown}}',
-  'option.passkey_domains_failed': 'Passkey domain update failed',
   'option.payment_compliance': 'Confirmed payment compliance',
   'option.reset_ratio': 'Reset model ratios',
   'option.clear_affinity_cache': 'Cleared channel affinity cache',

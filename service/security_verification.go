@@ -45,7 +45,7 @@ var adminUserManageActions = []string{"disable", "enable", "promote", "demote"}
 var (
 	ErrVerificationFailed         = errors.New("Verification failed. Please try again.")
 	ErrVerificationUnavailable    = errors.New("This verification method is currently unavailable.")
-	ErrVerificationLocked         = errors.New("Two-factor authentication is temporarily locked.")
+	ErrVerificationLocked         = errors.New("Verification is temporarily locked.")
 	ErrVerificationFlowRequired   = errors.New("This verification method requires its dedicated verification flow.")
 	ErrVerificationContextInvalid = errors.New("The action details are invalid.")
 	ErrVerificationForbidden      = errors.New("You do not have permission to perform this action.")
@@ -302,9 +302,9 @@ func securityVerificationPolicy(scope string, state model.UserVerificationState)
 	var methods []string
 	switch scope {
 	case VerificationScopeChannelKeyRead, VerificationScopeLogin:
-		// Login never falls back to a lighter factor: with two-factor auth and
-		// Passkeys removed, an account without one of them resolves to no method
-		// at all, which the caller treats as "no step-up required".
+		// Login offers no verification method: the second factors that used to
+		// require a step-up here were removed. An empty list means the caller
+		// treats the account as "no step-up required" and issues the session.
 	case VerificationScopeAccessTokenGenerate, VerificationScopeAccessTokenUpdate, VerificationScopeAccessTokenRevoke,
 		VerificationScopeAccountBind, VerificationScopeAccountUnbind,
 		VerificationScopePasswordSet, VerificationScopePasswordChange, VerificationScopeAccountDelete,
@@ -373,7 +373,7 @@ func GetVerificationRequirements(identity AuthIdentity, scope string) (*Verifica
 		// OAuth verification completes through a browser popup bound to a login
 		// session, which an access token cannot provide.
 		if _, ok := model.ParseAccessTokenSessionID(identity.SessionID); ok {
-			methods[i].Available, methods[i].Reason = false, "OAuth verification requires a browser sign-in. Enable two-factor authentication or a Passkey to continue."
+			methods[i].Available, methods[i].Reason = false, "OAuth verification requires a browser sign-in and is not available with an access token."
 			continue
 		}
 		user, err := model.GetUserById(identity.UserID, false)

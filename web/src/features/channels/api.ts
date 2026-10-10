@@ -282,7 +282,7 @@ export async function deleteDisabledChannels(): Promise<{
 }
 
 /**
- * Get channel key (requires 2FA verification)
+ * Get channel key (requires security verification)
  */
 export async function getChannelKey(
   id: number,
