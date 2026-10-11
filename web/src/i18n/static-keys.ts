@@ -81,6 +81,8 @@ export const STATIC_I18N_KEYS = [
   'Flexible integration',
   'Connect to model services through a Sub2API gateway',
   'Connect to New API model services with support for multiple task plugins',
+  '1min',
+  'Connect to 1min.AI models, including image understanding',
   'SGLang',
   'Connect to self-hosted models served by SGLang',
   'SGLang server address, without /v1',
