@@ -133,7 +133,9 @@ func TestNativeToOpenAIResponse(t *testing.T) {
 	assert.Equal(t, "gpt-6-luna", response.Model)
 }
 
-func TestNativeToOpenAIResponseSurfacesReasoning(t *testing.T) {
+func TestNativeToOpenAIResponseDropsReasoning(t *testing.T) {
+	// The upstream reports the model's thinking, but forwarding it makes clients
+	// without a thinking panel print it ahead of the answer, so it is dropped.
 	body := []byte(`{
 		"aiRecord": {"uuid": "r1", "model": "gpt-6-luna", "status": "SUCCESS",
 			"aiRecordDetail": {"resultObject": ["红色"]}},
@@ -144,23 +146,8 @@ func TestNativeToOpenAIResponseSurfacesReasoning(t *testing.T) {
 	response, upstreamErr := nativeToOpenAIResponse(body, "gpt-6-luna")
 
 	require.Nil(t, upstreamErr)
-	require.NotNil(t, response.Choices[0].Message.ReasoningContent)
-	assert.Contains(t, *response.Choices[0].Message.ReasoningContent, "Identifying colors")
-	// Reasoning must not leak into the visible answer.
-	assert.Equal(t, "红色", response.Choices[0].Message.Content)
-}
-
-func TestNativeToOpenAIResponseOmitsEmptyReasoning(t *testing.T) {
-	body := []byte(`{
-		"aiRecord": {"uuid": "r2", "model": "gpt-6-luna", "status": "SUCCESS",
-			"aiRecordDetail": {"resultObject": ["ok"]}},
-		"metadata": {"inputToken": 1, "outputToken": 1, "totalToken": 2, "reasoningContent": ""}
-	}`)
-
-	response, upstreamErr := nativeToOpenAIResponse(body, "gpt-6-luna")
-
-	require.Nil(t, upstreamErr)
 	assert.Nil(t, response.Choices[0].Message.ReasoningContent)
+	assert.Equal(t, "红色", response.Choices[0].Message.Content)
 }
 
 func TestNativeToOpenAIResponseRejectsFailureStatus(t *testing.T) {

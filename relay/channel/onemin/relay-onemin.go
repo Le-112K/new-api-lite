@@ -82,10 +82,9 @@ func buildNativePayload(request *dto.GeneralOpenAIRequest) (nativeChatRequest, b
 // are self-consistent with totalToken; promptToken counts something else and is
 // deliberately ignored.
 type nativeMetadata struct {
-	InputToken   int    `json:"inputToken"`
-	OutputToken  int    `json:"outputToken"`
-	TotalToken   int    `json:"totalToken"`
-	Reasoning    string `json:"reasoningContent"`
+	InputToken   int `json:"inputToken"`
+	OutputToken  int `json:"outputToken"`
+	TotalToken   int `json:"totalToken"`
 	InputDetails struct {
 		CachedTokens int `json:"cached_tokens"`
 	} `json:"inputTokenDetails"`
@@ -118,15 +117,13 @@ func nativeToOpenAIResponse(body []byte, model string) (*dto.OpenAITextResponse,
 		responseModel = model
 	}
 
-	// Reasoning models return their thinking here. Surfacing it as
-	// reasoning_content lets clients render it in their thinking panel instead
-	// of treating it as part of the answer.
+	// The upstream reports the model's thinking in metadata.reasoningContent.
+	// It is deliberately not forwarded: clients that lack a dedicated thinking
+	// panel render it inline ahead of the answer, which reads as noise, and the
+	// upstream only supplies it intermittently anyway.
 	message := dto.Message{
 		Role:    "assistant",
 		Content: content,
-	}
-	if reasoning := strings.TrimSpace(envelope.Metadata.Reasoning); reasoning != "" {
-		message.ReasoningContent = &reasoning
 	}
 
 	response := &dto.OpenAITextResponse{
@@ -161,7 +158,6 @@ func nativeStreamToOpenAI(body io.Reader, model string) io.Reader {
 		created := common.GetTimestamp()
 		sentRole := false
 		var finalUsage *dto.Usage
-		var finalReasoning string
 
 		writeChunk := func(delta dto.ChatCompletionsStreamResponseChoiceDelta, finish *string) error {
 			chunk := dto.ChatCompletionsStreamResponse{
@@ -217,7 +213,6 @@ func nativeStreamToOpenAI(body io.Reader, model string) io.Reader {
 					model = record.Model
 				}
 				finalUsage = nativeUsageFromStreamRecord(payload)
-				finalReasoning = nativeReasoningFromStreamRecord(payload)
 				continue
 			}
 
@@ -240,16 +235,6 @@ func nativeStreamToOpenAI(body io.Reader, model string) io.Reader {
 		if err := scanner.Err(); err != nil {
 			pw.CloseWithError(err)
 			return
-		}
-
-		if finalReasoning != "" {
-			reasoning := finalReasoning
-			if err := writeChunk(dto.ChatCompletionsStreamResponseChoiceDelta{
-				ReasoningContent: &reasoning,
-			}, nil); err != nil {
-				pw.CloseWithError(err)
-				return
-			}
 		}
 
 		stop := "stop"
@@ -277,18 +262,6 @@ func nativeStreamToOpenAI(body io.Reader, model string) io.Reader {
 		fmt.Fprint(pw, "data: [DONE]\n\n")
 	}()
 	return pr
-}
-
-func nativeReasoningFromStreamRecord(payload string) string {
-	var envelope struct {
-		AiRecord struct {
-			Metadata nativeMetadata `json:"metadata"`
-		} `json:"aiRecord"`
-	}
-	if err := common.UnmarshalJsonStr(payload, &envelope); err != nil {
-		return ""
-	}
-	return strings.TrimSpace(envelope.AiRecord.Metadata.Reasoning)
 }
 
 func nativeUsageFromStreamRecord(payload string) *dto.Usage {
