@@ -521,25 +521,63 @@ func hostOfURL(raw string) string {
 	return parsed.Host
 }
 
-// unrecognizedKeyMarker is how the upstream reports an allowlist violation.
-const unrecognizedKeyMarker = "Unrecognized key"
+// The upstream validates request bodies strictly and names the offending
+// parameter in every rejection it produces, in one of these shapes:
+//
+//	Unrecognized keys: "reasoning", "enable_thinking"
+//	Omit temperature for this model.
+//	Specify either max_tokens or max_completion_tokens, not both.
+//
+// Clients keep sending parameters the upstream has not adopted, and each
+// rejection names only one of them, so the caller drops the named parameters
+// and replays until the request is accepted.
 
-// withoutUnrecognizedKeys drops every parameter the upstream named as unknown
-// and returns the replayed payload. Keys are read from the error itself, so new
-// client parameters are handled without a hardcoded list.
-func withoutUnrecognizedKeys(resp *http.Response, requestBody []byte) ([]byte, bool) {
+// rejectedParams reads the parameters an upstream rejection complains about.
+// It prefers the structured `param` field and falls back to the names quoted or
+// named in the message.
+func rejectedParams(resp *http.Response) []string {
 	if resp == nil || resp.StatusCode != http.StatusBadRequest {
-		return nil, false
+		return nil
 	}
-	message, ok := readUpstreamErrorMessage(resp)
-	if !ok || !strings.Contains(message, unrecognizedKeyMarker) {
-		return nil, false
-	}
-	names := extractQuotedNames(message)
-	if len(names) == 0 {
-		return nil, false
+	message, param, ok := readUpstreamError(resp)
+	if !ok {
+		return nil
 	}
 
+	found := make(map[string]struct{})
+	var names []string
+	add := func(name string) {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			return
+		}
+		if _, seen := found[name]; seen {
+			return
+		}
+		found[name] = struct{}{}
+		names = append(names, name)
+	}
+
+	// "Unrecognized keys: \"reasoning\", \"thinking\"" and friends.
+	for _, quoted := range extractQuotedNames(message) {
+		add(quoted)
+	}
+	// "Omit temperature for this model."
+	if after, ok := strings.CutPrefix(message, "Omit "); ok {
+		if name, _, found := strings.Cut(after, " "); found {
+			add(name)
+		}
+	}
+	// "Specify either max_tokens or max_completion_tokens, not both."
+	if param != "" && strings.Contains(message, "not both") {
+		add(param)
+	}
+	return names
+}
+
+// dropNamedKeys removes the given parameters from the payload. It reports false
+// when none of them is present, so the caller stops retrying instead of looping.
+func dropNamedKeys(requestBody []byte, names []string) ([]byte, bool) {
 	var payload map[string]any
 	if err := common.Unmarshal(requestBody, &payload); err != nil {
 		return nil, false
@@ -561,27 +599,40 @@ func withoutUnrecognizedKeys(resp *http.Response, requestBody []byte) ([]byte, b
 	return stripped, true
 }
 
-// readUpstreamErrorMessage peeks at the response body, then restores it so a
-// request that is not retried still reports the original upstream error.
-func readUpstreamErrorMessage(resp *http.Response) (string, bool) {
+// readUpstreamError peeks at the response body, then restores it so a request
+// that is not retried still reports the original upstream error.
+func readUpstreamError(resp *http.Response) (message, param string, ok bool) {
 	if resp.Body == nil {
-		return "", false
+		return "", "", false
 	}
 	preview, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	if err != nil {
-		return "", false
+		return "", "", false
 	}
 	rest, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", false
+		return "", "", false
 	}
 	resp.Body = io.NopCloser(io.MultiReader(bytes.NewReader(preview), bytes.NewReader(rest)))
 
-	var upstream nativeError
-	if err := common.Unmarshal(preview, &upstream); err != nil {
-		return "", false
+	var upstream struct {
+		Error struct {
+			Message string `json:"message"`
+			Param   string `json:"param"`
+		} `json:"error"`
+		Message string `json:"message"`
 	}
-	return upstream.text(), true
+	if err := common.Unmarshal(preview, &upstream); err != nil {
+		return "", "", false
+	}
+	message = upstream.Error.Message
+	if message == "" {
+		message = upstream.Message
+	}
+	if message == "" {
+		return "", "", false
+	}
+	return message, upstream.Error.Param, true
 }
 
 // extractQuotedNames pulls the double-quoted identifiers out of an error such

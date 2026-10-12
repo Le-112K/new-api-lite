@@ -136,23 +136,40 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 		return resp, nil
 	}
 
-	// The OpenAI-compatible surface validates its body against an allowlist and
-	// rejects the whole request when a client sends a parameter it does not
-	// know. Clients keep inventing such parameters, so react to the error
-	// instead of maintaining a list: strip the offending keys and replay.
+	// Some reasoning models reject tool calling unless reasoning_effort is
+	// explicitly "none" while others reject the field outright, so this
+	// correction is driven by the upstream error rather than a model list.
 	if retried, ok := withReasoningEffortNone(body); ok && detectReasoningEffortShim(resp, body) {
 		if next, retryErr := channel.DoApiRequest(a, c, info, bytes.NewReader(retried)); retryErr == nil && next != nil {
 			logger.LogDebug(c, "1min: retried with reasoning_effort=none for tool calling")
 			service.CloseResponseBodyGracefully(resp)
 			resp = next
+			body = retried
 		}
 	}
-	if retried, ok := withoutUnrecognizedKeys(resp, body); ok {
-		if next, retryErr := channel.DoApiRequest(a, c, info, bytes.NewReader(retried)); retryErr == nil && next != nil {
-			logger.LogDebug(c, "1min: retried after dropping parameters this upstream rejects")
-			service.CloseResponseBodyGracefully(resp)
-			resp = next
+
+	// The OpenAI-compatible surface rejects the whole request when it meets a
+	// parameter it does not accept, and names only one parameter per rejection.
+	// Drop what it names and replay until it stops complaining, so clients keep
+	// working as they add new parameters.
+	payload := body
+	for range maxParamCorrections {
+		names := rejectedParams(resp)
+		if len(names) == 0 {
+			break
 		}
+		retried, ok := dropNamedKeys(payload, names)
+		if !ok {
+			break
+		}
+		next, retryErr := channel.DoApiRequest(a, c, info, bytes.NewReader(retried))
+		if retryErr != nil || next == nil {
+			break
+		}
+		logger.LogDebug(c, "1min: dropped parameters the upstream rejects: %v", names)
+		service.CloseResponseBodyGracefully(resp)
+		resp = next
+		payload = retried
 	}
 	return resp, nil
 }

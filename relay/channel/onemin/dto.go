@@ -9,6 +9,12 @@ import (
 // assetUploadTimeout bounds a single image upload to the asset API.
 const assetUploadTimeout = 60 * time.Second
 
+// maxParamCorrections bounds how many times a rejected parameter is dropped and
+// the request replayed. The upstream reports one offending parameter per
+// response, so a client sending several needs one round each; the cap keeps a
+// pathological request from retrying without limit.
+const maxParamCorrections = 6
+
 // 1min exposes two distinct surfaces under one API root:
 //   - OpenAI-compatible endpoints under /openai/v1, text only
 //   - the native feature API under /api, which is the only one that accepts images

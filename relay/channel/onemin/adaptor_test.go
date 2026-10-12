@@ -268,12 +268,15 @@ func TestExtractQuotedNames(t *testing.T) {
 	assert.Empty(t, extractQuotedNames("Unrecognized key: nothing quoted here"))
 }
 
-func TestWithoutUnrecognizedKeys(t *testing.T) {
+func TestRejectedParamsAndDropNamedKeys(t *testing.T) {
 	body := []byte(`{"model":"gpt-6-luna","messages":[],"thinking":{"type":"enabled"},"enable_thinking":true,"reasoning_effort":"low"}`)
 	resp := errorResponse(http.StatusBadRequest,
 		`{"error":{"message":"Unrecognized keys: \"thinking\", \"enable_thinking\"","type":"invalid_request_error"}}`)
 
-	retried, ok := withoutUnrecognizedKeys(resp, body)
+	names := rejectedParams(resp)
+	assert.ElementsMatch(t, []string{"thinking", "enable_thinking"}, names)
+
+	retried, ok := dropNamedKeys(body, names)
 	require.True(t, ok)
 
 	var payload map[string]any
@@ -290,19 +293,26 @@ func TestWithoutUnrecognizedKeys(t *testing.T) {
 	assert.Contains(t, string(restored), "Unrecognized keys")
 }
 
-func TestWithoutUnrecognizedKeysIgnoresOtherErrors(t *testing.T) {
+func TestRejectedParamsHandlesOmitWording(t *testing.T) {
+	resp := errorResponse(http.StatusBadRequest,
+		`{"error":{"message":"Omit temperature for this model.","param":"temperature"}}`)
+	assert.Equal(t, []string{"temperature"}, rejectedParams(resp))
+
+	conflict := errorResponse(http.StatusBadRequest,
+		`{"error":{"message":"Specify either max_tokens or max_completion_tokens, not both.","param":"max_completion_tokens"}}`)
+	assert.Equal(t, []string{"max_completion_tokens"}, rejectedParams(conflict))
+}
+
+func TestRejectedParamsIgnoresOtherErrors(t *testing.T) {
 	body := []byte(`{"model":"gpt-6-luna","messages":[]}`)
 
-	_, ok := withoutUnrecognizedKeys(errorResponse(http.StatusOK, `{"error":{"message":"Unrecognized key: \"x\""}}`), body)
-	assert.False(t, ok, "a successful response must never be rewritten")
-
-	_, ok = withoutUnrecognizedKeys(errorResponse(http.StatusBadRequest, `{"error":{"message":"some other failure"}}`), body)
-	assert.False(t, ok, "unrelated errors must not trigger a retry")
+	assert.Empty(t, rejectedParams(errorResponse(http.StatusOK, `{"error":{"message":"Unrecognized key: \"x\""}}`)),
+		"a successful response must never be rewritten")
+	assert.Empty(t, rejectedParams(errorResponse(http.StatusBadRequest, `{"error":{"message":"some other failure"}}`)),
+		"unrelated errors must not trigger a retry")
 
 	// Named keys that are absent from the payload leave nothing to retry.
-	_, ok = withoutUnrecognizedKeys(
-		errorResponse(http.StatusBadRequest, `{"error":{"message":"Unrecognized key: \"absent_key\""}}`),
-		body)
+	_, ok := dropNamedKeys(body, []string{"absent_key"})
 	assert.False(t, ok)
 }
 
