@@ -209,9 +209,10 @@ func TestNativeStreamToOpenAIProducesOpenAIChunks(t *testing.T) {
 	require.NoError(t, err)
 
 	output := string(converted)
+	// The opening is held back briefly so a leading decoration can be stripped,
+	// so deltas may arrive coalesced; assert on the text that reaches the client.
 	assert.Contains(t, output, `"role":"assistant"`)
-	assert.Contains(t, output, `"content":"图片"`)
-	assert.Contains(t, output, `"content":"是绿色"`)
+	assert.Contains(t, output, `"content":"图片是绿色"`)
 	assert.Contains(t, output, `"finish_reason":"stop"`)
 	assert.Contains(t, output, `"prompt_tokens":9`)
 	assert.Contains(t, output, `"completion_tokens":3`)
@@ -404,6 +405,41 @@ func TestNativeStreamDropsReasoningEvents(t *testing.T) {
 	assert.NotContains(t, output, "Describing image in Chinese")
 	assert.NotContains(t, output, "I see a red rectangle")
 	assert.Contains(t, output, "data: [DONE]")
+}
+
+func TestCrawlingStripperRemovesLeadingMarker(t *testing.T) {
+	// The upstream prepends this when it fetches a loopback URL mentioned in the
+	// prompt; the marker must not reach the client.
+	marker := "🌐 Crawling site http://127.0.0.1:8080\n"
+
+	stripper := &crawlingStripper{}
+	assert.Equal(t, "", stripper.feed(marker), "the opening is withheld")
+	assert.Equal(t, "好的，我会用中文回答。", stripper.feed("好的，我会用中文回答。"))
+	assert.Equal(t, "", stripper.flush())
+}
+
+func TestCrawlingStripperPassesNormalRepliesThrough(t *testing.T) {
+	stripper := &crawlingStripper{}
+	first := stripper.feed("这是一张纯红色的图片，没有其他可辨认的内容，尺寸约为 224x126 像素。")
+	assert.NotContains(t, first, "Crawling")
+	assert.Contains(t, first, "纯红色")
+}
+
+func TestCrawlingStripperFlushesShortReplies(t *testing.T) {
+	// Answers shorter than the lookahead must still reach the client.
+	stripper := &crawlingStripper{}
+	assert.Equal(t, "", stripper.feed("蓝色。"))
+	assert.Equal(t, "蓝色。", stripper.flush())
+	assert.Equal(t, "", stripper.flush(), "flush is idempotent")
+}
+
+func TestCrawlingStripperHandlesSplitMarker(t *testing.T) {
+	stripper := &crawlingStripper{}
+	assert.Equal(t, "", stripper.feed("🌐 Craw"))
+	assert.Equal(t, "", stripper.feed("ling site http://127.0.0.1:19387\n"))
+	// Still within the lookahead window, so nothing is released yet.
+	assert.Equal(t, "", stripper.feed("正文"))
+	assert.Equal(t, "正文", stripper.flush())
 }
 
 func TestNativeStreamHandlesEmptyContent(t *testing.T) {

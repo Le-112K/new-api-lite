@@ -237,8 +237,9 @@ func (a *Adaptor) doNativeStreamResponse(c *gin.Context, resp *http.Response, in
 	}
 	// Diagnostic: tells support whether a loopback URL in a reply came from the
 	// model or was added by the client's rendering.
-	resp.Body = io.NopCloser(nativeStreamToOpenAI(resp.Body, info.UpstreamModelName, func(transcript string) {
+	resp.Body = io.NopCloser(nativeStreamToOpenAI(resp.Body, info.UpstreamModelName, func(transcript, events string) {
 		logger.LogDebug(c, "1min: streamed reply content: %s", truncateForLog(transcript, 400))
+		logger.LogDebug(c, "1min: upstream event sequence: %s", truncateForLog(events, 1200))
 	}))
 	resp.Header.Set("Content-Type", "text/event-stream")
 	return a.openaiAdaptor.DoResponse(c, resp, info)

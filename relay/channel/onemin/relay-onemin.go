@@ -35,6 +35,59 @@ func stripCrawlingArtifact(text string) string {
 	return crawlingArtifact.ReplaceAllString(text, "")
 }
 
+// crawlingReplyPrefix is the decoration the upstream emits when it decides to
+// fetch a loopback URL mentioned in the prompt — ZCode's system prompt offers
+// http://127.0.0.1:8080 as its linking example, so it ends up in the prompt of
+// every request and the upstream prepends this marker to the reply.
+var crawlingReplyPrefix = regexp.MustCompile(`^🌐\s*Crawling site\s*🔗?\s*http://127\.0\.0\.1:\d+[^\S\n]*\n?`)
+
+// crawlingLeadLookahead is how much of a reply is held back before deciding
+// whether it opens with the marker. The marker is shorter than this, so one
+// withheld prefix is always enough to recognise it.
+const crawlingLeadLookahead = 64
+
+// crawlingStripper withholds the opening of a reply just long enough to strip
+// the marker, which the upstream may split across deltas, then passes the rest
+// through untouched.
+type crawlingStripper struct {
+	pending strings.Builder
+	settled bool
+}
+
+// feed returns the text that is safe to forward for this delta, which is empty
+// until the opening has been inspected.
+func (s *crawlingStripper) feed(chunk string) string {
+	if s.settled {
+		return chunk
+	}
+	s.pending.WriteString(chunk)
+	if s.pending.Len() < crawlingLeadLookahead {
+		return ""
+	}
+	return s.release()
+}
+
+// flush returns whatever is still withheld once the reply ends, so short
+// answers are not swallowed by the lookahead.
+func (s *crawlingStripper) flush() string {
+	if s.settled {
+		return ""
+	}
+	return s.release()
+}
+
+func (s *crawlingStripper) release() string {
+	s.settled = true
+	return stripCrawlingReply(s.pending.String())
+}
+
+func stripCrawlingReply(text string) string {
+	if !strings.HasPrefix(text, "🌐") {
+		return text
+	}
+	return crawlingReplyPrefix.ReplaceAllString(text, "")
+}
+
 // buildNativePayload flattens an OpenAI chat request into the native feature
 // payload and reports whether it carries images. Text-only requests keep using
 // the OpenAI-compatible surface, which preserves tools and structured output;
@@ -143,7 +196,7 @@ func nativeToOpenAIResponse(body []byte, model string) (*dto.OpenAITextResponse,
 	// upstream only supplies it intermittently anyway.
 	message := dto.Message{
 		Role:    "assistant",
-		Content: content,
+		Content: stripCrawlingReply(content),
 	}
 
 	response := &dto.OpenAITextResponse{
@@ -169,7 +222,7 @@ func nativeToOpenAIResponse(body []byte, model string) (*dto.OpenAITextResponse,
 // nativeStreamToOpenAI rewrites the native SSE stream into OpenAI chat
 // completion chunks. The reader is consumed in the background so the shared
 // OpenAI stream handler can keep doing the chunk parsing and billing.
-func nativeStreamToOpenAI(body io.Reader, model string, onComplete func(string)) io.Reader {
+func nativeStreamToOpenAI(body io.Reader, model string, onComplete func(transcript, events string)) io.Reader {
 	pr, pw := io.Pipe()
 	go func() {
 		defer pw.Close()
@@ -179,6 +232,8 @@ func nativeStreamToOpenAI(body io.Reader, model string, onComplete func(string))
 		sentRole := false
 		var finalUsage *dto.Usage
 		var transcript strings.Builder
+		var rawEvents strings.Builder
+		stripper := &crawlingStripper{}
 
 		writeChunk := func(delta dto.ChatCompletionsStreamResponseChoiceDelta, finish *string) error {
 			chunk := dto.ChatCompletionsStreamResponse{
@@ -252,14 +307,21 @@ func nativeStreamToOpenAI(body io.Reader, model string, onComplete func(string))
 			if event.Content == "" {
 				continue
 			}
-			delta := dto.ChatCompletionsStreamResponseChoiceDelta{}
+			// The stripper withholds the opening, so the delta is built only
+			// once there is text to send — otherwise the withheld delta would
+			// consume the role marker without ever emitting it.
+			sanitized := stripper.feed(event.Content)
+			if sanitized == "" {
+				continue
+			}
+			rawEvents.WriteString(fmt.Sprintf("[%s]%s | ", eventName, truncateForLog(sanitized, 120)))
+			transcript.WriteString(sanitized)
+			content := sanitized
+			delta := dto.ChatCompletionsStreamResponseChoiceDelta{Content: &content}
 			if !sentRole {
 				delta.Role = "assistant"
 				sentRole = true
 			}
-			transcript.WriteString(event.Content)
-			content := event.Content
-			delta.Content = &content
 			if err := writeChunk(delta, nil); err != nil {
 				pw.CloseWithError(err)
 				return
@@ -269,6 +331,14 @@ func nativeStreamToOpenAI(body io.Reader, model string, onComplete func(string))
 		if err := scanner.Err(); err != nil {
 			pw.CloseWithError(err)
 			return
+		}
+
+		if tail := stripper.flush(); tail != "" {
+			content := tail
+			if err := writeChunk(dto.ChatCompletionsStreamResponseChoiceDelta{Content: &content}, nil); err != nil {
+				pw.CloseWithError(err)
+				return
+			}
 		}
 
 		stop := "stop"
@@ -295,7 +365,7 @@ func nativeStreamToOpenAI(body io.Reader, model string, onComplete func(string))
 		}
 		fmt.Fprint(pw, "data: [DONE]\n\n")
 		if onComplete != nil {
-			onComplete(transcript.String())
+			onComplete(transcript.String(), rawEvents.String())
 		}
 	}()
 	return pr
