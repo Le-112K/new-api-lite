@@ -316,6 +316,30 @@ func TestRejectedParamsIgnoresOtherErrors(t *testing.T) {
 	assert.False(t, ok)
 }
 
+func TestDropNamedKeysAlsoCleansMessages(t *testing.T) {
+	// Clients replay the reasoning we returned as message.reasoning_content,
+	// which the upstream refuses to accept as input.
+	body := []byte(`{"model":"gpt-6-luna","messages":[
+		{"role":"user","content":"hi"},
+		{"role":"assistant","content":"hello","reasoning_content":"thinking..."},
+		{"role":"user","content":"again"}
+	]}`)
+
+	stripped, ok := dropNamedKeys(body, []string{"reasoning_content"})
+	require.True(t, ok)
+
+	var payload struct {
+		Messages []map[string]any `json:"messages"`
+	}
+	require.NoError(t, json.Unmarshal(stripped, &payload))
+	require.Len(t, payload.Messages, 3)
+	for _, message := range payload.Messages {
+		assert.NotContains(t, message, "reasoning_content")
+	}
+	// Message content must be untouched.
+	assert.Equal(t, "hello", payload.Messages[1]["content"])
+}
+
 func TestWithReasoningEffortNone(t *testing.T) {
 	retried, ok := withReasoningEffortNone(toolRequestBody(t, nil))
 	require.True(t, ok)

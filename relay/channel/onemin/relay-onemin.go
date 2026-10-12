@@ -575,8 +575,11 @@ func rejectedParams(resp *http.Response) []string {
 	return names
 }
 
-// dropNamedKeys removes the given parameters from the payload. It reports false
-// when none of them is present, so the caller stops retrying instead of looping.
+// dropNamedKeys removes the given parameters from the payload. A rejected name
+// may live at the top level or inside a message — clients replay the reasoning
+// we hand back as message.reasoning_content, and the upstream refuses to accept
+// it as input — so both places are cleaned. It reports false when nothing was
+// present, so the caller stops retrying instead of looping.
 func dropNamedKeys(requestBody []byte, names []string) ([]byte, bool) {
 	var payload map[string]any
 	if err := common.Unmarshal(requestBody, &payload); err != nil {
@@ -587,6 +590,20 @@ func dropNamedKeys(requestBody []byte, names []string) ([]byte, bool) {
 		if _, exists := payload[name]; exists {
 			delete(payload, name)
 			dropped = true
+		}
+	}
+	if messages, ok := payload["messages"].([]any); ok {
+		for _, entry := range messages {
+			message, ok := entry.(map[string]any)
+			if !ok {
+				continue
+			}
+			for _, name := range names {
+				if _, exists := message[name]; exists {
+					delete(message, name)
+					dropped = true
+				}
+			}
 		}
 	}
 	if !dropped {
