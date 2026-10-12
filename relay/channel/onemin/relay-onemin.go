@@ -200,9 +200,18 @@ func nativeStreamToOpenAI(body io.Reader, model string, onComplete func(string))
 			return err
 		}
 
+		// The upstream frames each delta with an event name: `reasoning` carries
+		// the model's thinking, `content` the answer, `result` the terminal
+		// record. The name has to be tracked, otherwise the thinking gets
+		// forwarded as answer text.
+		eventName := ""
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
-			if line == "" || strings.HasPrefix(line, "event:") {
+			if line == "" {
+				continue
+			}
+			if name, found := strings.CutPrefix(line, "event:"); found {
+				eventName = strings.TrimSpace(name)
 				continue
 			}
 			if !strings.HasPrefix(line, "data:") {
@@ -235,6 +244,11 @@ func nativeStreamToOpenAI(body io.Reader, model string, onComplete func(string))
 				continue
 			}
 
+			// The model's thinking is not part of the answer; clients without a
+			// dedicated thinking panel would print it ahead of the reply.
+			if eventName == "reasoning" {
+				continue
+			}
 			if event.Content == "" {
 				continue
 			}

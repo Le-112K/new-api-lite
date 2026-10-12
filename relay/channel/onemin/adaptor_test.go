@@ -378,6 +378,34 @@ func TestWithReasoningEffortNone(t *testing.T) {
 	assert.False(t, ok)
 }
 
+func TestNativeStreamDropsReasoningEvents(t *testing.T) {
+	// The upstream frames thinking separately; forwarding it made clients print
+	// the model's reasoning ahead of the answer.
+	native := strings.Join([]string{
+		"event: reasoning",
+		`data: {"content":"**Describing image in Chinese**"}`,
+		"",
+		"event: reasoning",
+		`data: {"content":"\n\nI see a red rectangle."}`,
+		"",
+		"event: content",
+		`data: {"content":"这是一张纯红色的图片。"}`,
+		"",
+		"event: result",
+		`data: {"aiRecord":{"uuid":"s1","model":"gpt-6-luna","metadata":{"inputToken":9,"outputToken":3,"totalToken":12}}}`,
+		"",
+	}, "\n")
+
+	converted, err := io.ReadAll(nativeStreamToOpenAI(strings.NewReader(native), "gpt-6-luna", nil))
+	require.NoError(t, err)
+
+	output := string(converted)
+	assert.Contains(t, output, "这是一张纯红色的图片。")
+	assert.NotContains(t, output, "Describing image in Chinese")
+	assert.NotContains(t, output, "I see a red rectangle")
+	assert.Contains(t, output, "data: [DONE]")
+}
+
 func TestNativeStreamHandlesEmptyContent(t *testing.T) {
 	native := "event: result\ndata: {\"aiRecord\":{\"uuid\":\"e\",\"model\":\"gpt-6-luna\"}}\n\n"
 
