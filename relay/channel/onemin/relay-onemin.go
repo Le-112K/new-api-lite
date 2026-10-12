@@ -11,6 +11,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
@@ -18,6 +19,21 @@ import (
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/service"
 )
+
+// crawlingArtifact matches the decoration a client renders when the model
+// emits a loopback URL — ZCode's system prompt tells the model to link local
+// content that way, so it copies the example address into its replies. The
+// decoration gets stored in the conversation, and once it is in the history the
+// model keeps repeating it, because folding the transcript back into the prompt
+// shows it its own past wording. Removing it here breaks that cycle.
+var crawlingArtifact = regexp.MustCompile(`🌐\s*Crawling site\s*🔗?\s*http://127\.0\.0\.1:\d+[^\S\n]*\n?`)
+
+func stripCrawlingArtifact(text string) string {
+	if !strings.Contains(text, "Crawling site") {
+		return text
+	}
+	return crawlingArtifact.ReplaceAllString(text, "")
+}
 
 // buildNativePayload flattens an OpenAI chat request into the native feature
 // payload and reports whether it carries images. Text-only requests keep using
@@ -45,7 +61,11 @@ func buildNativePayload(request *dto.GeneralOpenAIRequest) (nativeChatRequest, b
 		if len(textParts) == 0 {
 			continue
 		}
-		text := strings.Join(textParts, "\n")
+		text := stripCrawlingArtifact(strings.Join(textParts, "\n"))
+		if text == "" {
+			// The message carried nothing but the decoration.
+			continue
+		}
 		// The native surface takes a single prompt string, so roles are folded
 		// into a compact transcript that keeps the model's instructions intact.
 		switch message.Role {

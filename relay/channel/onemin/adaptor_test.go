@@ -102,6 +102,39 @@ func TestAdaptorRoutesByImagePresence(t *testing.T) {
 	assert.True(t, adaptor.useNative, "image requests must use the native surface")
 }
 
+func TestStripCrawlingArtifact(t *testing.T) {
+	// ZCode stores its own "Crawling site" decoration for loopback URLs in the
+	// conversation; replaying it teaches the model to keep emitting it.
+	assert.Equal(t,
+		"**Interpreting user's request**\n\nThe user mentioned an image.",
+		stripCrawlingArtifact("🌐 Crawling site http://127.0.0.1:8080\n**Interpreting user's request**\n\nThe user mentioned an image."))
+
+	assert.Equal(t, "好的，抱歉刚才用了英文。",
+		stripCrawlingArtifact("🌐 Crawling site 🔗 http://127.0.0.1:19387\n好的，抱歉刚才用了英文。"))
+
+	// Ordinary content is untouched, including other hosts and plain text.
+	assert.Equal(t, "回答正文", stripCrawlingArtifact("回答正文"))
+	assert.Equal(t, "see http://example.com for details",
+		stripCrawlingArtifact("see http://example.com for details"))
+	assert.Equal(t, "http://127.0.0.1:8080 without the label",
+		stripCrawlingArtifact("http://127.0.0.1:8080 without the label"))
+}
+
+func TestBuildNativePayloadDropsArtifactOnlyMessages(t *testing.T) {
+	request := &dto.GeneralOpenAIRequest{
+		Model: "gpt-6-luna",
+		Messages: []dto.Message{
+			{Content: "🌐 Crawling site http://127.0.0.1:8080", Role: "assistant"},
+			textMessage("user", "真实的用户消息"),
+		},
+	}
+
+	payload, _ := buildNativePayload(request)
+
+	assert.NotContains(t, payload.PromptObject.Prompt, "Crawling site")
+	assert.Contains(t, payload.PromptObject.Prompt, "真实的用户消息")
+}
+
 func TestDescribeImageSchemes(t *testing.T) {
 	assert.Equal(t, "none", describeImageSchemes(nil))
 	assert.Equal(t, "inline", describeImageSchemes([]string{"data:image/png;base64,AAAA"}))
