@@ -136,42 +136,52 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 		return resp, nil
 	}
 
-	// Some reasoning models reject tool calling unless reasoning_effort is
-	// explicitly "none" while others reject the field outright, so this
-	// correction is driven by the upstream error rather than a model list.
-	if retried, ok := withReasoningEffortNone(body); ok && detectReasoningEffortShim(resp, body) {
-		if next, retryErr := channel.DoApiRequest(a, c, info, bytes.NewReader(retried)); retryErr == nil && next != nil {
-			logger.LogDebug(c, "1min: retried with reasoning_effort=none for tool calling")
-			service.CloseResponseBodyGracefully(resp)
-			resp = next
-			body = retried
-		}
-	}
-
-	// The OpenAI-compatible surface rejects the whole request when it meets a
-	// parameter it does not accept, and names only one parameter per rejection.
-	// Drop what it names and replay until it stops complaining, so clients keep
-	// working as they add new parameters.
+	// The OpenAI-compatible surface reports one problem per response, and fixing
+	// it usually reveals the next one — a request carrying both a rejected
+	// parameter and a tool call that needs reasoning_effort takes two rounds.
+	// Each round therefore re-decides which correction applies instead of
+	// running the two rules once in a fixed order.
 	payload := body
-	for range maxParamCorrections {
-		names := rejectedParams(resp)
-		if len(names) == 0 {
-			break
-		}
-		retried, ok := dropNamedKeys(payload, names)
+	for range maxRequestCorrections {
+		corrected, reason, ok := correctRequest(resp, payload)
 		if !ok {
 			break
 		}
-		next, retryErr := channel.DoApiRequest(a, c, info, bytes.NewReader(retried))
+		next, retryErr := channel.DoApiRequest(a, c, info, bytes.NewReader(corrected))
 		if retryErr != nil || next == nil {
 			break
 		}
-		logger.LogDebug(c, "1min: dropped parameters the upstream rejects: %v", names)
+		logger.LogDebug(c, "1min: %s", reason)
 		service.CloseResponseBodyGracefully(resp)
 		resp = next
-		payload = retried
+		payload = corrected
 	}
 	return resp, nil
+}
+
+// correctRequest applies whichever correction the upstream error calls for and
+// returns the payload to replay.
+func correctRequest(resp *http.Response, payload []byte) (corrected []byte, reason string, ok bool) {
+	// Some reasoning models reject tool calling unless reasoning_effort is
+	// explicitly "none"; others reject the field outright. Which is which cannot
+	// be told from the request, so this follows the error.
+	if detectReasoningEffortShim(resp, payload) {
+		if retried, applied := withReasoningEffortNone(payload); applied {
+			return retried, "retried with reasoning_effort=none for tool calling", true
+		}
+	}
+
+	// The surface also rejects the whole request over any parameter it does not
+	// accept, naming the offender.
+	names := rejectedParams(resp)
+	if len(names) == 0 {
+		return nil, "", false
+	}
+	retried, applied := dropNamedKeys(payload, names)
+	if !applied {
+		return nil, "", false
+	}
+	return retried, fmt.Sprintf("dropped parameters the upstream rejects: %v", names), true
 }
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *types.NewAPIError) {
