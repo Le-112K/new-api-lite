@@ -169,7 +169,7 @@ func nativeToOpenAIResponse(body []byte, model string) (*dto.OpenAITextResponse,
 // nativeStreamToOpenAI rewrites the native SSE stream into OpenAI chat
 // completion chunks. The reader is consumed in the background so the shared
 // OpenAI stream handler can keep doing the chunk parsing and billing.
-func nativeStreamToOpenAI(body io.Reader, model string) io.Reader {
+func nativeStreamToOpenAI(body io.Reader, model string, onComplete func(string)) io.Reader {
 	pr, pw := io.Pipe()
 	go func() {
 		defer pw.Close()
@@ -178,6 +178,7 @@ func nativeStreamToOpenAI(body io.Reader, model string) io.Reader {
 		created := common.GetTimestamp()
 		sentRole := false
 		var finalUsage *dto.Usage
+		var transcript strings.Builder
 
 		writeChunk := func(delta dto.ChatCompletionsStreamResponseChoiceDelta, finish *string) error {
 			chunk := dto.ChatCompletionsStreamResponse{
@@ -226,9 +227,7 @@ func nativeStreamToOpenAI(body io.Reader, model string) io.Reader {
 			}
 
 			if event.AiRecord != nil {
-				// Terminal event. Usage and reasoning are held back until the
-				// end of the stream because the upstream only delivers them
-				// here, not alongside each content delta.
+				// Terminal event: usage arrives here rather than with each delta.
 				if record := event.AiRecord; record.Model != "" {
 					model = record.Model
 				}
@@ -244,6 +243,7 @@ func nativeStreamToOpenAI(body io.Reader, model string) io.Reader {
 				delta.Role = "assistant"
 				sentRole = true
 			}
+			transcript.WriteString(event.Content)
 			content := event.Content
 			delta.Content = &content
 			if err := writeChunk(delta, nil); err != nil {
@@ -280,6 +280,9 @@ func nativeStreamToOpenAI(body io.Reader, model string) io.Reader {
 			}
 		}
 		fmt.Fprint(pw, "data: [DONE]\n\n")
+		if onComplete != nil {
+			onComplete(transcript.String())
+		}
 	}()
 	return pr
 }

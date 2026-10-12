@@ -205,7 +205,7 @@ func TestNativeStreamToOpenAIProducesOpenAIChunks(t *testing.T) {
 		"",
 	}, "\n")
 
-	converted, err := io.ReadAll(nativeStreamToOpenAI(strings.NewReader(native), "gpt-6-luna"))
+	converted, err := io.ReadAll(nativeStreamToOpenAI(strings.NewReader(native), "gpt-6-luna", nil))
 	require.NoError(t, err)
 
 	output := string(converted)
@@ -381,7 +381,7 @@ func TestWithReasoningEffortNone(t *testing.T) {
 func TestNativeStreamHandlesEmptyContent(t *testing.T) {
 	native := "event: result\ndata: {\"aiRecord\":{\"uuid\":\"e\",\"model\":\"gpt-6-luna\"}}\n\n"
 
-	converted, err := io.ReadAll(nativeStreamToOpenAI(strings.NewReader(native), "gpt-6-luna"))
+	converted, err := io.ReadAll(nativeStreamToOpenAI(strings.NewReader(native), "gpt-6-luna", nil))
 	require.NoError(t, err)
 
 	output := string(converted)
