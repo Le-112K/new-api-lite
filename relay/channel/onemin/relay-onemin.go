@@ -480,6 +480,14 @@ func extensionForMime(mime string) string {
 	}
 }
 
+// truncateForLog bounds a diagnostic dump so a long reply cannot flood the logs.
+func truncateForLog(text string, limit int) string {
+	if len(text) <= limit {
+		return text
+	}
+	return text[:limit] + "..."
+}
+
 // describeImageSchemes summarises image references for diagnostics without
 // leaking image payloads into the logs.
 func describeImageSchemes(images []string) string {

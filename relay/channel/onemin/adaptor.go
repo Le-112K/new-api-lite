@@ -216,6 +216,12 @@ func (a *Adaptor) doNativeResponse(c *gin.Context, resp *http.Response, info *re
 	if nativeErr != nil {
 		return nil, types.NewOpenAIError(fmt.Errorf("1min: %s", nativeErr.text()), types.ErrorCodeBadResponseBody, http.StatusInternalServerError)
 	}
+	// Diagnostic: tells support whether a loopback URL in a reply came from the
+	// model or was added by the client's rendering.
+	if len(converted.Choices) > 0 {
+		content, _ := converted.Choices[0].Message.Content.(string)
+		logger.LogDebug(c, "1min: reply content: %s", truncateForLog(content, 400))
+	}
 
 	encoded, marshalErr := common.Marshal(converted)
 	if marshalErr != nil {
