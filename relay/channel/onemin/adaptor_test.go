@@ -259,6 +259,53 @@ func TestDetectReasoningEffortShimSkipsOtherCases(t *testing.T) {
 		"non-tool requests are unaffected")
 }
 
+func TestExtractQuotedNames(t *testing.T) {
+	assert.Equal(t,
+		[]string{"reasoning", "enable_thinking", "thinking"},
+		extractQuotedNames(`Unrecognized keys: "reasoning", "enable_thinking", "thinking"`))
+	assert.Equal(t, []string{"enable_thinking"},
+		extractQuotedNames(`Unrecognized key: "enable_thinking"`))
+	assert.Empty(t, extractQuotedNames("Unrecognized key: nothing quoted here"))
+}
+
+func TestWithoutUnrecognizedKeys(t *testing.T) {
+	body := []byte(`{"model":"gpt-6-luna","messages":[],"thinking":{"type":"enabled"},"enable_thinking":true,"reasoning_effort":"low"}`)
+	resp := errorResponse(http.StatusBadRequest,
+		`{"error":{"message":"Unrecognized keys: \"thinking\", \"enable_thinking\"","type":"invalid_request_error"}}`)
+
+	retried, ok := withoutUnrecognizedKeys(resp, body)
+	require.True(t, ok)
+
+	var payload map[string]any
+	require.NoError(t, json.Unmarshal(retried, &payload))
+	assert.NotContains(t, payload, "thinking")
+	assert.NotContains(t, payload, "enable_thinking")
+	// Everything the upstream did not complain about must survive.
+	assert.Equal(t, "gpt-6-luna", payload["model"])
+	assert.Equal(t, "low", payload["reasoning_effort"])
+
+	// The original error body stays readable when a retry does not happen.
+	restored, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Contains(t, string(restored), "Unrecognized keys")
+}
+
+func TestWithoutUnrecognizedKeysIgnoresOtherErrors(t *testing.T) {
+	body := []byte(`{"model":"gpt-6-luna","messages":[]}`)
+
+	_, ok := withoutUnrecognizedKeys(errorResponse(http.StatusOK, `{"error":{"message":"Unrecognized key: \"x\""}}`), body)
+	assert.False(t, ok, "a successful response must never be rewritten")
+
+	_, ok = withoutUnrecognizedKeys(errorResponse(http.StatusBadRequest, `{"error":{"message":"some other failure"}}`), body)
+	assert.False(t, ok, "unrelated errors must not trigger a retry")
+
+	// Named keys that are absent from the payload leave nothing to retry.
+	_, ok = withoutUnrecognizedKeys(
+		errorResponse(http.StatusBadRequest, `{"error":{"message":"Unrecognized key: \"absent_key\""}}`),
+		body)
+	assert.False(t, ok)
+}
+
 func TestWithReasoningEffortNone(t *testing.T) {
 	retried, ok := withReasoningEffortNone(toolRequestBody(t, nil))
 	require.True(t, ok)

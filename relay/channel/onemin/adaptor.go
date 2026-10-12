@@ -132,11 +132,26 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 	if err != nil || resp == nil {
 		return resp, err
 	}
-	if !a.useNative && detectReasoningEffortShim(resp, body) {
-		if retried, ok := withReasoningEffortNone(body); ok {
+	if a.useNative {
+		return resp, nil
+	}
+
+	// The OpenAI-compatible surface validates its body against an allowlist and
+	// rejects the whole request when a client sends a parameter it does not
+	// know. Clients keep inventing such parameters, so react to the error
+	// instead of maintaining a list: strip the offending keys and replay.
+	if retried, ok := withReasoningEffortNone(body); ok && detectReasoningEffortShim(resp, body) {
+		if next, retryErr := channel.DoApiRequest(a, c, info, bytes.NewReader(retried)); retryErr == nil && next != nil {
+			logger.LogDebug(c, "1min: retried with reasoning_effort=none for tool calling")
 			service.CloseResponseBodyGracefully(resp)
-			logger.LogDebug(c, "1min: retrying with reasoning_effort=none for tool calling")
-			return channel.DoApiRequest(a, c, info, bytes.NewReader(retried))
+			resp = next
+		}
+	}
+	if retried, ok := withoutUnrecognizedKeys(resp, body); ok {
+		if next, retryErr := channel.DoApiRequest(a, c, info, bytes.NewReader(retried)); retryErr == nil && next != nil {
+			logger.LogDebug(c, "1min: retried after dropping parameters this upstream rejects")
+			service.CloseResponseBodyGracefully(resp)
+			resp = next
 		}
 	}
 	return resp, nil

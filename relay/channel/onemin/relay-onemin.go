@@ -521,6 +521,83 @@ func hostOfURL(raw string) string {
 	return parsed.Host
 }
 
+// unrecognizedKeyMarker is how the upstream reports an allowlist violation.
+const unrecognizedKeyMarker = "Unrecognized key"
+
+// withoutUnrecognizedKeys drops every parameter the upstream named as unknown
+// and returns the replayed payload. Keys are read from the error itself, so new
+// client parameters are handled without a hardcoded list.
+func withoutUnrecognizedKeys(resp *http.Response, requestBody []byte) ([]byte, bool) {
+	if resp == nil || resp.StatusCode != http.StatusBadRequest {
+		return nil, false
+	}
+	message, ok := readUpstreamErrorMessage(resp)
+	if !ok || !strings.Contains(message, unrecognizedKeyMarker) {
+		return nil, false
+	}
+	names := extractQuotedNames(message)
+	if len(names) == 0 {
+		return nil, false
+	}
+
+	var payload map[string]any
+	if err := common.Unmarshal(requestBody, &payload); err != nil {
+		return nil, false
+	}
+	dropped := false
+	for _, name := range names {
+		if _, exists := payload[name]; exists {
+			delete(payload, name)
+			dropped = true
+		}
+	}
+	if !dropped {
+		return nil, false
+	}
+	stripped, err := common.Marshal(payload)
+	if err != nil {
+		return nil, false
+	}
+	return stripped, true
+}
+
+// readUpstreamErrorMessage peeks at the response body, then restores it so a
+// request that is not retried still reports the original upstream error.
+func readUpstreamErrorMessage(resp *http.Response) (string, bool) {
+	if resp.Body == nil {
+		return "", false
+	}
+	preview, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	if err != nil {
+		return "", false
+	}
+	rest, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", false
+	}
+	resp.Body = io.NopCloser(io.MultiReader(bytes.NewReader(preview), bytes.NewReader(rest)))
+
+	var upstream nativeError
+	if err := common.Unmarshal(preview, &upstream); err != nil {
+		return "", false
+	}
+	return upstream.text(), true
+}
+
+// extractQuotedNames pulls the double-quoted identifiers out of an error such
+// as `Unrecognized keys: "reasoning", "enable_thinking"`. Splitting on the
+// quote character leaves the identifiers at odd indices.
+func extractQuotedNames(message string) []string {
+	segments := strings.Split(message, `"`)
+	var names []string
+	for i := 1; i < len(segments); i += 2 {
+		if name := strings.TrimSpace(segments[i]); name != "" {
+			names = append(names, name)
+		}
+	}
+	return names
+}
+
 func replaceResponseBody(resp *http.Response, body []byte, contentType string) {
 	resp.Body = io.NopCloser(bytes.NewReader(body))
 	resp.ContentLength = int64(len(body))
