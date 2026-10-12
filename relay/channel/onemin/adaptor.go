@@ -71,6 +71,23 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 	if !hasImages {
 		return request, nil
 	}
+
+	logger.LogDebug(c, "1min: routing to native surface, images=%d schemes=%s",
+		len(payload.PromptObject.Attachments.Images), describeImageSchemes(payload.PromptObject.Attachments.Images))
+
+	// Pasted images arrive as base64 data URIs, which the upstream cannot fetch.
+	// Upload them first so the model actually receives the picture.
+	resolved, err := resolveInlineImages(
+		c.Request.Context(),
+		strings.TrimSuffix(info.ChannelBaseUrl, "/"),
+		info.ApiKey,
+		payload.PromptObject.Attachments.Images,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("prepare image attachments: %w", err)
+	}
+	payload.PromptObject.Attachments.Images = resolved
+
 	a.useNative = true
 	return payload, nil
 }

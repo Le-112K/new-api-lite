@@ -4,10 +4,14 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
+	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relaykit/dto"
+
+	"github.com/gin-gonic/gin"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -59,17 +63,31 @@ func TestBuildNativePayloadRoutesImagesToAttachments(t *testing.T) {
 	assert.Contains(t, payload.PromptObject.Prompt, "what is this")
 }
 
+func relayContext(t *testing.T) (*gin.Context, *relaycommon.RelayInfo) {
+	t.Helper()
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+	return c, &relaycommon.RelayInfo{
+		ChannelMeta: &relaycommon.ChannelMeta{
+			ChannelBaseUrl: "https://api.1min.ai",
+			ApiKey:         "test-key",
+		},
+	}
+}
+
 func TestAdaptorRoutesByImagePresence(t *testing.T) {
 	adaptor := &Adaptor{}
+	c, info := relayContext(t)
 
 	textOnly := &dto.GeneralOpenAIRequest{
 		Model:    "gpt-6-luna",
 		Messages: []dto.Message{textMessage("user", "hi")},
 	}
-	_, err := adaptor.ConvertOpenAIRequest(nil, nil, textOnly)
+	_, err := adaptor.ConvertOpenAIRequest(c, info, textOnly)
 	require.NoError(t, err)
 	assert.False(t, adaptor.useNative)
 
+	// A remote URL needs no upload, so this stays a pure routing assertion.
 	withImage := &dto.GeneralOpenAIRequest{
 		Model: "gpt-6-luna",
 		Messages: []dto.Message{messageWithImages(t,
@@ -79,9 +97,16 @@ func TestAdaptorRoutesByImagePresence(t *testing.T) {
 			},
 		)},
 	}
-	_, err = adaptor.ConvertOpenAIRequest(nil, nil, withImage)
+	_, err = adaptor.ConvertOpenAIRequest(c, info, withImage)
 	require.NoError(t, err)
 	assert.True(t, adaptor.useNative, "image requests must use the native surface")
+}
+
+func TestDescribeImageSchemes(t *testing.T) {
+	assert.Equal(t, "none", describeImageSchemes(nil))
+	assert.Equal(t, "inline", describeImageSchemes([]string{"data:image/png;base64,AAAA"}))
+	assert.Equal(t, "url:example.com", describeImageSchemes([]string{"https://example.com/a.png"}))
+	assert.Equal(t, "empty", describeImageSchemes([]string{""}))
 }
 
 func TestNativeToOpenAIResponse(t *testing.T) {

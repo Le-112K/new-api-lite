@@ -2,15 +2,21 @@ package onemin
 
 import (
 	"bytes"
+	"context"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/relay/helper"
 	"github.com/QuantumNous/new-api/relaykit/dto"
+	"github.com/QuantumNous/new-api/service"
 )
 
 // buildNativePayload flattens an OpenAI chat request into the native feature
@@ -334,6 +340,152 @@ func withReasoningEffortNone(body []byte) ([]byte, bool) {
 		return nil, false
 	}
 	return retried, true
+}
+
+// uploadAsset stores one image with 1min and returns the key that the native
+// chat endpoint accepts in attachments.images. Clients routinely send pasted
+// images as base64 data URIs, which the upstream cannot fetch on its own, so
+// anything that is not already a plain http(s) URL has to be uploaded first.
+func uploadAsset(ctx context.Context, apiBase, apiKey, filename string, raw []byte) (string, error) {
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("asset", filename)
+	if err != nil {
+		return "", err
+	}
+	if _, err = part.Write(raw); err != nil {
+		return "", err
+	}
+	if err = writer.Close(); err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiBase+nativeAssetPath, &body)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("API-KEY", apiKey)
+
+	client := &http.Client{Timeout: assetUploadTimeout}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer service.CloseResponseBodyGracefully(resp)
+
+	payload, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode != http.StatusOK {
+		var upstream nativeError
+		if common.Unmarshal(payload, &upstream) == nil {
+			if msg := upstream.text(); msg != "" {
+				return "", fmt.Errorf("asset upload rejected: %s", msg)
+			}
+		}
+		return "", fmt.Errorf("asset upload returned status %d", resp.StatusCode)
+	}
+
+	var uploaded struct {
+		Asset struct {
+			Key string `json:"key"`
+		} `json:"asset"`
+	}
+	if err := common.Unmarshal(payload, &uploaded); err != nil {
+		return "", err
+	}
+	if uploaded.Asset.Key == "" {
+		return "", errors.New("asset upload returned no key")
+	}
+	return uploaded.Asset.Key, nil
+}
+
+// resolveInlineImages replaces every inline (base64) image with an uploaded
+// asset key, leaving plain http(s) URLs untouched so public images still pass
+// straight through without a redundant round trip.
+func resolveInlineImages(ctx context.Context, apiBase, apiKey string, images []string) ([]string, error) {
+	resolved := make([]string, 0, len(images))
+	for i, image := range images {
+		if !strings.HasPrefix(image, "data:") {
+			resolved = append(resolved, image)
+			continue
+		}
+		meta, payload, found := strings.Cut(image, ",")
+		if !found {
+			return nil, errors.New("malformed inline image")
+		}
+		if !strings.Contains(meta, "base64") {
+			return nil, errors.New("only base64 inline images are supported")
+		}
+		raw, err := base64.StdEncoding.DecodeString(strings.TrimSpace(payload))
+		if err != nil {
+			return nil, fmt.Errorf("decode inline image: %w", err)
+		}
+		mime := mimeTypeFromDataURI(meta)
+		key, err := uploadAsset(ctx, apiBase, apiKey, fmt.Sprintf("image-%d%s", i, extensionForMime(mime)), raw)
+		if err != nil {
+			return nil, err
+		}
+		resolved = append(resolved, key)
+	}
+	return resolved, nil
+}
+
+func mimeTypeFromDataURI(meta string) string {
+	trimmed := strings.TrimPrefix(meta, "data:")
+	if idx := strings.Index(trimmed, ";"); idx >= 0 {
+		trimmed = trimmed[:idx]
+	}
+	return strings.TrimSpace(trimmed)
+}
+
+func extensionForMime(mime string) string {
+	switch mime {
+	case "image/jpeg", "image/jpg":
+		return ".jpg"
+	case "image/gif":
+		return ".gif"
+	case "image/webp":
+		return ".webp"
+	default:
+		return ".png"
+	}
+}
+
+// describeImageSchemes summarises image references for diagnostics without
+// leaking image payloads into the logs.
+func describeImageSchemes(images []string) string {
+	if len(images) == 0 {
+		return "none"
+	}
+	schemes := make([]string, 0, len(images))
+	for _, image := range images {
+		switch {
+		case strings.HasPrefix(image, "data:"):
+			schemes = append(schemes, "inline")
+		case strings.HasPrefix(image, "http://"), strings.HasPrefix(image, "https://"):
+			if host := hostOfURL(image); host != "" {
+				schemes = append(schemes, "url:"+host)
+				continue
+			}
+			schemes = append(schemes, "url")
+		case image == "":
+			schemes = append(schemes, "empty")
+		default:
+			schemes = append(schemes, "other")
+		}
+	}
+	return strings.Join(schemes, ",")
+}
+
+func hostOfURL(raw string) string {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return ""
+	}
+	return parsed.Host
 }
 
 func replaceResponseBody(resp *http.Response, body []byte, contentType string) {
