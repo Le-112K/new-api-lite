@@ -1,7 +1,9 @@
 package onemin
 
 import (
+	"encoding/json"
 	"io"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -143,6 +145,81 @@ func TestNativeStreamToOpenAIProducesOpenAIChunks(t *testing.T) {
 
 	// The terminal chunk must precede the usage-only chunk.
 	assert.Less(t, strings.Index(output, `"finish_reason":"stop"`), strings.Index(output, `"prompt_tokens":9`))
+}
+
+func toolRequestBody(t *testing.T, extra map[string]any) []byte {
+	t.Helper()
+	payload := map[string]any{
+		"model":    "gpt-6-luna",
+		"messages": []any{map[string]any{"role": "user", "content": "weather?"}},
+		"tools": []any{map[string]any{
+			"type":     "function",
+			"function": map[string]any{"name": "get_weather"},
+		}},
+	}
+	for k, v := range extra {
+		payload[k] = v
+	}
+	encoded, err := json.Marshal(payload)
+	require.NoError(t, err)
+	return encoded
+}
+
+func errorResponse(status int, body string) *http.Response {
+	return &http.Response{
+		StatusCode: status,
+		Body:       io.NopCloser(strings.NewReader(body)),
+	}
+}
+
+const reasoningEffortError = `{"error":{"message":"Tool calling on this model requires reasoning_effort: none.","type":"invalid_request_error","param":"reasoning_effort"}}`
+
+func TestDetectReasoningEffortShimTriggersOnToolRequest(t *testing.T) {
+	resp := errorResponse(http.StatusBadRequest, reasoningEffortError)
+
+	assert.True(t, detectReasoningEffortShim(resp, toolRequestBody(t, nil)))
+
+	// The body must survive the inspection so a non-retried request still
+	// reports the upstream error.
+	restored, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, reasoningEffortError, string(restored))
+}
+
+func TestDetectReasoningEffortShimSkipsOtherCases(t *testing.T) {
+	payload := toolRequestBody(t, nil)
+
+	assert.False(t, detectReasoningEffortShim(errorResponse(http.StatusOK, reasoningEffortError), payload),
+		"a 200 response is not an error to shim")
+	assert.False(t, detectReasoningEffortShim(errorResponse(http.StatusBadRequest, `{"error":{"message":"bad model"}}`), payload),
+		"unrelated errors must not trigger a retry")
+	assert.False(t, detectReasoningEffortShim(
+		errorResponse(http.StatusBadRequest, reasoningEffortError),
+		toolRequestBody(t, map[string]any{"reasoning_effort": "high"}),
+	), "an explicit effort setting must never be overwritten")
+
+	noTools, err := json.Marshal(map[string]any{"model": "gpt-6-luna", "messages": []any{}})
+	require.NoError(t, err)
+	assert.False(t, detectReasoningEffortShim(errorResponse(http.StatusBadRequest, reasoningEffortError), noTools),
+		"non-tool requests are unaffected")
+}
+
+func TestWithReasoningEffortNone(t *testing.T) {
+	retried, ok := withReasoningEffortNone(toolRequestBody(t, nil))
+	require.True(t, ok)
+
+	var payload map[string]any
+	require.NoError(t, json.Unmarshal(retried, &payload))
+	assert.Equal(t, "none", payload["reasoning_effort"])
+	assert.NotNil(t, payload["tools"], "the original tools must be preserved")
+
+	_, ok = withReasoningEffortNone(toolRequestBody(t, map[string]any{"reasoning_effort": "high"}))
+	assert.False(t, ok, "existing effort must not be overwritten")
+
+	noTools, err := json.Marshal(map[string]any{"model": "gpt-6-luna", "messages": []any{}})
+	require.NoError(t, err)
+	_, ok = withReasoningEffortNone(noTools)
+	assert.False(t, ok)
 }
 
 func TestNativeStreamHandlesEmptyContent(t *testing.T) {

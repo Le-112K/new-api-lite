@@ -1,6 +1,7 @@
 package onemin
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -8,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/relay/channel"
 	"github.com/QuantumNous/new-api/relay/channel/openai"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
@@ -102,7 +104,25 @@ func (a *Adaptor) ConvertAudioRequest(c *gin.Context, info *relaycommon.RelayInf
 }
 
 func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, requestBody io.Reader) (any, error) {
-	return channel.DoApiRequest(a, c, info, requestBody)
+	body, readErr := io.ReadAll(requestBody)
+	if readErr != nil {
+		// Fall back to streaming the original reader; the retry shim needs a
+		// buffered payload, but a read failure here should not change behaviour.
+		return channel.DoApiRequest(a, c, info, requestBody)
+	}
+
+	resp, err := channel.DoApiRequest(a, c, info, bytes.NewReader(body))
+	if err != nil || resp == nil {
+		return resp, err
+	}
+	if !a.useNative && detectReasoningEffortShim(resp, body) {
+		if retried, ok := withReasoningEffortNone(body); ok {
+			service.CloseResponseBodyGracefully(resp)
+			logger.LogDebug(c, "1min: retrying with reasoning_effort=none for tool calling")
+			return channel.DoApiRequest(a, c, info, bytes.NewReader(retried))
+		}
+	}
+	return resp, nil
 }
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *types.NewAPIError) {

@@ -274,6 +274,68 @@ func nativeUsageFromStreamRecord(payload string) *dto.Usage {
 	return usage
 }
 
+// Some reasoning models (the gpt-6 family) reject tool calling unless
+// reasoning_effort is explicitly "none", while every other model rejects the
+// field outright ("reasoning_effort is supported only for OpenAI reasoning
+// models"). Which models fall on which side cannot be told from the request, so
+// the shim reacts to the upstream error instead of guessing by model name: only
+// when the error names this exact requirement is the request replayed once with
+// the field set.
+const reasoningEffortRequiredMarker = "requires reasoning_effort"
+
+// detectReasoningEffortShim reports whether the upstream rejected a tool call
+// because reasoning_effort was not "none". The response body is inspected
+// through a restoring read so a non-retried request keeps its error payload.
+func detectReasoningEffortShim(resp *http.Response, requestBody []byte) bool {
+	if resp == nil || resp.StatusCode != http.StatusBadRequest || resp.Body == nil {
+		return false
+	}
+	preview, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	if err != nil {
+		return false
+	}
+	rest, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false
+	}
+	resp.Body = io.NopCloser(io.MultiReader(bytes.NewReader(preview), bytes.NewReader(rest)))
+	if !bytes.Contains(preview, []byte(reasoningEffortRequiredMarker)) {
+		return false
+	}
+
+	var payload struct {
+		Tools           []json.RawMessage `json:"tools"`
+		ReasoningEffort json.RawMessage   `json:"reasoning_effort"`
+	}
+	if err := common.Unmarshal(requestBody, &payload); err != nil {
+		return false
+	}
+	return len(payload.Tools) > 0 && len(payload.ReasoningEffort) == 0
+}
+
+// withReasoningEffortNone replays a tool-calling payload with the field the
+// upstream demands. It returns false when the payload is not a tool request or
+// already carries an effort setting, so nothing is ever overwritten.
+func withReasoningEffortNone(body []byte) ([]byte, bool) {
+	var payload map[string]any
+	if err := common.Unmarshal(body, &payload); err != nil {
+		return nil, false
+	}
+	tools, hasTools := payload["tools"].([]any)
+	if !hasTools || len(tools) == 0 {
+		return nil, false
+	}
+	if _, exists := payload["reasoning_effort"]; exists {
+		return nil, false
+	}
+	payload["reasoning_effort"] = "none"
+	retried, err := common.Marshal(payload)
+	if err != nil {
+		return nil, false
+	}
+	return retried, true
+}
+
 func replaceResponseBody(resp *http.Response, body []byte, contentType string) {
 	resp.Body = io.NopCloser(bytes.NewReader(body))
 	resp.ContentLength = int64(len(body))
