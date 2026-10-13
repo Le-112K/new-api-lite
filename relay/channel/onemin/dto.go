@@ -33,13 +33,13 @@ const (
 
 // nativeChatRequest is the payload for POST /api/chat-with-ai.
 type nativeChatRequest struct {
-	Type         string               `json:"type"`
-	Model        string               `json:"model"`
-	PromptObject nativePromptObject   `json:"promptObject"`
+	Type         string             `json:"type"`
+	Model        string             `json:"model"`
+	PromptObject nativePromptObject `json:"promptObject"`
 }
 
 type nativePromptObject struct {
-	Prompt      string           `json:"prompt"`
+	Prompt      string             `json:"prompt"`
 	Attachments *nativeAttachments `json:"attachments,omitempty"`
 }
 
@@ -48,12 +48,6 @@ type nativePromptObject struct {
 // attachments.images reaches the model.
 type nativeAttachments struct {
 	Images []string `json:"images"`
-}
-
-// nativeChatResponse is the envelope returned by the native endpoint. The
-// answer lives in AiRecord.AiRecordDetail.ResultObject[0].
-type nativeChatResponse struct {
-	AiRecord nativeAiRecord `json:"aiRecord"`
 }
 
 type nativeAiRecord struct {
@@ -108,11 +102,11 @@ func (r *nativeResultObject) UnmarshalJSON(data []byte) error {
 // Content deltas arrive as {"content":"..."}; the terminal event carries the
 // full aiRecord.
 type nativeStreamEvent struct {
-	Content  string              `json:"content"`
-	AiRecord *nativeAiRecord     `json:"aiRecord"`
+	Content  string          `json:"content"`
+	AiRecord *nativeAiRecord `json:"aiRecord"`
 }
 
-// openAIError is the error shape both 1min surfaces return.
+// nativeError is the error shape both 1min surfaces return.
 type nativeError struct {
 	Error struct {
 		Message string `json:"message"`
