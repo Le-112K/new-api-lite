@@ -314,8 +314,10 @@ func nativeStreamToOpenAI(body io.Reader, model string, onComplete func(transcri
 			if sanitized == "" {
 				continue
 			}
-			rawEvents.WriteString(fmt.Sprintf("[%s]%s | ", eventName, truncateForLog(sanitized, 120)))
-			transcript.WriteString(sanitized)
+			if onComplete != nil {
+				rawEvents.WriteString(fmt.Sprintf("[%s]%s | ", eventName, truncateForLog(sanitized, 120)))
+				transcript.WriteString(sanitized)
+			}
 			content := sanitized
 			delta := dto.ChatCompletionsStreamResponseChoiceDelta{Content: &content}
 			if !sentRole {
