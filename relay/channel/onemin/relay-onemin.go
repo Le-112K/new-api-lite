@@ -95,24 +95,6 @@ func stripCrawlingReply(text string) string {
 // keeping it would force the whole conversation onto the native surface.
 const staleImageMarker = "[用户此前发送了一张图片，现在无法再次查看其内容]"
 
-// lastUserMessageIndex reports the position of the newest user turn.
-//
-// Only the pictures in that turn are treated as "the model should look at these
-// now". Pictures from earlier turns are collapsed into a marker instead. This
-// matters because a client replays the whole conversation on every request: if
-// any older turn carried an image, that used to mark every later turn as a
-// vision request, which pinned the entire conversation to the native surface —
-// where tools are unavailable and the folded transcript makes the model answer
-// the previous question instead of the current one.
-func lastUserMessageIndex(messages []dto.Message) int {
-	for i := len(messages) - 1; i >= 0; i-- {
-		if messages[i].Role == "user" {
-			return i
-		}
-	}
-	return -1
-}
-
 // nativePlan is the outcome of deciding how a request should reach 1min.
 type nativePlan struct {
 	payload nativeChatRequest
@@ -125,12 +107,19 @@ type nativePlan struct {
 }
 
 // buildNativePayload flattens an OpenAI chat request into the native feature
-// payload. Only pictures in the newest user turn count towards routing; older
-// ones become a marker so the rest of the conversation keeps working normally.
+// payload.
+//
+// Only a picture carried by the newest message counts towards routing. Older
+// ones become a marker, because a client replays the whole conversation on
+// every request: if any earlier turn carried an image, treating it as current
+// would pin the entire conversation to the native surface, where tools are
+// unavailable and the folded transcript makes the model answer an old question.
+// Reading only the newest message also keeps a tool-result turn — whose newest
+// message is `tool`, not `user` — on the surface that understands it.
 func buildNativePayload(request *dto.GeneralOpenAIRequest) nativePlan {
 	var prompt strings.Builder
 	var images []string
-	current := lastUserMessageIndex(request.Messages)
+	current := len(request.Messages) - 1
 
 	for i := range request.Messages {
 		message := &request.Messages[i]

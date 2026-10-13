@@ -704,3 +704,30 @@ func TestNativeStreamPassesProseThroughWhenToolAware(t *testing.T) {
 	assert.Contains(t, output, "Google")
 	assert.Contains(t, output, `"finish_reason":"stop"`)
 }
+
+// A tool-result turn ends with a `tool` message, not a `user` one. The picture
+// from the original question must not drag this turn onto the native surface,
+// which would strip the tool result of its meaning.
+func TestToolResultTurnStaysOnOpenAISurface(t *testing.T) {
+	request := &dto.GeneralOpenAIRequest{
+		Model: "gpt-6-luna",
+		Messages: []dto.Message{
+			messageWithImages(t,
+				dto.MediaContent{Type: dto.ContentTypeText, Text: "描述图片并查天气"},
+				imagePart("https://example.com/a.png"),
+			),
+			{
+				Role:      "assistant",
+				Content:   "",
+				ToolCalls: json.RawMessage(`[{"id":"c1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"北京\"}"}}]`),
+			},
+			{Role: "tool", ToolCallId: "c1", Content: "晴，25 度"},
+		},
+		Tools: weatherTools(),
+	}
+
+	plan := buildNativePayload(request)
+
+	assert.False(t, plan.hasImages, "the follow-up turn must stay on the surface that understands tool results")
+	assert.False(t, plan.toolAware)
+}
