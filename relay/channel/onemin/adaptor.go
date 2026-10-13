@@ -34,6 +34,9 @@ import (
 type Adaptor struct {
 	openaiAdaptor openai.Adaptor
 	useNative     bool
+	// toolAware records that tools were described in the native prompt, so the
+	// reply has to be read back as a possible tool-request script.
+	toolAware bool
 }
 
 func (a *Adaptor) Init(info *relaycommon.RelayInfo) {
@@ -67,13 +70,18 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}
-	payload, hasImages := buildNativePayload(request)
-	if !hasImages {
-		return request, nil
+	plan := buildNativePayload(request)
+	if !plan.hasImages {
+		// Staying on the OpenAI-compatible surface, which preserves tools.
+		// Pictures from earlier turns still have to go, because that surface
+		// rejects multimodal content and a client replays the whole
+		// conversation on every request.
+		return sanitizeMessagesForOpenAI(request), nil
 	}
 
-	logger.LogDebug(c, "1min: routing to native surface, images=%d schemes=%s",
-		len(payload.PromptObject.Attachments.Images), describeImageSchemes(payload.PromptObject.Attachments.Images))
+	logger.LogDebug(c, "1min: routing to native surface, images=%d toolAware=%t schemes=%s",
+		len(plan.payload.PromptObject.Attachments.Images), plan.toolAware,
+		describeImageSchemes(plan.payload.PromptObject.Attachments.Images))
 
 	// Pasted images arrive as base64 data URIs, which the upstream cannot fetch.
 	// Upload them first so the model actually receives the picture.
@@ -81,15 +89,16 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 		c.Request.Context(),
 		strings.TrimSuffix(info.ChannelBaseUrl, "/"),
 		info.ApiKey,
-		payload.PromptObject.Attachments.Images,
+		plan.payload.PromptObject.Attachments.Images,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("prepare image attachments: %w", err)
 	}
-	payload.PromptObject.Attachments.Images = resolved
+	plan.payload.PromptObject.Attachments.Images = resolved
 
 	a.useNative = true
-	return payload, nil
+	a.toolAware = plan.toolAware
+	return plan.payload, nil
 }
 
 func (a *Adaptor) ConvertOpenAIResponsesRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.OpenAIResponsesRequest) (any, error) {
@@ -212,7 +221,7 @@ func (a *Adaptor) doNativeResponse(c *gin.Context, resp *http.Response, info *re
 		return nil, types.NewOpenAIError(fmt.Errorf("1min returned status %d", resp.StatusCode), types.ErrorCodeBadResponse, resp.StatusCode)
 	}
 
-	converted, nativeErr := nativeToOpenAIResponse(body, info.UpstreamModelName)
+	converted, nativeErr := nativeToOpenAIResponse(body, info.UpstreamModelName, a.toolAware)
 	if nativeErr != nil {
 		return nil, types.NewOpenAIError(fmt.Errorf("1min: %s", nativeErr.text()), types.ErrorCodeBadResponseBody, http.StatusInternalServerError)
 	}
@@ -246,7 +255,7 @@ func (a *Adaptor) doNativeStreamResponse(c *gin.Context, resp *http.Response, in
 			logger.LogDebug(c, "1min: upstream event sequence: %s", truncateForLog(events, 1200))
 		}
 	}
-	resp.Body = io.NopCloser(nativeStreamToOpenAI(resp.Body, info.UpstreamModelName, onComplete))
+	resp.Body = io.NopCloser(nativeStreamToOpenAI(resp.Body, info.UpstreamModelName, a.toolAware, onComplete))
 	resp.Header.Set("Content-Type", "text/event-stream")
 	return a.openaiAdaptor.DoResponse(c, resp, info)
 }

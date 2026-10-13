@@ -8,10 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
@@ -88,26 +90,66 @@ func stripCrawlingReply(text string) string {
 	return crawlingReplyPrefix.ReplaceAllString(text, "")
 }
 
+// staleImageMarker replaces a picture that belongs to an earlier turn. The
+// transcript has to stay readable, but the image itself cannot be replayed:
+// keeping it would force the whole conversation onto the native surface.
+const staleImageMarker = "[用户此前发送了一张图片，现在无法再次查看其内容]"
+
+// lastUserMessageIndex reports the position of the newest user turn.
+//
+// Only the pictures in that turn are treated as "the model should look at these
+// now". Pictures from earlier turns are collapsed into a marker instead. This
+// matters because a client replays the whole conversation on every request: if
+// any older turn carried an image, that used to mark every later turn as a
+// vision request, which pinned the entire conversation to the native surface —
+// where tools are unavailable and the folded transcript makes the model answer
+// the previous question instead of the current one.
+func lastUserMessageIndex(messages []dto.Message) int {
+	for i := len(messages) - 1; i >= 0; i-- {
+		if messages[i].Role == "user" {
+			return i
+		}
+	}
+	return -1
+}
+
+// nativePlan is the outcome of deciding how a request should reach 1min.
+type nativePlan struct {
+	payload nativeChatRequest
+	// hasImages reports whether the current turn carries pictures, which is
+	// what sends the request to the native surface.
+	hasImages bool
+	// toolAware reports whether the request carries tools that the native
+	// surface cannot express, so they were described in the prompt instead.
+	toolAware bool
+}
+
 // buildNativePayload flattens an OpenAI chat request into the native feature
-// payload and reports whether it carries images. Text-only requests keep using
-// the OpenAI-compatible surface, which preserves tools and structured output;
-// only image requests need the native surface.
-func buildNativePayload(request *dto.GeneralOpenAIRequest) (nativeChatRequest, bool) {
+// payload. Only pictures in the newest user turn count towards routing; older
+// ones become a marker so the rest of the conversation keeps working normally.
+func buildNativePayload(request *dto.GeneralOpenAIRequest) nativePlan {
 	var prompt strings.Builder
 	var images []string
+	current := lastUserMessageIndex(request.Messages)
 
-	for _, message := range request.Messages {
+	for i := range request.Messages {
+		message := &request.Messages[i]
 		contents := message.ParseContent()
+		isCurrent := i == current
 		var textParts []string
-		for i := range contents {
-			switch contents[i].Type {
+		for j := range contents {
+			switch contents[j].Type {
 			case dto.ContentTypeText:
-				if contents[i].Text != "" {
-					textParts = append(textParts, contents[i].Text)
+				if contents[j].Text != "" {
+					textParts = append(textParts, contents[j].Text)
 				}
 			case dto.ContentTypeImageURL:
-				if image := contents[i].GetImageMedia(); image != nil && image.Url != "" {
-					images = append(images, image.Url)
+				if image := contents[j].GetImageMedia(); image != nil && image.Url != "" {
+					if isCurrent {
+						images = append(images, image.Url)
+					} else {
+						textParts = append(textParts, staleImageMarker)
+					}
 				}
 			}
 		}
@@ -148,7 +190,131 @@ func buildNativePayload(request *dto.GeneralOpenAIRequest) (nativeChatRequest, b
 	if len(images) > 0 {
 		payload.PromptObject.Attachments = &nativeAttachments{Images: images}
 	}
-	return payload, len(images) > 0
+
+	plan := nativePlan{payload: payload, hasImages: len(images) > 0}
+	if plan.hasImages && len(request.Tools) > 0 {
+		// The native surface has no tools field, so the tools are described in
+		// the prompt and the model answers with a tool-call script instead.
+		payload.PromptObject.Prompt = toolScriptFor(request.Tools) + "\n" + payload.PromptObject.Prompt
+		plan.payload = payload
+		plan.toolAware = true
+	}
+	return plan
+}
+
+// toolScriptFor describes the tools in a form the native prompt can carry.
+func toolScriptFor(tools []dto.ToolCallRequest) string {
+	var script strings.Builder
+	script.WriteString("You have access to the following tools:\n")
+	described := 0
+	for _, tool := range tools {
+		name := strings.TrimSpace(tool.Function.Name)
+		if name == "" {
+			continue
+		}
+		described++
+		description := strings.TrimSpace(tool.Function.Description)
+		if description == "" {
+			description = "no description provided"
+		}
+		script.WriteString("- ")
+		script.WriteString(name)
+		script.WriteString("(")
+		script.WriteString(describeToolParameters(tool.Function.Parameters))
+		script.WriteString("): ")
+		script.WriteString(description)
+		script.WriteString("\n")
+	}
+	if described == 0 {
+		return ""
+	}
+	script.WriteString("\nIf you need to call one or more tools, reply with ONLY a JSON object")
+	script.WriteString(" in this exact format and nothing else:\n")
+	script.WriteString(`{"tool_calls":[{"name":"<tool name>","arguments":{<arguments as a JSON object>}}]}`)
+	script.WriteString("\nIf no tool is needed, reply normally in plain text.\n")
+	return script.String()
+}
+
+// describeToolParameters renders a JSON Schema parameter object as a compact
+// signature such as `city: string, required`.
+func describeToolParameters(params any) string {
+	if params == nil {
+		return ""
+	}
+	raw, err := common.Marshal(params)
+	if err != nil {
+		return ""
+	}
+	var schema struct {
+		Properties map[string]any `json:"properties"`
+		Required   []string       `json:"required"`
+	}
+	if err := common.Unmarshal(raw, &schema); err != nil {
+		return ""
+	}
+	names := make([]string, 0, len(schema.Properties))
+	for name := range schema.Properties {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	required := make(map[string]struct{}, len(schema.Required))
+	for _, name := range schema.Required {
+		required[name] = struct{}{}
+	}
+	parts := make([]string, 0, len(names))
+	for _, name := range names {
+		if _, needed := required[name]; needed {
+			parts = append(parts, name+": required")
+		} else {
+			parts = append(parts, name)
+		}
+	}
+	return strings.Join(parts, ", ")
+}
+
+// sanitizeMessagesForOpenAI strips image content out of a request that is
+// staying on the OpenAI-compatible surface. That surface rejects multimodal
+// content outright, so a transcript that once carried pictures needs them
+// replaced before it can be replayed there.
+func sanitizeMessagesForOpenAI(request *dto.GeneralOpenAIRequest) *dto.GeneralOpenAIRequest {
+	messages := make([]dto.Message, len(request.Messages))
+	copy(messages, request.Messages)
+	changed := false
+	for i := range messages {
+		text, replaced := textWithImagesMarked(messages[i].ParseContent())
+		if !replaced {
+			continue
+		}
+		messages[i].Content = text
+		changed = true
+	}
+	if !changed {
+		return request
+	}
+	cleaned := *request
+	cleaned.Messages = messages
+	return &cleaned
+}
+
+// textWithImagesMarked renders a message's text with every picture replaced by
+// the stale-image marker.
+func textWithImagesMarked(contents []dto.MediaContent) (string, bool) {
+	var parts []string
+	replaced := false
+	for i := range contents {
+		switch contents[i].Type {
+		case dto.ContentTypeText:
+			if contents[i].Text != "" {
+				parts = append(parts, contents[i].Text)
+			}
+		case dto.ContentTypeImageURL:
+			if image := contents[i].GetImageMedia(); image != nil && image.Url != "" {
+				parts = append(parts, staleImageMarker)
+				replaced = true
+			}
+		}
+	}
+	return strings.Join(parts, "\n"), replaced
 }
 
 // nativeMetadata carries the upstream token counters. inputToken/outputToken
@@ -163,10 +329,139 @@ type nativeMetadata struct {
 	} `json:"inputTokenDetails"`
 }
 
+// nativeToolScript is the shape the model answers with when tools were
+// described in the native prompt. The native surface has no tools field, so
+// this is how a vision request can still ask for a tool.
+type nativeToolScript struct {
+	ToolCalls []struct {
+		Name      string          `json:"name"`
+		Arguments json.RawMessage `json:"arguments"`
+	} `json:"tool_calls"`
+}
+
+// newToolCallID mints an id in the shape OpenAI clients expect.
+func newToolCallID() string {
+	const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
+	var id strings.Builder
+	id.WriteString("call_")
+	for i := 0; i < 24; i++ {
+		id.WriteByte(alphabet[rand.Intn(len(alphabet))])
+	}
+	return id.String()
+}
+
+// parseToolScript reads a tool-call script out of a reply. It reports false
+// when the reply is ordinary prose, so a model that ignores the instructions
+// simply falls back to a normal answer instead of failing the request.
+func parseToolScript(text string) ([]dto.ToolCallResponse, bool) {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return nil, false
+	}
+	if strings.HasPrefix(trimmed, "```") {
+		// Strip a markdown fence the model may wrap the JSON in.
+		trimmed = strings.TrimPrefix(trimmed, "```")
+		trimmed = strings.TrimPrefix(strings.TrimSpace(trimmed), "json")
+		trimmed = strings.TrimSpace(trimmed)
+		if end := strings.Index(trimmed, "```"); end >= 0 {
+			trimmed = trimmed[:end]
+		}
+		trimmed = strings.TrimSpace(trimmed)
+	}
+	if !strings.HasPrefix(trimmed, "{") {
+		return nil, false
+	}
+	var script nativeToolScript
+	if err := common.Unmarshal([]byte(trimmed), &script); err != nil {
+		return nil, false
+	}
+	if len(script.ToolCalls) == 0 {
+		return nil, false
+	}
+	calls := make([]dto.ToolCallResponse, 0, len(script.ToolCalls))
+	for i, entry := range script.ToolCalls {
+		name := strings.TrimSpace(entry.Name)
+		if name == "" {
+			return nil, false
+		}
+		arguments := strings.TrimSpace(string(entry.Arguments))
+		if arguments == "" {
+			arguments = "{}"
+		}
+		call := dto.ToolCallResponse{ID: newToolCallID(), Type: "function"}
+		call.SetIndex(i)
+		call.Function = dto.FunctionResponse{Name: name, Arguments: arguments}
+		calls = append(calls, call)
+	}
+	return calls, true
+}
+
+// toolScriptStart reports whether a reply is opening a tool-call script rather
+// than prose, which is what decides how a streamed reply is handled.
+func toolScriptStart(text string) bool {
+	trimmed := strings.TrimSpace(text)
+	return strings.HasPrefix(trimmed, "{") || strings.HasPrefix(trimmed, "```")
+}
+
+// toolSniffLookahead is how much of a reply is read before deciding whether it
+// is prose. A script announces itself in its first character, so this only has
+// to be long enough not to mistake a short answer for one.
+const toolSniffLookahead = 64
+
+const (
+	splitterUndecided = iota
+	splitterText
+	splitterTool
+)
+
+// replySplitter decides whether a reply to a prompt that carried tool
+// descriptions is a tool-call script or ordinary prose. A script has to be read
+// in full before it can be parsed, so it is withheld until the reply ends;
+// prose is released as soon as it is recognised, keeping the stream live.
+type replySplitter struct {
+	pending strings.Builder
+	mode    int
+}
+
+func (s *replySplitter) feed(chunk string) string {
+	if s.mode == splitterText {
+		return chunk
+	}
+	s.pending.WriteString(chunk)
+	if s.mode == splitterTool {
+		return ""
+	}
+	head := strings.TrimSpace(s.pending.String())
+	if toolScriptStart(head) {
+		s.mode = splitterTool
+		return ""
+	}
+	if len(head) >= toolSniffLookahead {
+		s.mode = splitterText
+		return s.release()
+	}
+	return ""
+}
+
+// finish returns what is still withheld and whether to read it as a script.
+func (s *replySplitter) finish() (string, bool) {
+	if s.mode == splitterTool {
+		return s.pending.String(), true
+	}
+	return s.release(), false
+}
+
+func (s *replySplitter) release() string {
+	text := s.pending.String()
+	s.pending.Reset()
+	s.mode = splitterText
+	return text
+}
+
 // nativeToOpenAIResponse converts the native envelope into an OpenAI chat
 // completion so the shared OpenAI response handling (billing, format
 // conversion, rendering) can be reused verbatim.
-func nativeToOpenAIResponse(body []byte, model string) (*dto.OpenAITextResponse, *nativeError) {
+func nativeToOpenAIResponse(body []byte, model string, toolAware bool) (*dto.OpenAITextResponse, *nativeError) {
 	var envelope struct {
 		AiRecord nativeAiRecord `json:"aiRecord"`
 		Metadata nativeMetadata `json:"metadata"`
@@ -194,10 +489,21 @@ func nativeToOpenAIResponse(body []byte, model string) (*dto.OpenAITextResponse,
 	// It is deliberately not forwarded: clients that lack a dedicated thinking
 	// panel render it inline ahead of the answer, which reads as noise, and the
 	// upstream only supplies it intermittently anyway.
-	message := dto.Message{
-		Role:    "assistant",
-		Content: stripCrawlingReply(content),
+	content = stripCrawlingReply(content)
+	message := dto.Message{Role: "assistant"}
+	finishReason := "stop"
+	// When tools were described in the prompt, a reply that opens as JSON is a
+	// tool request rather than an answer.
+	if toolAware {
+		if calls, ok := parseToolScript(content); ok {
+			if encoded, err := common.Marshal(calls); err == nil {
+				message.ToolCalls = encoded
+				finishReason = "tool_calls"
+				content = ""
+			}
+		}
 	}
+	message.Content = content
 
 	response := &dto.OpenAITextResponse{
 		Id:      "chatcmpl-" + record.Uuid,
@@ -207,7 +513,7 @@ func nativeToOpenAIResponse(body []byte, model string) (*dto.OpenAITextResponse,
 		Choices: []dto.OpenAITextResponseChoice{{
 			Index:        0,
 			Message:      message,
-			FinishReason: "stop",
+			FinishReason: finishReason,
 		}},
 	}
 	response.Usage = dto.Usage{
@@ -222,7 +528,7 @@ func nativeToOpenAIResponse(body []byte, model string) (*dto.OpenAITextResponse,
 // nativeStreamToOpenAI rewrites the native SSE stream into OpenAI chat
 // completion chunks. The reader is consumed in the background so the shared
 // OpenAI stream handler can keep doing the chunk parsing and billing.
-func nativeStreamToOpenAI(body io.Reader, model string, onComplete func(transcript, events string)) io.Reader {
+func nativeStreamToOpenAI(body io.Reader, model string, toolAware bool, onComplete func(transcript, events string)) io.Reader {
 	pr, pw := io.Pipe()
 	go func() {
 		defer pw.Close()
@@ -234,6 +540,7 @@ func nativeStreamToOpenAI(body io.Reader, model string, onComplete func(transcri
 		var transcript strings.Builder
 		var rawEvents strings.Builder
 		stripper := &crawlingStripper{}
+		splitter := &replySplitter{}
 
 		writeChunk := func(delta dto.ChatCompletionsStreamResponseChoiceDelta, finish *string) error {
 			chunk := dto.ChatCompletionsStreamResponse{
@@ -253,6 +560,29 @@ func nativeStreamToOpenAI(body io.Reader, model string, onComplete func(transcri
 			}
 			_, err = fmt.Fprintf(pw, "data: %s\n\n", data)
 			return err
+		}
+
+		sendText := func(text string) error {
+			content := text
+			delta := dto.ChatCompletionsStreamResponseChoiceDelta{Content: &content}
+			if !sentRole {
+				delta.Role = "assistant"
+				sentRole = true
+			}
+			return writeChunk(delta, nil)
+		}
+
+		// The native surface cannot express tool calls, so a tool request built
+		// from the prompt arrives as one script and is emitted as a single chunk
+		// that already carries the finish reason.
+		sendToolCalls := func(calls []dto.ToolCallResponse) error {
+			delta := dto.ChatCompletionsStreamResponseChoiceDelta{ToolCalls: calls}
+			if !sentRole {
+				delta.Role = "assistant"
+				sentRole = true
+			}
+			finish := "tool_calls"
+			return writeChunk(delta, &finish)
 		}
 
 		// The upstream frames each delta with an event name: `reasoning` carries
@@ -314,17 +644,19 @@ func nativeStreamToOpenAI(body io.Reader, model string, onComplete func(transcri
 			if sanitized == "" {
 				continue
 			}
+			if toolAware {
+				// A tool script only makes sense once it is complete, so it is
+				// held back; prose is released as soon as it is recognised.
+				sanitized = splitter.feed(sanitized)
+				if sanitized == "" {
+					continue
+				}
+			}
 			if onComplete != nil {
 				rawEvents.WriteString(fmt.Sprintf("[%s]%s | ", eventName, truncateForLog(sanitized, 120)))
 				transcript.WriteString(sanitized)
 			}
-			content := sanitized
-			delta := dto.ChatCompletionsStreamResponseChoiceDelta{Content: &content}
-			if !sentRole {
-				delta.Role = "assistant"
-				sentRole = true
-			}
-			if err := writeChunk(delta, nil); err != nil {
+			if err := sendText(sanitized); err != nil {
 				pw.CloseWithError(err)
 				return
 			}
@@ -335,22 +667,56 @@ func nativeStreamToOpenAI(body io.Reader, model string, onComplete func(transcri
 			return
 		}
 
-		if tail := stripper.flush(); tail != "" {
-			content := tail
-			if err := writeChunk(dto.ChatCompletionsStreamResponseChoiceDelta{Content: &content}, nil); err != nil {
+		// Whatever the stripper withheld still belongs to the reply, and it has
+		// to go through the splitter too, since the opening is what decides
+		// whether this was a tool request.
+		tail := stripper.flush()
+		emittedToolCalls := false
+		if toolAware {
+			if emit := splitter.feed(tail); emit != "" {
+				if err := sendText(emit); err != nil {
+					pw.CloseWithError(err)
+					return
+				}
+			}
+			text, isScript := splitter.finish()
+			if isScript {
+				if calls, ok := parseToolScript(text); ok {
+					if err := sendToolCalls(calls); err != nil {
+						pw.CloseWithError(err)
+						return
+					}
+					emittedToolCalls = true
+				} else if text != "" {
+					// Not a usable script after all; fall back to plain text.
+					if err := sendText(text); err != nil {
+						pw.CloseWithError(err)
+						return
+					}
+				}
+			} else if text != "" {
+				if err := sendText(text); err != nil {
+					pw.CloseWithError(err)
+					return
+				}
+			}
+		} else if tail != "" {
+			if err := sendText(tail); err != nil {
 				pw.CloseWithError(err)
 				return
 			}
 		}
 
-		stop := "stop"
-		finalDelta := dto.ChatCompletionsStreamResponseChoiceDelta{}
-		if !sentRole {
-			finalDelta.Role = "assistant"
-		}
-		if err := writeChunk(finalDelta, &stop); err != nil {
-			pw.CloseWithError(err)
-			return
+		if !emittedToolCalls {
+			stop := "stop"
+			finalDelta := dto.ChatCompletionsStreamResponseChoiceDelta{}
+			if !sentRole {
+				finalDelta.Role = "assistant"
+			}
+			if err := writeChunk(finalDelta, &stop); err != nil {
+				pw.CloseWithError(err)
+				return
+			}
 		}
 		if finalUsage != nil {
 			data, err := json.Marshal(dto.ChatCompletionsStreamResponse{

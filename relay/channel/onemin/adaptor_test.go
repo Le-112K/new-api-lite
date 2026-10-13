@@ -32,10 +32,10 @@ func TestBuildNativePayloadKeepsTextOnlyOnOpenAISurface(t *testing.T) {
 		Messages: []dto.Message{textMessage("user", "hello")},
 	}
 
-	payload, hasImages := buildNativePayload(request)
+	plan := buildNativePayload(request)
 
-	assert.False(t, hasImages, "text-only requests must not switch to the native surface")
-	assert.Empty(t, payload.PromptObject.Attachments)
+	assert.False(t, plan.hasImages, "text-only requests must not switch to the native surface")
+	assert.Empty(t, plan.payload.PromptObject.Attachments)
 }
 
 func TestBuildNativePayloadRoutesImagesToAttachments(t *testing.T) {
@@ -53,9 +53,10 @@ func TestBuildNativePayloadRoutesImagesToAttachments(t *testing.T) {
 		},
 	}
 
-	payload, hasImages := buildNativePayload(request)
+	plan := buildNativePayload(request)
+	payload := plan.payload
 
-	require.True(t, hasImages)
+	require.True(t, plan.hasImages)
 	require.NotNil(t, payload.PromptObject.Attachments)
 	assert.Equal(t, []string{"https://example.com/a.png"}, payload.PromptObject.Attachments.Images)
 	assert.Equal(t, nativeFeatureTag, payload.Type)
@@ -129,7 +130,7 @@ func TestBuildNativePayloadDropsArtifactOnlyMessages(t *testing.T) {
 		},
 	}
 
-	payload, _ := buildNativePayload(request)
+	payload := buildNativePayload(request).payload
 
 	assert.NotContains(t, payload.PromptObject.Prompt, "Crawling site")
 	assert.Contains(t, payload.PromptObject.Prompt, "真实的用户消息")
@@ -153,7 +154,7 @@ func TestNativeToOpenAIResponse(t *testing.T) {
 		"metadata": {"inputToken": 150, "outputToken": 5, "totalToken": 155}
 	}`)
 
-	response, upstreamErr := nativeToOpenAIResponse(body, "fallback-model")
+	response, upstreamErr := nativeToOpenAIResponse(body, "fallback-model", false)
 
 	require.Nil(t, upstreamErr)
 	require.Len(t, response.Choices, 1)
@@ -176,7 +177,7 @@ func TestNativeToOpenAIResponseDropsReasoning(t *testing.T) {
 			"reasoningContent": "**Identifying colors**\n\nLooking at the image..."}
 	}`)
 
-	response, upstreamErr := nativeToOpenAIResponse(body, "gpt-6-luna")
+	response, upstreamErr := nativeToOpenAIResponse(body, "gpt-6-luna", false)
 
 	require.Nil(t, upstreamErr)
 	assert.Nil(t, response.Choices[0].Message.ReasoningContent)
@@ -186,7 +187,7 @@ func TestNativeToOpenAIResponseDropsReasoning(t *testing.T) {
 func TestNativeToOpenAIResponseRejectsFailureStatus(t *testing.T) {
 	body := []byte(`{"aiRecord": {"status": "FAILURE", "model": "gpt-6-luna"}}`)
 
-	_, upstreamErr := nativeToOpenAIResponse(body, "gpt-6-luna")
+	_, upstreamErr := nativeToOpenAIResponse(body, "gpt-6-luna", false)
 
 	require.NotNil(t, upstreamErr)
 	assert.Contains(t, upstreamErr.text(), "FAILURE")
@@ -205,7 +206,7 @@ func TestNativeStreamToOpenAIProducesOpenAIChunks(t *testing.T) {
 		"",
 	}, "\n")
 
-	converted, err := io.ReadAll(nativeStreamToOpenAI(strings.NewReader(native), "gpt-6-luna", nil))
+	converted, err := io.ReadAll(nativeStreamToOpenAI(strings.NewReader(native), "gpt-6-luna", false, nil))
 	require.NoError(t, err)
 
 	output := string(converted)
@@ -397,7 +398,7 @@ func TestNativeStreamDropsReasoningEvents(t *testing.T) {
 		"",
 	}, "\n")
 
-	converted, err := io.ReadAll(nativeStreamToOpenAI(strings.NewReader(native), "gpt-6-luna", nil))
+	converted, err := io.ReadAll(nativeStreamToOpenAI(strings.NewReader(native), "gpt-6-luna", false, nil))
 	require.NoError(t, err)
 
 	output := string(converted)
@@ -445,11 +446,261 @@ func TestCrawlingStripperHandlesSplitMarker(t *testing.T) {
 func TestNativeStreamHandlesEmptyContent(t *testing.T) {
 	native := "event: result\ndata: {\"aiRecord\":{\"uuid\":\"e\",\"model\":\"gpt-6-luna\"}}\n\n"
 
-	converted, err := io.ReadAll(nativeStreamToOpenAI(strings.NewReader(native), "gpt-6-luna", nil))
+	converted, err := io.ReadAll(nativeStreamToOpenAI(strings.NewReader(native), "gpt-6-luna", false, nil))
 	require.NoError(t, err)
 
 	output := string(converted)
 	assert.Contains(t, output, `"role":"assistant"`)
 	assert.Contains(t, output, `"finish_reason":"stop"`)
 	assert.Contains(t, output, "data: [DONE]")
+}
+
+func imagePart(url string) dto.MediaContent {
+	return dto.MediaContent{
+		Type:     dto.ContentTypeImageURL,
+		ImageUrl: map[string]any{"url": url},
+	}
+}
+
+func weatherTools() []dto.ToolCallRequest {
+	return []dto.ToolCallRequest{{
+		Type: "function",
+		Function: dto.FunctionRequest{
+			Name:        "get_weather",
+			Description: "Get the weather for a city",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"city": map[string]any{"type": "string"},
+				},
+				"required": []any{"city"},
+			},
+		},
+	}}
+}
+
+// A client replays the whole conversation on every request. If any earlier turn
+// carried a picture, that must not drag later turns onto the native surface —
+// that is what silently disabled tool calling for the rest of the conversation.
+func TestOlderTurnImagesDoNotRouteToNativeSurface(t *testing.T) {
+	request := &dto.GeneralOpenAIRequest{
+		Model: "gpt-6-luna",
+		Messages: []dto.Message{
+			messageWithImages(t,
+				dto.MediaContent{Type: dto.ContentTypeText, Text: "这是什么品牌"},
+				imagePart("https://example.com/a.png"),
+			),
+			textMessage("assistant", "Google"),
+			textMessage("user", "查询北京天气"),
+		},
+		Tools: weatherTools(),
+	}
+
+	plan := buildNativePayload(request)
+
+	assert.False(t, plan.hasImages, "pictures from earlier turns must not switch to the native surface")
+	assert.Nil(t, plan.payload.PromptObject.Attachments)
+	assert.False(t, plan.toolAware)
+}
+
+// The newest user turn is the one that decides.
+func TestCurrentTurnImageStillRoutesToNativeSurface(t *testing.T) {
+	request := &dto.GeneralOpenAIRequest{
+		Model: "gpt-6-luna",
+		Messages: []dto.Message{
+			textMessage("user", "你好"),
+			textMessage("assistant", "你好"),
+			messageWithImages(t,
+				dto.MediaContent{Type: dto.ContentTypeText, Text: "看看这张"},
+				imagePart("https://example.com/b.png"),
+			),
+		},
+	}
+
+	plan := buildNativePayload(request)
+
+	require.True(t, plan.hasImages)
+	require.NotNil(t, plan.payload.PromptObject.Attachments)
+	assert.Equal(t, []string{"https://example.com/b.png"}, plan.payload.PromptObject.Attachments.Images)
+}
+
+func TestOlderTurnImagesBecomeMarkersInNativePrompt(t *testing.T) {
+	request := &dto.GeneralOpenAIRequest{
+		Model: "gpt-6-luna",
+		Messages: []dto.Message{
+			messageWithImages(t,
+				dto.MediaContent{Type: dto.ContentTypeText, Text: "之前那张"},
+				imagePart("https://example.com/old.png"),
+			),
+			messageWithImages(t,
+				dto.MediaContent{Type: dto.ContentTypeText, Text: "这张呢"},
+				imagePart("https://example.com/new.png"),
+			),
+		},
+	}
+
+	plan := buildNativePayload(request)
+
+	require.True(t, plan.hasImages)
+	require.NotNil(t, plan.payload.PromptObject.Attachments)
+	assert.Equal(t, []string{"https://example.com/new.png"}, plan.payload.PromptObject.Attachments.Images,
+		"only the newest turn's picture is sent to the model")
+	assert.Contains(t, plan.payload.PromptObject.Prompt, staleImageMarker)
+}
+
+// The native surface has no tools field, so a vision request that needs tools
+// gets them described in the prompt instead.
+func TestToolsAreDescribedInPromptWhenCombinedWithImages(t *testing.T) {
+	request := &dto.GeneralOpenAIRequest{
+		Model: "gpt-6-luna",
+		Messages: []dto.Message{
+			messageWithImages(t,
+				dto.MediaContent{Type: dto.ContentTypeText, Text: "描述图片并查天气"},
+				imagePart("https://example.com/a.png"),
+			),
+		},
+		Tools: weatherTools(),
+	}
+
+	plan := buildNativePayload(request)
+
+	require.True(t, plan.hasImages)
+	assert.True(t, plan.toolAware, "tools must be described when the native surface is used")
+	assert.Contains(t, plan.payload.PromptObject.Prompt, "get_weather")
+	assert.Contains(t, plan.payload.PromptObject.Prompt, "city: required")
+	assert.Contains(t, plan.payload.PromptObject.Prompt, "tool_calls")
+}
+
+// Without pictures the OpenAI-compatible surface handles tools natively, so no
+// prompt script should be involved.
+func TestToolsAreNotDescribedWithoutImages(t *testing.T) {
+	request := &dto.GeneralOpenAIRequest{
+		Model:    "gpt-6-luna",
+		Messages: []dto.Message{textMessage("user", "查询天气")},
+		Tools:    weatherTools(),
+	}
+
+	plan := buildNativePayload(request)
+
+	assert.False(t, plan.hasImages)
+	assert.False(t, plan.toolAware)
+}
+
+func TestParseToolScript(t *testing.T) {
+	script := `{"tool_calls":[{"name":"get_weather","arguments":{"city":"北京"}}]}`
+	calls, ok := parseToolScript(script)
+	require.True(t, ok)
+	require.Len(t, calls, 1)
+	assert.Equal(t, "get_weather", calls[0].Function.Name)
+	assert.Equal(t, `{"city":"北京"}`, calls[0].Function.Arguments)
+	assert.True(t, strings.HasPrefix(calls[0].ID, "call_"))
+
+	fenced := "```json\n" + script + "\n```"
+	calls, ok = parseToolScript(fenced)
+	require.True(t, ok, "a markdown fence should be stripped")
+	assert.Equal(t, "get_weather", calls[0].Function.Name)
+
+	_, ok = parseToolScript("北京今天晴，气温 25 度。")
+	assert.False(t, ok, "ordinary prose is not a tool request")
+
+	_, ok = parseToolScript("")
+	assert.False(t, ok)
+
+	_, ok = parseToolScript(`{"tool_calls":[]}`)
+	assert.False(t, ok)
+
+	_, ok = parseToolScript(`{"tool_calls":[{"name":"","arguments":{}}]}`)
+	assert.False(t, ok, "a nameless entry is not usable")
+}
+
+func TestSanitizeMessagesForOpenAIReplacesImages(t *testing.T) {
+	request := &dto.GeneralOpenAIRequest{
+		Model: "gpt-6-luna",
+		Messages: []dto.Message{
+			messageWithImages(t,
+				dto.MediaContent{Type: dto.ContentTypeText, Text: "之前那张"},
+				imagePart("https://example.com/old.png"),
+			),
+			textMessage("assistant", "Google"),
+			textMessage("user", "查询北京天气"),
+		},
+	}
+
+	cleaned := sanitizeMessagesForOpenAI(request)
+
+	assert.NotSame(t, request, cleaned)
+	first := cleaned.Messages[0]
+	encoded, err := json.Marshal(first.Content)
+	require.NoError(t, err)
+	assert.NotContains(t, string(encoded), "example.com/old.png",
+		"the OpenAI-compatible surface rejects image content")
+	assert.Contains(t, string(encoded), staleImageMarker)
+	// Untouched messages keep their text.
+	assert.Equal(t, "查询北京天气", cleaned.Messages[2].Content)
+}
+
+func TestSanitizeMessagesForOpenAILeavesCleanRequestsAlone(t *testing.T) {
+	request := &dto.GeneralOpenAIRequest{
+		Model:    "gpt-6-luna",
+		Messages: []dto.Message{textMessage("user", "hello")},
+	}
+
+	assert.Same(t, request, sanitizeMessagesForOpenAI(request))
+}
+
+// End-to-end routing: after an older turn carried an image, a new text question
+// with tools must still reach the OpenAI-compatible surface.
+func TestConvertOpenAIRequestStaysOnOpenAISurfaceAfterOlderImage(t *testing.T) {
+	c, info := relayContext(t)
+	request := &dto.GeneralOpenAIRequest{
+		Model: "gpt-6-luna",
+		Messages: []dto.Message{
+			messageWithImages(t,
+				dto.MediaContent{Type: dto.ContentTypeText, Text: "这是什么品牌"},
+				imagePart("https://example.com/a.png"),
+			),
+			textMessage("assistant", "Google"),
+			textMessage("user", "查询北京天气"),
+		},
+		Tools: weatherTools(),
+	}
+
+	adaptor := &Adaptor{}
+	adaptor.Init(info)
+	converted, err := adaptor.ConvertOpenAIRequest(c, info, request)
+
+	require.NoError(t, err)
+	assert.False(t, adaptor.useNative, "must not be pinned to the native surface")
+	forwarded, ok := converted.(*dto.GeneralOpenAIRequest)
+	require.True(t, ok, "expected the request to be forwarded to the OpenAI-compatible surface")
+	assert.Len(t, forwarded.Messages, 3)
+	encoded, err := json.Marshal(forwarded.Messages[0].Content)
+	require.NoError(t, err)
+	assert.NotContains(t, string(encoded), "image_url")
+}
+
+func TestNativeStreamEmitsToolCallsWhenToolAware(t *testing.T) {
+	native := "event: content\ndata: {\"content\":\"{\\\"tool_calls\\\":[{\\\"name\\\":\\\"get_weather\\\",\\\"arguments\\\":{\\\"city\\\":\\\"北京\\\"}}]}\"}\n\n" +
+		"event: result\ndata: {\"aiRecord\":{\"uuid\":\"t\",\"model\":\"gpt-6-luna\"}}\n\n"
+
+	converted, err := io.ReadAll(nativeStreamToOpenAI(strings.NewReader(native), "gpt-6-luna", true, nil))
+
+	require.NoError(t, err)
+	output := string(converted)
+	assert.Contains(t, output, "get_weather")
+	assert.Contains(t, output, `"finish_reason":"tool_calls"`)
+	assert.Contains(t, output, "data: [DONE]")
+}
+
+func TestNativeStreamPassesProseThroughWhenToolAware(t *testing.T) {
+	native := "event: content\ndata: {\"content\":\"这是一张 Google 的标志图片，蓝红黄绿四色组成。\"}\n\n" +
+		"event: result\ndata: {\"aiRecord\":{\"uuid\":\"t2\",\"model\":\"gpt-6-luna\"}}\n\n"
+
+	converted, err := io.ReadAll(nativeStreamToOpenAI(strings.NewReader(native), "gpt-6-luna", true, nil))
+
+	require.NoError(t, err)
+	output := string(converted)
+	assert.NotContains(t, output, `"finish_reason":"tool_calls"`)
+	assert.Contains(t, output, "Google")
+	assert.Contains(t, output, `"finish_reason":"stop"`)
 }
