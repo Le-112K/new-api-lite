@@ -181,9 +181,11 @@ func buildNativePayload(request *dto.GeneralOpenAIRequest) nativePlan {
 	}
 
 	plan := nativePlan{payload: payload, hasImages: len(images) > 0}
-	if plan.hasImages && len(request.Tools) > 0 {
-		// The native surface has no tools field, so the tools are described in
-		// the prompt and the model answers with a tool-call script instead.
+	// The native surface has no tools field, so any request that may end up
+	// here with tools gets them described in the prompt. That covers vision
+	// requests, and also requests too large for the OpenAI-compatible surface
+	// that get replayed on this one — those may carry no picture at all.
+	if len(request.Tools) > 0 {
 		payload.PromptObject.Prompt = toolScriptFor(request.Tools) + "\n" + payload.PromptObject.Prompt
 		plan.payload = payload
 		plan.toolAware = true
@@ -343,25 +345,19 @@ func newToolCallID() string {
 // when the reply is ordinary prose, so a model that ignores the instructions
 // simply falls back to a normal answer instead of failing the request.
 func parseToolScript(text string) ([]dto.ToolCallResponse, bool) {
-	trimmed := strings.TrimSpace(text)
-	if trimmed == "" {
+	trimmed := stripCodeFence(strings.TrimSpace(text))
+	if trimmed == "" || !strings.Contains(trimmed, "tool_calls") {
 		return nil, false
 	}
-	if strings.HasPrefix(trimmed, "```") {
-		// Strip a markdown fence the model may wrap the JSON in.
-		trimmed = strings.TrimPrefix(trimmed, "```")
-		trimmed = strings.TrimPrefix(strings.TrimSpace(trimmed), "json")
-		trimmed = strings.TrimSpace(trimmed)
-		if end := strings.Index(trimmed, "```"); end >= 0 {
-			trimmed = trimmed[:end]
-		}
-		trimmed = strings.TrimSpace(trimmed)
-	}
-	if !strings.HasPrefix(trimmed, "{") {
+	// The model often appends a remark after the script ("... in JSON
+	// format."), so the object is lifted out of the reply instead of
+	// demanding that the whole reply be JSON.
+	candidate, ok := extractJSONObject(trimmed)
+	if !ok {
 		return nil, false
 	}
 	var script nativeToolScript
-	if err := common.Unmarshal([]byte(trimmed), &script); err != nil {
+	if err := common.Unmarshal([]byte(candidate), &script); err != nil {
 		return nil, false
 	}
 	if len(script.ToolCalls) == 0 {
@@ -385,11 +381,64 @@ func parseToolScript(text string) ([]dto.ToolCallResponse, bool) {
 	return calls, true
 }
 
+// stripCodeFence removes a markdown fence the model may wrap the JSON in.
+func stripCodeFence(text string) string {
+	if !strings.HasPrefix(text, "```") {
+		return text
+	}
+	trimmed := strings.TrimPrefix(text, "```")
+	trimmed = strings.TrimPrefix(strings.TrimSpace(trimmed), "json")
+	trimmed = strings.TrimSpace(trimmed)
+	if end := strings.Index(trimmed, "```"); end >= 0 {
+		trimmed = trimmed[:end]
+	}
+	return strings.TrimSpace(trimmed)
+}
+
+// extractJSONObject returns the first complete {...} block of a reply, so a
+// script that carries an extra remark before or after it is still readable.
+// Strings and escapes are tracked so braces inside values do not end the block.
+func extractJSONObject(text string) (string, bool) {
+	start := strings.Index(text, "{")
+	if start < 0 {
+		return "", false
+	}
+	depth := 0
+	inString := false
+	escaped := false
+	for i := start; i < len(text); i++ {
+		switch c := text[i]; {
+		case escaped:
+			escaped = false
+		case c == '\\' && inString:
+			escaped = true
+		case c == '"':
+			inString = !inString
+		case inString:
+			// Braces inside a string are content, not structure.
+		case c == '{':
+			depth++
+		case c == '}':
+			depth--
+			if depth == 0 {
+				return text[start : i+1], true
+			}
+		}
+	}
+	return "", false
+}
+
 // toolScriptStart reports whether a reply is opening a tool-call script rather
 // than prose, which is what decides how a streamed reply is handled.
 func toolScriptStart(text string) bool {
 	trimmed := strings.TrimSpace(text)
-	return strings.HasPrefix(trimmed, "{") || strings.HasPrefix(trimmed, "```")
+	if strings.HasPrefix(trimmed, "{") || strings.HasPrefix(trimmed, "```") {
+		return true
+	}
+	// A short preamble before the script ("Sure: ") still counts. A reply that
+	// only mentions tool_calls in prose is recognised as text later, when the
+	// script fails to parse.
+	return strings.Contains(trimmed, "tool_calls")
 }
 
 // toolSniffLookahead is how much of a reply is read before deciding whether it

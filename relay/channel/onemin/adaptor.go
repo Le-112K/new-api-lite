@@ -37,6 +37,9 @@ type Adaptor struct {
 	// toolAware records that tools were described in the native prompt, so the
 	// reply has to be read back as a possible tool-request script.
 	toolAware bool
+	// original keeps the request as the client sent it, so it can be rebuilt
+	// for the native surface if the OpenAI-compatible one refuses it.
+	original *dto.GeneralOpenAIRequest
 }
 
 func (a *Adaptor) Init(info *relaycommon.RelayInfo) {
@@ -70,6 +73,7 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}
+	a.original = request
 	plan := buildNativePayload(request)
 	if !plan.hasImages {
 		// Staying on the OpenAI-compatible surface, which preserves tools.
@@ -152,6 +156,18 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 	// running the two rules once in a fixed order.
 	payload := body
 	for range maxRequestCorrections {
+		// A request over the character budget cannot be trimmed into shape:
+		// the tools and the transcript are both needed. Replaying it on the
+		// native surface, which has no such budget, is the only way through.
+		if a.original != nil && isPayloadTooLarge(resp) {
+			fell, fallbackErr := a.replayOnNativeSurface(c, info)
+			if fallbackErr == nil && fell != nil {
+				logger.LogDebug(c, "1min: request exceeded the 100,000 character limit, replayed on the native surface")
+				service.CloseResponseBodyGracefully(resp)
+				return fell, nil
+			}
+			break
+		}
 		corrected, reason, ok := correctRequest(resp, payload)
 		if !ok {
 			break
@@ -191,6 +207,48 @@ func correctRequest(resp *http.Response, payload []byte) (corrected []byte, reas
 		return nil, "", false
 	}
 	return retried, fmt.Sprintf("dropped parameters the upstream rejects: %v", names), true
+}
+
+// isPayloadTooLarge reports whether the upstream refused the request for going
+// over its character budget. Nothing in the request can be dropped to fix that
+// — the transcript and the tools are both needed — so the caller replays it on
+// the native surface instead. The body is read restoratively, so a request that
+// is not replayed still reports the original upstream error.
+func isPayloadTooLarge(resp *http.Response) bool {
+	if resp == nil || resp.StatusCode != http.StatusBadRequest {
+		return false
+	}
+	message, _, ok := readUpstreamError(resp)
+	if !ok {
+		return false
+	}
+	return strings.Contains(message, payloadTooLargeMarker)
+}
+
+// replayOnNativeSurface rebuilds the client's request for the native surface
+// and sends it there. Flipping useNative is what makes the next call build the
+// native URL and authenticate with API-KEY.
+func (a *Adaptor) replayOnNativeSurface(c *gin.Context, info *relaycommon.RelayInfo) (*http.Response, error) {
+	plan := buildNativePayload(a.original)
+	if plan.payload.PromptObject.Attachments != nil {
+		resolved, err := resolveInlineImages(
+			c.Request.Context(),
+			strings.TrimSuffix(info.ChannelBaseUrl, "/"),
+			info.ApiKey,
+			plan.payload.PromptObject.Attachments.Images,
+		)
+		if err != nil {
+			return nil, err
+		}
+		plan.payload.PromptObject.Attachments.Images = resolved
+	}
+	encoded, err := common.Marshal(plan.payload)
+	if err != nil {
+		return nil, err
+	}
+	a.useNative = true
+	a.toolAware = plan.toolAware
+	return channel.DoApiRequest(a, c, info, bytes.NewReader(encoded))
 }
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *types.NewAPIError) {

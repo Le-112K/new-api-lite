@@ -9,6 +9,12 @@ import (
 // assetUploadTimeout bounds a single image upload to the asset API.
 const assetUploadTimeout = 60 * time.Second
 
+// payloadTooLargeMarker is how the OpenAI-compatible surface reports that the
+// request as a whole — messages, tools and response format together — is over
+// its 100,000 character budget. Nothing inside the request can fix that, so the
+// request is replayed on the native surface, which has no such budget.
+const payloadTooLargeMarker = "exceed the 100,000 character limit"
+
 // maxRequestCorrections bounds how many times a rejected request is corrected
 // and replayed. The upstream reports one problem per response, so a client that
 // trips several checks needs one round each; the cap keeps a pathological

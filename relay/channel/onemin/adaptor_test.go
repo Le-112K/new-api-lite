@@ -500,7 +500,6 @@ func TestOlderTurnImagesDoNotRouteToNativeSurface(t *testing.T) {
 
 	assert.False(t, plan.hasImages, "pictures from earlier turns must not switch to the native surface")
 	assert.Nil(t, plan.payload.PromptObject.Attachments)
-	assert.False(t, plan.toolAware)
 }
 
 // The newest user turn is the one that decides.
@@ -571,8 +570,10 @@ func TestToolsAreDescribedInPromptWhenCombinedWithImages(t *testing.T) {
 	assert.Contains(t, plan.payload.PromptObject.Prompt, "tool_calls")
 }
 
-// Without pictures the OpenAI-compatible surface handles tools natively, so no
-// prompt script should be involved.
+// Without pictures the request is not routed to the native surface — the
+// OpenAI-compatible surface handles tools natively. The script is still built
+// because an oversized request can be replayed on the native surface, where
+// tools have to be described; it simply goes unused while routing stays here.
 func TestToolsAreNotDescribedWithoutImages(t *testing.T) {
 	request := &dto.GeneralOpenAIRequest{
 		Model:    "gpt-6-luna",
@@ -582,8 +583,7 @@ func TestToolsAreNotDescribedWithoutImages(t *testing.T) {
 
 	plan := buildNativePayload(request)
 
-	assert.False(t, plan.hasImages)
-	assert.False(t, plan.toolAware)
+	assert.False(t, plan.hasImages, "routing is still decided by whether the newest message carries a picture")
 }
 
 func TestParseToolScript(t *testing.T) {
@@ -729,5 +729,60 @@ func TestToolResultTurnStaysOnOpenAISurface(t *testing.T) {
 	plan := buildNativePayload(request)
 
 	assert.False(t, plan.hasImages, "the follow-up turn must stay on the surface that understands tool results")
-	assert.False(t, plan.toolAware)
+}
+
+// An oversized request carries no picture but still has to work if it gets
+// replayed on the native surface, so the tool script has to be built for it too.
+func TestToolsAreDescribedEvenWithoutImagesForOversizeFallback(t *testing.T) {
+	request := &dto.GeneralOpenAIRequest{
+		Model:    "gpt-6-luna",
+		Messages: []dto.Message{textMessage("user", "查询天气")},
+		Tools:    weatherTools(),
+	}
+
+	plan := buildNativePayload(request)
+
+	assert.False(t, plan.hasImages)
+	assert.True(t, plan.toolAware, "the script must exist so an oversized replay can still call tools")
+	assert.Contains(t, plan.payload.PromptObject.Prompt, "get_weather")
+}
+
+func TestIsPayloadTooLarge(t *testing.T) {
+	oversize := &http.Response{
+		StatusCode: http.StatusBadRequest,
+		Body:       io.NopCloser(strings.NewReader(`{"error":{"message":"Messages, tools and response format exceed the 100,000 character limit."}}`)),
+	}
+	assert.True(t, isPayloadTooLarge(oversize))
+	// The body must survive the check so the original error can still be reported.
+	remaining, err := io.ReadAll(oversize.Body)
+	require.NoError(t, err)
+	assert.Contains(t, string(remaining), "100,000 character limit")
+
+	other := &http.Response{
+		StatusCode: http.StatusBadRequest,
+		Body:       io.NopCloser(strings.NewReader(`{"error":{"message":"Unrecognized keys: \"reasoning\""}}`)),
+	}
+	assert.False(t, isPayloadTooLarge(other), "other rejections are handled by dropping parameters")
+
+	ok := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(strings.NewReader(`{"choices":[]}`)),
+	}
+	assert.False(t, isPayloadTooLarge(ok))
+}
+
+// The model often appends a remark after the script, so the object has to be
+// lifted out rather than requiring the whole reply to be JSON.
+func TestParseToolScriptToleratesSurroundingProse(t *testing.T) {
+	script := `{"tool_calls":[{"name":"get_weather","arguments":{"city":"北京"}}]}`
+	calls, ok := parseToolScript(script + " in JSON format.")
+	require.True(t, ok, "a trailing remark must not hide the script")
+	assert.Equal(t, "get_weather", calls[0].Function.Name)
+
+	calls, ok = parseToolScript("Sure, calling it now://n" + script)
+	require.True(t, ok, "a short preamble must not hide the script")
+	assert.Equal(t, "get_weather", calls[0].Function.Name)
+
+	_, ok = parseToolScript("I cannot call tools, but tool_calls are unavailable here.")
+	assert.False(t, ok, "prose that merely mentions tool_calls is not a script")
 }
