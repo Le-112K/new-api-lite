@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
@@ -1144,6 +1145,59 @@ func readUpstreamError(resp *http.Response) (message, param string, ok bool) {
 		return "", "", false
 	}
 	return message, upstream.Error.Param, true
+}
+
+// numberTooLargePattern extracts the ceiling from a numeric rejection.
+var numberTooLargePattern = regexp.MustCompile(regexp.QuoteMeta(numberTooLargeMarker) + `(\d+)`)
+
+// numberTooLarge reads the numeric ceiling the upstream enforces.
+func numberTooLarge(resp *http.Response) (int, bool) {
+	if resp == nil || resp.StatusCode != http.StatusBadRequest {
+		return 0, false
+	}
+	message, _, ok := readUpstreamError(resp)
+	if !ok {
+		return 0, false
+	}
+	match := numberTooLargePattern.FindStringSubmatch(message)
+	if match == nil {
+		return 0, false
+	}
+	limit, err := strconv.Atoi(match[1])
+	if err != nil || limit <= 0 {
+		return 0, false
+	}
+	return limit, true
+}
+
+// clampOversizeNumbers caps every numeric parameter that exceeds the ceiling.
+// Messages and tools are skipped: they carry content, not settings, and
+// shrinking them would change what the client asked for.
+func clampOversizeNumbers(payload []byte, limit int) ([]byte, bool) {
+	var request map[string]any
+	if err := common.Unmarshal(payload, &request); err != nil {
+		return nil, false
+	}
+	clamped := false
+	for key, value := range request {
+		if key == "messages" || key == "tools" {
+			continue
+		}
+		number, isNumber := value.(float64)
+		if !isNumber || number <= float64(limit) {
+			continue
+		}
+		request[key] = limit
+		clamped = true
+	}
+	if !clamped {
+		return nil, false
+	}
+	corrected, err := common.Marshal(request)
+	if err != nil {
+		return nil, false
+	}
+	return corrected, true
 }
 
 // extractQuotedNames pulls the double-quoted identifiers out of an error such

@@ -786,3 +786,61 @@ func TestParseToolScriptToleratesSurroundingProse(t *testing.T) {
 	_, ok = parseToolScript("I cannot call tools, but tool_calls are unavailable here.")
 	assert.False(t, ok, "prose that merely mentions tool_calls is not a script")
 }
+
+// ZCode asks for 128000 output tokens; 1min caps it at 32768. Dropping the field
+// would truncate the answer, so it has to be clamped instead.
+func TestNumberTooLargeIsClamped(t *testing.T) {
+	resp := &http.Response{
+		StatusCode: http.StatusBadRequest,
+		Body:       io.NopCloser(strings.NewReader(`{"error":{"message":"Too big: expected number to be <=32768"}}`)),
+	}
+	limit, ok := numberTooLarge(resp)
+	require.True(t, ok)
+	assert.Equal(t, 32768, limit)
+
+	payload, applied := clampOversizeNumbers([]byte(
+		`{"model":"glm-5.3","max_completion_tokens":128000,"messages":[],"tools":[]}`), limit)
+	require.True(t, applied)
+
+	var decoded map[string]any
+	require.NoError(t, json.Unmarshal(payload, &decoded))
+	assert.Equal(t, float64(32768), decoded["max_completion_tokens"], "clamped to the ceiling")
+	assert.Equal(t, "glm-5.3", decoded["model"], "other fields untouched")
+	assert.Contains(t, string(payload), "32768")
+}
+
+func TestClampLeavesCompliantRequestsAlone(t *testing.T) {
+	body := `{"model":"glm-5.3","max_completion_tokens":4096,"messages":[],"tools":[]}`
+	_, applied := clampOversizeNumbers([]byte(body), 32768)
+	assert.False(t, applied, "nothing to clamp")
+}
+
+func TestClampSkipsMessagesAndTools(t *testing.T) {
+	body := `{"messages":[{"role":"user","content":"x"}],"tools":[{"type":"function"}],"max_completion_tokens":128000}`
+	payload, applied := clampOversizeNumbers([]byte(body), 32768)
+	require.True(t, applied)
+	var decoded map[string]any
+	require.NoError(t, json.Unmarshal(payload, &decoded))
+	assert.Equal(t, float64(32768), decoded["max_completion_tokens"])
+	assert.Equal(t, []any{map[string]any{"role": "user", "content": "x"}}, decoded["messages"])
+}
+
+func TestIsPayloadTooLargeCoversSingleFieldToo(t *testing.T) {
+	whole := &http.Response{
+		StatusCode: http.StatusBadRequest,
+		Body:       io.NopCloser(strings.NewReader(`{"error":{"message":"Messages, tools and response format exceed the 100,000 character limit."}}`)),
+	}
+	assert.True(t, isPayloadTooLarge(whole))
+
+	single := &http.Response{
+		StatusCode: http.StatusBadRequest,
+		Body:       io.NopCloser(strings.NewReader(`{"error":{"message":"Too big: expected string to have <=100000 characters"}}`)),
+	}
+	assert.True(t, isPayloadTooLarge(single), "a single oversized field also needs the native surface")
+
+	numeric := &http.Response{
+		StatusCode: http.StatusBadRequest,
+		Body:       io.NopCloser(strings.NewReader(`{"error":{"message":"Too big: expected number to be <=32768"}}`)),
+	}
+	assert.False(t, isPayloadTooLarge(numeric), "numeric limits are clamped in place, not replayed")
+}

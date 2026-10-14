@@ -196,6 +196,16 @@ func correctRequest(resp *http.Response, payload []byte) (corrected []byte, reas
 		}
 	}
 
+	// A numeric parameter over the upstream ceiling is rejected outright.
+	// Clamping keeps the client's intent — a long answer — while fitting the
+	// limit; dropping the field instead would let the upstream substitute a far
+	// smaller default and truncate the reply.
+	if limit, ok := numberTooLarge(resp); ok {
+		if clamped, applied := clampOversizeNumbers(payload, limit); applied {
+			return clamped, fmt.Sprintf("clamped numeric parameters to the upstream ceiling of %d", limit), true
+		}
+	}
+
 	// The surface also rejects the whole request over any parameter it does not
 	// accept, naming the offender.
 	names := rejectedParams(resp)
@@ -222,7 +232,10 @@ func isPayloadTooLarge(resp *http.Response) bool {
 	if !ok {
 		return false
 	}
-	return strings.Contains(message, payloadTooLargeMarker)
+	// Both shapes mean "this request is too big to say as-is": the whole
+	// payload over budget, or a single field over the character ceiling.
+	return strings.Contains(message, payloadTooLargeMarker) ||
+		strings.Contains(message, stringTooLargeMarker)
 }
 
 // replayOnNativeSurface rebuilds the client's request for the native surface

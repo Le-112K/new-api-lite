@@ -15,6 +15,19 @@ const assetUploadTimeout = 60 * time.Second
 // request is replayed on the native surface, which has no such budget.
 const payloadTooLargeMarker = "exceed the 100,000 character limit"
 
+// stringTooLargeMarker is how the surface reports a single field — one message,
+// most often — going over the 100,000 character ceiling. Nothing can be trimmed
+// without losing what the client sent, so the request is replayed on the native
+// surface, which has no per-field ceiling.
+const stringTooLargeMarker = "expected string to have <=100000"
+
+// numberTooLargeMarker precedes the cap in rejections such as
+// `Too big: expected number to be <=32768`. Clients routinely ask for far more
+// output tokens than 1min allows — ZCode asks for 128000. Dropping the field
+// would leave the upstream to pick a much smaller default and truncate the
+// answer, so the value is clamped to the ceiling instead.
+const numberTooLargeMarker = "expected number to be <="
+
 // maxRequestCorrections bounds how many times a rejected request is corrected
 // and replayed. The upstream reports one problem per response, so a client that
 // trips several checks needs one round each; the cap keeps a pathological
