@@ -38,7 +38,7 @@ export const CHANNEL_TYPE_SGLANG = 63
  * 其余类型依然保留数字常量与显示标签（存量渠道数据仍需要它们渲染名称），
  * 但不再出现在渠道类型下拉里；后端 validateChannel 会拒绝新建这些类型。
  */
-export const RETAINED_CHANNEL_TYPES = [1, 14, 24, 40, 58, 59, 60, 64] as const
+export const RETAINED_CHANNEL_TYPES = [1, 14, 24, 40, 58, 59, 60] as const
 
 /**
  * 二开精简中移除的渠道类型：后端不再有对应的 relay 适配器。
@@ -153,7 +153,6 @@ export const CHANNEL_TYPES = {
   61: 'Task Plugin',
   62: 'vLLM',
   63: 'SGLang',
-  64: '1min',
 } as const
 
 export type ChannelProviderPresentation = {
@@ -185,16 +184,13 @@ const RETAINED_CHANNEL_PRESENTATION: Record<
     descriptionKey:
       'Connect to New API model services with support for multiple task plugins',
   },
-  64: {
-    descriptionKey: 'Connect to 1min.AI models, including image understanding',
-  },
 }
 
 export const CHANNEL_PROVIDER_PRESENTATION: Partial<
   Record<number, ChannelProviderPresentation>
 > = RETAINED_CHANNEL_PRESENTATION
 
-const CHANNEL_TYPE_DISPLAY_ORDER: number[] = [1, 14, 24, 40, 58, 59, 60, 64]
+const CHANNEL_TYPE_DISPLAY_ORDER: number[] = [1, 14, 24, 40, 58, 59, 60]
 
 export const CHANNEL_TYPE_OPTIONS: { value: number; label: string }[] = (() => {
   const ordered: { value: number; label: string }[] = []

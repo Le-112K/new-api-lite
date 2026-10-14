@@ -7,7 +7,6 @@ import (
 	"github.com/QuantumNous/new-api/relay/channel/claude"
 	"github.com/QuantumNous/new-api/relay/channel/gemini"
 	"github.com/QuantumNous/new-api/relay/channel/newapi"
-	"github.com/QuantumNous/new-api/relay/channel/onemin"
 	"github.com/QuantumNous/new-api/relay/channel/openai"
 	"github.com/QuantumNous/new-api/relay/channel/siliconflow"
 	"github.com/QuantumNous/new-api/relay/channel/sub2api"
@@ -17,9 +16,9 @@ import (
 //
 // This fork retains a small set of providers: OpenAI-compatible endpoints
 // (third-party gateways, OpenAI itself, and vendor OpenAI-compatible
-// endpoints), Anthropic, Gemini, SiliconFlow, Advanced Custom, Sub2API,
-// New API and 1min. Removed provider types deliberately have no case here —
-// their channel types fall back to APITypeOpenAI in common.ChannelType2APIType.
+// endpoints), Anthropic, Gemini, SiliconFlow, Advanced Custom, Sub2API and
+// New API. Removed provider types deliberately have no case here — their
+// channel types fall back to APITypeOpenAI in common.ChannelType2APIType.
 func GetAdaptor(apiType int) channel.Adaptor {
 	switch apiType {
 	case constant.APITypeAnthropic:
@@ -36,8 +35,6 @@ func GetAdaptor(apiType int) channel.Adaptor {
 		return &sub2api.Adaptor{}
 	case constant.APITypeNewAPI:
 		return &newapi.Adaptor{}
-	case constant.APITypeOnemin:
-		return &onemin.Adaptor{}
 	}
 	return nil
 }

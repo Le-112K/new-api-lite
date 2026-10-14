@@ -18,7 +18,6 @@ import (
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/relay/channel/advancedcustom"
 	"github.com/QuantumNous/new-api/relay/channel/gemini"
-	"github.com/QuantumNous/new-api/relay/channel/onemin"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relaykit/dto"
@@ -383,13 +382,7 @@ func fetchChannelUpstreamModelIDs(channel *model.Channel) ([]string, error) {
 		return fetchAdvancedCustomUpstreamModelIDs(channel, baseURL)
 	}
 
-	// 1min keeps its OpenAI-compatible catalogue under /openai/v1 rather than
-	// /v1, while the channel base URL stays the canonical API root.
-	modelListPath := "/v1/models"
-	if channel.Type == constant.ChannelTypeOnemin {
-		modelListPath = onemin.ModelListPath
-	}
-	url := fmt.Sprintf("%s%s", strings.TrimSuffix(baseURL, "/"), modelListPath)
+	url := fmt.Sprintf("%s/v1/models", baseURL)
 
 	key, _, apiErr := channel.GetNextEnabledKey()
 	if apiErr != nil {
