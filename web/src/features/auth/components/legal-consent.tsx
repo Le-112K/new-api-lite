@@ -31,34 +31,24 @@ interface LegalConsentProps {
   className?: string
 }
 
-export function LegalConsent({
-  status,
-  checked,
-  onCheckedChange,
-  className,
-}: LegalConsentProps) {
+export function LegalConsent(props: LegalConsentProps) {
   const { t } = useTranslation()
-  const hasUserAgreement = Boolean(status?.user_agreement_enabled)
-  const hasPrivacyPolicy = Boolean(status?.privacy_policy_enabled)
+  const hasUserAgreement = Boolean(props.status?.user_agreement_enabled)
+  const hasPrivacyPolicy = Boolean(props.status?.privacy_policy_enabled)
 
   if (!hasUserAgreement && !hasPrivacyPolicy) {
     return null
   }
 
   const handleChange = (value: boolean) => {
-    onCheckedChange(value === true)
+    props.onCheckedChange(value === true)
   }
 
   return (
-    <div
-      className={cn(
-        'border-border/60 bg-muted/40 flex items-start gap-3 rounded-md border p-3',
-        className
-      )}
-    >
+    <div className={cn('flex items-start gap-2.5', props.className)}>
       <Checkbox
         id='legal-consent'
-        checked={checked}
+        checked={props.checked}
         onCheckedChange={handleChange}
         className='mt-0.5'
       />

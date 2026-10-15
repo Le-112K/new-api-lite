@@ -30,6 +30,10 @@ For commercial licensing, please contact support@quantumnous.com
 @import './theme.css';
 @import './theme-presets.css';
 @import './theme-apple-bw.css';
+/* Additive layer for the Aperture design language (gray ramp, type scale,
+ * space scale, emphasis/hairline tokens the base themes do not declare).
+ * Kept last so nothing downstream can shadow it. */
+@import './aperture-tokens.css';
 
 @layer base {
   :root {

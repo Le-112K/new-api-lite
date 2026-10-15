@@ -1,0 +1,129 @@
+/*
+Copyright (C) 2023-2026 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
+/* ==========================================================================
+ * aperture-tokens.css — additive layer for the Aperture design language
+ * --------------------------------------------------------------------------
+ * WHY THIS FILE IS *ADDITIVE ONLY*: the project already ships an Apple
+ * grayscale theme (`theme-apple-bw.css`) whose values are, token for token,
+ * the same as the ones this design language specifies — `--background`
+ * #F5F5F7, `--border` #E8E8ED, `--primary` #0a0a0a, `--muted-foreground`
+ * #6E6E73, `--sidebar` rgba(255,255,255,0.72). Re-declaring them here would
+ * create a second source of truth for the same value, so this file only
+ * declares what the project does NOT already have.
+ *
+ * WHAT IT ADDS (77 tokens: 60 in :root, 17 in .dark)
+ *   1. the full gray ramp        --gray-0 .. --gray-950
+ *   2. literal aliases           --text-color / --input-bg / --panel / --code-bg
+ *   3. emphasis + interaction     --emphasis* / --link / --live / --active-*
+ *   4. hairline surfaces          --hairline / --whisper / --glass-blur
+ *   5. type scale                 --text-display .. --text-eyebrow
+ *   6. space scale + rhythm       --space-* / --section-py / --row-gap / --hero-pt
+ *
+ * NOTE ON THE RHYTHM TOKENS: --section-py (160px) is a MARKETING rhythm. It is
+ * deliberately available globally, but components in the console must NOT
+ * consume it — the console has its own density scale in console-tokens.css.
+ *
+ * Import order matters: this file must come AFTER `theme.css` and
+ * `theme-apple-bw.css` so that nothing here is overwritten by a later import.
+ * ========================================================================== */
+
+:root {
+  --gray-0:                          #FFFFFF;  /* Paper：页面/卡片画布 */
+  --gray-50:                         #FBFBFD;  /* 极浅：内嵌面 / 表格头 */
+  --gray-100:                        #F5F5F7;  /* Ash/画布：Apple 标志性浅灰，section 交替底 */
+  --gray-200:                        #E8E8ED;  /* 边框 / 发丝线（实色） */
+  --gray-300:                        #D2D2D7;  /* 强分割 / 禁用边 */
+  --gray-400:                        #AEAEB2;  /* 禁用文字 */
+  --gray-500:                        #86868B;  /* Smoke：三级文字 / caption（仅限 ≤13px 非关键信息） */
+  --gray-600:                        #6E6E73;  /* Graphite：二级文字 / 说明 */
+  --gray-700:                        #48484A;  /* 强二级 / 深面文字 */
+  --gray-800:                        #2C2C2E;  /* 深面（深色模式卡片 / 悬浮） */
+  --gray-900:                        #1D1D1F;  /* 正文 / 标题（Apple 近黑，比纯黑暖） */
+  --gray-950:                        #0A0A0A;  /* Obsidian：主按钮 / 深色画布 / 最强强调 */
+  --text-color:                      var(--foreground);  /* 全文默认文字色（卡片/正文 = --card-foreground） */
+  --input-bg:                        var(--background);  /* 输入框底色（含 select/combobox/popover） */
+  --panel:                           var(--card);  /* 面板底色（popover 可用 --popover，同值） */
+  --code-bg:                         var(--muted);  /* 代码块底色（文字 = --muted-foreground） */
+  --emphasis:                        var(--gray-950);  /* 主强调：实心填充 / 当前态 / 关键数据 */
+  --emphasis-foreground:             #FFFFFF;
+  --emphasis-soft:                   #F2F2F4;  /* 次级强调面：hover / 选中底 / 标签底 */
+  --emphasis-strong:                 #000000;  /* 最深强调（需要比近黑更重时，慎用） */
+  --ring-offset:                     var(--background);  /* 焦点环外圈间隙色（双层环用） */
+  --link:                            var(--gray-900);  /* 正文链接：近黑 + 下划线（下划线承载"可点"） */
+  --live:                            var(--gray-950);  /* 实时状态点：近黑 + 脉冲动画（动画承载"live"） */
+  --active-surface:                  var(--gray-950);  /* 当前/激活态：反色实心块 */
+  --active-foreground:               #FFFFFF;
+  --hairline:                        rgba(0, 0, 0, 0.12);  /* 结构线：12% 黑，比实色灰更"轻" */
+  --whisper:                         rgba(0, 0, 0, 0.04);  /* 极淡装饰面 / 分隔 */
+  --glass-blur:                      20px;
+  --font-mono:                       'SF Mono', 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Monaco,
+    'Cascadia Code', 'Roboto Mono', 'Noto Sans Mono CJK SC', Consolas,
+    monospace;
+  --text-display:                    clamp(2.75rem, 6vw, 5rem);  /* Hero：44→80px */
+  --text-h1:                         clamp(2rem, 3.6vw, 3rem);  /* Section 大标题：32→48px */
+  --text-h2:                         clamp(1.5rem, 2.4vw, 2rem);  /* 子区：24→32px */
+  --text-h3:                         1.375rem;  /* 卡片标题：22px */
+  --text-lead:                       1.1875rem;  /* 副标题：19px */
+  --text-body:                       1.0625rem;  /* 正文：17px（OpenAI 基准） */
+  --text-caption:                    0.8125rem;  /* caption：13px */
+  --text-eyebrow:                    0.6875rem;  /* eyebrow：11px */
+  --space-1:                         4px;
+  --space-5:                         20px;
+  --space-12:                        48px;
+  --space-32:                        128px;
+  --section-py-mobile:               96px;
+  --section-py:                      160px;  /* 桌面 section 之间（OpenAI 用 10rem） */
+  --row-gap:                         64px;  /* section 内行间距（OpenAI 用 4rem） */
+  --hero-pt:                         160px;
+  --hero-pb:                         96px;
+  --container-max:                   1200px;  /* 主容器（OpenAI ~1280px） */
+  --prose-max:                       720px;  /* 正文阅读列（~65ch） */
+  --radius-xs:                       6px;  /* 徽标 / 小标签（OpenAI 卡片 whisper 6px） */
+  --radius-pill:                     999px;  /* 按钮 / 标签 / 胶囊 */
+  --shadow-hairline:                 0 1px 0 rgba(0, 0, 0, 0.03);
+  --shadow-floating:                 0 12px 32px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.05);
+  --border-width:                    1px;
+  --ease-out-expo:                   cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart:                  cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-spring:                     cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast:                        120ms;
+  --dur-base:                        200ms;
+  --dur-slow:                        320ms;
+  --dur-entrance:                    600ms;
+}
+
+.dark {
+  --text-color:                      var(--foreground);
+  --input-bg:                        var(--background);
+  --panel:                           var(--card);
+  --code-bg:                         var(--muted);
+  --emphasis:                        #FFFFFF;
+  --emphasis-foreground:             #0A0A0A;
+  --emphasis-soft:                   rgba(255, 255, 255, 0.08);
+  --emphasis-strong:                 #FFFFFF;
+  --ring-offset:                     var(--background);
+  --link:                            #F5F5F7;
+  --live:                            #FFFFFF;
+  --active-surface:                  #FFFFFF;
+  --active-foreground:               #0A0A0A;
+  --hairline:                        rgba(255, 255, 255, 0.14);
+  --whisper:                         rgba(255, 255, 255, 0.05);
+  --shadow-hairline:                 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-floating:                 0 12px 32px rgba(0, 0, 0, 0.60);
+}

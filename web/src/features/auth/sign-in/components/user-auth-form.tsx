@@ -243,6 +243,7 @@ export function UserAuthForm({
                   <FormLabel>{t('Username or Email')}</FormLabel>
                   <FormControl>
                     <Input
+                      className='h-11 rounded-xl'
                       placeholder={t('Enter your username or email')}
                       {...field}
                     />
@@ -261,6 +262,7 @@ export function UserAuthForm({
                   <FormLabel>{t('Password')}</FormLabel>
                   <FormControl>
                     <PasswordInput
+                      className='[&_input]:h-11 [&_input]:rounded-xl'
                       placeholder={t('Enter password')}
                       {...field}
                     />
@@ -279,7 +281,7 @@ export function UserAuthForm({
             {/* Submit Button */}
             <Button
               type='submit'
-              className='mt-2 w-full justify-center gap-2'
+              className='mt-2 h-12 w-full justify-center gap-2 rounded-full'
               disabled={isLoading || (requiresLegalConsent && !agreedToLegal)}
             >
               {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}

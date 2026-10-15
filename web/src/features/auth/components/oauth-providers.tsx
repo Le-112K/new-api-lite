@@ -49,15 +49,10 @@ type ProviderButton = {
   disabled?: boolean
 }
 
-export function OAuthProviders({
-  status,
-  disabled = false,
-  className,
-  onWeChatLogin,
-  isWeChatLoading = false,
-  redirectTo,
-}: OAuthProvidersProps) {
+export function OAuthProviders(props: OAuthProvidersProps) {
   const { t } = useTranslation()
+  const disabled = props.disabled ?? false
+  const isWeChatLoading = props.isWeChatLoading ?? false
   const {
     isLoading,
     githubButtonText,
@@ -68,21 +63,21 @@ export function OAuthProviders({
     handleLinuxDOLogin,
     handleTelegramLogin,
     handleCustomOAuthLogin,
-  } = useOAuthLogin(status, redirectTo)
+  } = useOAuthLogin(props.status, props.redirectTo)
 
   const providerButtons: ProviderButton[] = []
 
-  if (status?.wechat_login && onWeChatLogin) {
+  if (props.status?.wechat_login && props.onWeChatLogin) {
     providerButtons.push({
       key: 'wechat',
       label: t('Continue with WeChat'),
-      onClick: onWeChatLogin,
+      onClick: props.onWeChatLogin,
       icon: <IconWeChat className='h-4 w-4' />,
       disabled: isWeChatLoading,
     })
   }
 
-  if (status?.github_oauth) {
+  if (props.status?.github_oauth) {
     providerButtons.push({
       key: 'github',
       label: githubButtonText || t('Continue with GitHub'),
@@ -92,7 +87,7 @@ export function OAuthProviders({
     })
   }
 
-  if (status?.discord_oauth) {
+  if (props.status?.discord_oauth) {
     providerButtons.push({
       key: 'discord',
       label: t('Continue with Discord'),
@@ -101,8 +96,8 @@ export function OAuthProviders({
     })
   }
 
-  if (status?.oidc_enabled) {
-    const oidcDisplayName = status.oidc_display_name?.trim() || 'OIDC'
+  if (props.status?.oidc_enabled) {
+    const oidcDisplayName = props.status.oidc_display_name?.trim() || 'OIDC'
     providerButtons.push({
       key: 'oidc',
       label: t('Continue with {{name}}', {
@@ -112,7 +107,7 @@ export function OAuthProviders({
     })
   }
 
-  if (status?.linuxdo_oauth) {
+  if (props.status?.linuxdo_oauth) {
     providerButtons.push({
       key: 'linuxdo',
       label: t('Continue with LinuxDO'),
@@ -121,7 +116,7 @@ export function OAuthProviders({
     })
   }
 
-  if (status?.telegram_oauth) {
+  if (props.status?.telegram_oauth) {
     providerButtons.push({
       key: 'telegram',
       label: t('Continue with Telegram'),
@@ -131,7 +126,7 @@ export function OAuthProviders({
   }
 
   // Custom OAuth providers
-  const customProviders = status?.custom_oauth_providers
+  const customProviders = props.status?.custom_oauth_providers
   if (customProviders && customProviders.length > 0) {
     for (const provider of customProviders) {
       providerButtons.push({
@@ -145,13 +140,13 @@ export function OAuthProviders({
   if (providerButtons.length === 0) return null
 
   return (
-    <div className={cn('space-y-3', className)}>
+    <div className={cn('space-y-3', props.className)}>
       <div className='relative'>
         <div className='absolute inset-0 flex items-center'>
           <span className='w-full border-t' />
         </div>
         <div className='relative flex justify-center text-xs uppercase'>
-          <span className='bg-background text-muted-foreground px-2'>
+          <span className='bg-card text-muted-foreground px-2'>
             {t('Or continue with')}
           </span>
         </div>
@@ -166,7 +161,7 @@ export function OAuthProviders({
               type='button'
               disabled={disabled || isLoading || extraDisabled}
               onClick={onClick}
-              className='h-11 w-full justify-center gap-2 rounded-lg'
+              className='h-11 w-full justify-center gap-2 rounded-full'
             >
               {icon}
               {label}

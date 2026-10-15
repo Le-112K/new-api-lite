@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { useStatus } from '@/hooks/use-status'
 
+import { ApertureGlobe } from '../aperture-globe'
 import { HeroTerminalDemo } from '../hero-terminal-demo'
 
 interface HeroProps {
@@ -226,13 +227,24 @@ export function Hero(props: HeroProps) {
           </div>
         </div>
 
-        {/* Right: Terminal */}
+        {/* Right: the rotating land dot-field. This is the signature Aperture
+            element — the terminal moved below the split so the globe can own
+            the right column. */}
         <div
           className='landing-animate-fade-up flex w-full justify-center opacity-0 lg:col-span-6'
           style={{ animationDelay: '320ms' }}
         >
-          <HeroTerminalDemo className='mt-2 lg:mt-0' />
+          <ApertureGlobe className='aspect-square w-full max-w-[560px]' />
         </div>
+      </div>
+
+      {/* Terminal — its own full-width beat under the split, matching the
+          approved layout where the globe and the terminal are separate rows. */}
+      <div
+        className='landing-animate-fade-up mx-auto mt-14 max-w-6xl opacity-0'
+        style={{ animationDelay: '420ms' }}
+      >
+        <HeroTerminalDemo />
       </div>
     </section>
   )

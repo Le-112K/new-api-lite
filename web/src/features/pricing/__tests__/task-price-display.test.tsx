@@ -345,11 +345,15 @@ it('shows one standard task price and a localized group price without duplicate 
   ).toHaveLength(2)
 })
 
-it('labels even a single task price on model cards', async () => {
+it('keeps a single task price with its usage unit in the card spec row', () => {
   render(<ModelCard model={model} onClick={() => {}} />)
-  expect(screen.getByText('Song generation unit price')).toBeVisible()
-  await act(() => i18next.changeLanguage('zhCN'))
-  expect(screen.getByText('生成歌曲单价')).toBeVisible()
+  expect(screen.getByText('Input').parentElement).toHaveTextContent(
+    '$0.22/unit'
+  )
+  // The descriptive unit label belongs to the detail sheet, not the card.
+  expect(
+    screen.queryByText('Song generation unit price')
+  ).not.toBeInTheDocument()
 })
 
 it('preserves condition tables, boolean states and additional charges', () => {
@@ -624,7 +628,7 @@ it('switches provider group prices, localized conditions and examples, and shows
   expect(within(panel).getByText('$0.5')).toBeVisible()
 })
 
-it('shows provider count, price range and missing-price status in both list and card views', () => {
+it('shows provider count, price range and missing-price status in the list view', () => {
   const shared: PricingModel = {
     ...model,
     billing_mode: undefined,
@@ -660,9 +664,9 @@ it('shows provider count, price range and missing-price status in both list and 
       <ModelCard model={shared} onClick={vi.fn()} />
     </QueryClientProvider>
   )
-  expect(screen.getAllByText(/3 providers/)).toHaveLength(2)
+  expect(screen.getAllByText(/3 providers/)).toHaveLength(1)
   expect(screen.getAllByText(/Not configured for some providers/)).toHaveLength(
-    2
+    1
   )
   expect(screen.getByText('0.4 – 0.8/s')).toBeVisible()
   expect(screen.getByText('$0.4 – $0.8')).toBeVisible()
