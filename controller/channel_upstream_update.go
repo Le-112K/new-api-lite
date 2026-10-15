@@ -18,6 +18,7 @@ import (
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/relay/channel/advancedcustom"
 	"github.com/QuantumNous/new-api/relay/channel/gemini"
+	"github.com/QuantumNous/new-api/relay/channel/openai"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relaykit/dto"
@@ -383,6 +384,17 @@ func fetchChannelUpstreamModelIDs(channel *model.Channel) ([]string, error) {
 	}
 
 	url := fmt.Sprintf("%s/v1/models", baseURL)
+	if channel.Type == constant.ChannelTypeVolcEngine {
+		// Volcano Ark serves the OpenAI protocol under an /api/v3 prefix, which
+		// the channel base URL already carries. Reuse the adaptor's URL rule so
+		// the model list endpoint can never drift from the relay endpoint (both
+		// drop the client-side /v1 segment); keeping it would produce
+		// /api/v3/v1/models and the upstream answers 404.
+		var urlErr error
+		if url, urlErr = openai.BuildVolcEngineModelListURL(baseURL); urlErr != nil {
+			return nil, urlErr
+		}
+	}
 
 	key, _, apiErr := channel.GetNextEnabledKey()
 	if apiErr != nil {

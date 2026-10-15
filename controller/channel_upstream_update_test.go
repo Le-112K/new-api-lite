@@ -179,6 +179,60 @@ func TestFetchAdvancedCustomModelsRedactsQueryKeyFromTransportErrors(t *testing.
 	require.EqualError(t, queryError, "dial [REDACTED]: connection refused")
 }
 
+func newModelListChannel(channelType int, baseURL string) *model.Channel {
+	return &model.Channel{
+		Type:    channelType,
+		Key:     "secret-key",
+		BaseURL: &baseURL,
+	}
+}
+
+// Volcano Ark serves the OpenAI protocol under an /api/v3 prefix carried by the
+// channel base URL. Discovery must drop the client-side /v1 segment exactly
+// like the relay adaptor does; keeping it would request /api/v3/v1/models and
+// the upstream answers 404, forcing operators to type model names by hand.
+func TestFetchVolcEngineModelsDropsClientVersionPrefix(t *testing.T) {
+	type receivedRequest struct {
+		Path          string
+		Authorization string
+	}
+	received := make(chan receivedRequest, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		received <- receivedRequest{Path: r.URL.Path, Authorization: r.Header.Get("Authorization")}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":[{"id":"deepseek-v4-flash-ga-260731"},{"id":"doubao-pro-32k"}]}`))
+	}))
+	defer server.Close()
+
+	channel := newModelListChannel(constant.ChannelTypeVolcEngine, server.URL+"/api/v3")
+
+	models, err := fetchChannelUpstreamModelIDs(channel)
+	require.NoError(t, err)
+	require.Equal(t, []string{"deepseek-v4-flash-ga-260731", "doubao-pro-32k"}, models)
+
+	request := <-received
+	require.Equal(t, "/api/v3/models", request.Path)
+	require.Equal(t, "Bearer secret-key", request.Authorization)
+}
+
+// The Ark-specific trimming must not leak into other OpenAI-protocol channels.
+func TestFetchOpenAIModelsKeepsVersionPrefix(t *testing.T) {
+	receivedPath := make(chan string, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedPath <- r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":[{"id":"gpt-4.1"}]}`))
+	}))
+	defer server.Close()
+
+	channel := newModelListChannel(constant.ChannelTypeOpenAI, server.URL)
+
+	models, err := fetchChannelUpstreamModelIDs(channel)
+	require.NoError(t, err)
+	require.Equal(t, []string{"gpt-4.1"}, models)
+	require.Equal(t, "/v1/models", <-receivedPath)
+}
+
 func TestFetchOrdinaryOpenAIModelsKeepsExistingEmptyDataBehavior(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`{"object":"list"}`))

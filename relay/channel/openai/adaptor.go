@@ -189,6 +189,24 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 	}
 }
 
+// BuildVolcEngineModelListURL resolves the upstream model-list endpoint for a
+// Volcano Ark channel. Ark's OpenAI-compatible endpoints live under /api/v3,
+// which the channel base URL already carries, so the client-side /v1 segment
+// is dropped — the same rule GetRequestURL applies to relay paths. Keeping the
+// rule here (instead of re-joining at the call site) ensures model discovery
+// can never drift away from the relay endpoint.
+func BuildVolcEngineModelListURL(baseURL string) (string, error) {
+	return (&Adaptor{}).GetRequestURL(&relaycommon.RelayInfo{
+		RelayFormat:    types.RelayFormatOpenAI,
+		RelayMode:      relayconstant.RelayModeUnknown,
+		RequestURLPath: "/v1/models",
+		ChannelMeta: &relaycommon.ChannelMeta{
+			ChannelType:    constant.ChannelTypeVolcEngine,
+			ChannelBaseUrl: baseURL,
+		},
+	})
+}
+
 func (a *Adaptor) SetupRequestHeader(c *gin.Context, header *http.Header, info *relaycommon.RelayInfo) error {
 	channel.SetupApiRequestHeader(info, c, header)
 	if info.ChannelType == constant.ChannelTypeAzure {

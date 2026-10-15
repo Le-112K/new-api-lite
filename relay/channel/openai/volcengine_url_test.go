@@ -53,3 +53,11 @@ func TestGetRequestURLKeepsVersionPrefixForOpenAI(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, base+"/v1/chat/completions", url)
 }
+
+// Model discovery goes through the same helper the relay path uses, so the two
+// endpoints can never drift apart.
+func TestBuildVolcEngineModelListURLMatchesRelayEndpoint(t *testing.T) {
+	url, err := BuildVolcEngineModelListURL(arkBaseURL)
+	require.NoError(t, err)
+	assert.Equal(t, arkBaseURL+"/models", url)
+}
