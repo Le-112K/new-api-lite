@@ -132,25 +132,25 @@ var ChannelBaseURLs = []string{
 	"https://api.mistral.ai",                    //42
 	"https://api.deepseek.com",                  //43
 	"https://api.moka.ai",                       //44
-	"https://ark.cn-beijing.volces.com",         //45
-	"https://qianfan.baidubce.com",              //46
-	"",                                          //47
-	"https://api.x.ai",                          //48
-	"https://api.coze.cn",                       //49
-	"https://api.klingai.com",                   //50
-	"https://visual.volcengineapi.com",          //51
-	"https://api.vidu.cn",                       //52
-	"https://llm.submodel.ai",                   //53
-	"https://ark.cn-beijing.volces.com",         //54
-	"https://api.openai.com",                    //55
-	"https://api.replicate.com",                 //56
-	"https://chatgpt.com",                       //57
-	"",                                          //58
-	"",                                          //59
-	"",                                          //60
-	"",                                          //61
-	"",                                          //62
-	"",                                          //63
+	"https://ark.cn-beijing.volces.com/api/v3", //45
+	"https://qianfan.baidubce.com",             //46
+	"",                                         //47
+	"https://api.x.ai",                         //48
+	"https://api.coze.cn",                      //49
+	"https://api.klingai.com",                  //50
+	"https://visual.volcengineapi.com",         //51
+	"https://api.vidu.cn",                      //52
+	"https://llm.submodel.ai",                  //53
+	"https://ark.cn-beijing.volces.com",        //54
+	"https://api.openai.com",                   //55
+	"https://api.replicate.com",                //56
+	"https://chatgpt.com",                      //57
+	"",                                         //58
+	"",                                         //59
+	"",                                         //60
+	"",                                         //61
+	"",                                         //62
+	"",                                         //63
 }
 
 func GetChannelBaseURL(channelType int) string {

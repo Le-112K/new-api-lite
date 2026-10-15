@@ -102,6 +102,11 @@ func (a *Adaptor) Init(info *relaycommon.RelayInfo) {
 	}
 }
 
+// volcengineAPIPrefix is the path under which Volcano Ark serves the OpenAI
+// protocol. The channel base URL normally carries it; a path-less base URL
+// (the dashboard offers bare region hosts) is normalized to include it.
+const volcengineAPIPrefix = "/api/v3"
+
 func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 	if info.RelayMode == relayconstant.RelayModeRealtime {
 		if after, ok := strings.CutPrefix(info.ChannelBaseUrl, "https://"); ok {
@@ -168,11 +173,17 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 	//	return minimax.GetRequestURL(info)
 	case constant.ChannelTypeVolcEngine:
 		// Volcano Ark serves the OpenAI protocol under an /api/v3 prefix, which
-		// the channel base URL already carries. The client path brings its own
-		// /v1 version segment, so it is dropped before joining; keeping it
-		// would produce /api/v3/v1/... and the upstream answers 404.
+		// the channel base URL is expected to carry. The dashboard lists bare
+		// region hosts, so normalize a path-less base URL (and drop a trailing
+		// slash) instead of silently producing /models or //models 404s. The
+		// client path brings its own /v1 version segment, so it is dropped
+		// before joining; keeping it would produce /api/v3/v1/... 404s.
+		baseURL := strings.TrimSuffix(info.ChannelBaseUrl, "/")
+		if parsed, err := url.Parse(baseURL); err == nil && (parsed.Path == "" || parsed.Path == "/") {
+			baseURL += volcengineAPIPrefix
+		}
 		return relaycommon.GetFullRequestURL(
-			info.ChannelBaseUrl,
+			baseURL,
 			strings.TrimPrefix(info.RequestURLPath, "/v1"),
 			info.ChannelType), nil
 	case constant.ChannelTypeCustom:
@@ -191,10 +202,11 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 
 // BuildVolcEngineModelListURL resolves the upstream model-list endpoint for a
 // Volcano Ark channel. Ark's OpenAI-compatible endpoints live under /api/v3,
-// which the channel base URL already carries, so the client-side /v1 segment
-// is dropped — the same rule GetRequestURL applies to relay paths. Keeping the
-// rule here (instead of re-joining at the call site) ensures model discovery
-// can never drift away from the relay endpoint.
+// which the channel base URL normally carries (a path-less base URL is
+// normalized to it), so the client-side /v1 segment is dropped — the same rule
+// GetRequestURL applies to relay paths. Keeping the rule here (instead of
+// re-joining at the call site) ensures model discovery can never drift away
+// from the relay endpoint.
 func BuildVolcEngineModelListURL(baseURL string) (string, error) {
 	return (&Adaptor{}).GetRequestURL(&relaycommon.RelayInfo{
 		RelayFormat:    types.RelayFormatOpenAI,

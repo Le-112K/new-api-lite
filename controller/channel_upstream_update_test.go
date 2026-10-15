@@ -233,6 +233,26 @@ func TestFetchOpenAIModelsKeepsVersionPrefix(t *testing.T) {
 	require.Equal(t, "/v1/models", <-receivedPath)
 }
 
+// The dashboard's region picker submits bare hosts with no path, so discovery
+// must normalize them to the /api/v3 surface instead of requesting /models
+// and surfacing a 404 to the operator.
+func TestFetchVolcEngineModelsNormalizesBareHostBaseURL(t *testing.T) {
+	receivedPath := make(chan string, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedPath <- r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":[{"id":"deepseek-v4-flash-ga-260731"}]}`))
+	}))
+	defer server.Close()
+
+	channel := newModelListChannel(constant.ChannelTypeVolcEngine, server.URL)
+
+	models, err := fetchChannelUpstreamModelIDs(channel)
+	require.NoError(t, err)
+	require.Equal(t, []string{"deepseek-v4-flash-ga-260731"}, models)
+	require.Equal(t, "/api/v3/models", <-receivedPath)
+}
+
 func TestFetchOrdinaryOpenAIModelsKeepsExistingEmptyDataBehavior(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`{"object":"list"}`))

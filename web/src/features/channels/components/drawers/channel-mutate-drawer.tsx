@@ -954,7 +954,7 @@ export function ChannelMutateDrawer({
     if (currentType === 45) {
       const currentBaseUrlValue = form.getValues('base_url')
       if (!currentBaseUrlValue || currentBaseUrlValue === '') {
-        form.setValue('base_url', 'https://ark.cn-beijing.volces.com')
+        form.setValue('base_url', 'https://ark.cn-beijing.volces.com/api/v3')
       }
     }
 
@@ -970,7 +970,9 @@ export function ChannelMutateDrawer({
   useEffect(() => {
     if (currentType !== 45 || currentBaseUrl !== 'doubao-coding-plan') return
 
-    form.setValue('base_url', 'https://ark.cn-beijing.volces.com', {
+    // The coding plan speaks the OpenAI protocol under /api/coding/v3, not
+    // the standard /api/v3 surface.
+    form.setValue('base_url', 'https://ark.cn-beijing.volces.com/api/coding/v3', {
       shouldDirty: false,
       shouldValidate: true,
     })
@@ -3722,19 +3724,21 @@ export function ChannelMutateDrawer({
                       disabled={sensitiveLocked}
                       items={[
                         {
-                          value: 'https://ark.cn-beijing.volces.com',
-                          label: t('https://ark.cn-beijing.volces.com'),
+                          value: 'https://ark.cn-beijing.volces.com/api/v3',
+                          label: t('https://ark.cn-beijing.volces.com/api/v3'),
                         },
                         {
-                          value: 'https://ark.ap-southeast.bytepluses.com',
-                          label: t('https://ark.ap-southeast.bytepluses.com'),
+                          value: 'https://ark.ap-southeast.bytepluses.com/api/v3',
+                          label: t(
+                            'https://ark.ap-southeast.bytepluses.com/api/v3'
+                          ),
                         },
                       ]}
                       onValueChange={field.onChange}
                       value={
                         field.value === 'doubao-coding-plan'
-                          ? 'https://ark.cn-beijing.volces.com'
-                          : field.value || 'https://ark.cn-beijing.volces.com'
+                          ? 'https://ark.cn-beijing.volces.com/api/v3'
+                          : field.value || 'https://ark.cn-beijing.volces.com/api/v3'
                       }
                     >
                       <FormControl>
@@ -3744,11 +3748,13 @@ export function ChannelMutateDrawer({
                       </FormControl>
                       <SelectContent alignItemWithTrigger={false}>
                         <SelectGroup>
-                          <SelectItem value='https://ark.cn-beijing.volces.com'>
-                            {t('https://ark.cn-beijing.volces.com')}
+                          <SelectItem value='https://ark.cn-beijing.volces.com/api/v3'>
+                            {t('https://ark.cn-beijing.volces.com/api/v3')}
                           </SelectItem>
-                          <SelectItem value='https://ark.ap-southeast.bytepluses.com'>
-                            {t('https://ark.ap-southeast.bytepluses.com')}
+                          <SelectItem value='https://ark.ap-southeast.bytepluses.com/api/v3'>
+                            {t(
+                              'https://ark.ap-southeast.bytepluses.com/api/v3'
+                            )}
                           </SelectItem>
                         </SelectGroup>
                       </SelectContent>
