@@ -1348,6 +1348,7 @@
     "Connect to self-hosted models served by vLLM": "连接通过 vLLM 部署的自托管模型",
     "Connect to self-hosted models served by Xinference": "接入通过 Xinference 自部署的模型服务",
     "Connect to SiliconFlow model inference services": "接入硅基流动模型推理服务",
+    "Connect to Volcano Ark model services": "接入火山方舟模型服务",
     "Connect to Submodel model services": "接入 Submodel 模型服务",
     "Connect to Tencent Hunyuan model services": "接入腾讯混元模型服务",
     "Connect to the Anthropic API or compatible services": "接入 Anthropic API 或兼容其接口的服务",

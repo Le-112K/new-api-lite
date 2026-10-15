@@ -22,6 +22,10 @@ func ChannelType2APIType(channelType int) (int, bool) {
 		apiType = constant.APITypeGemini
 	case constant.ChannelTypeSiliconFlow:
 		apiType = constant.APITypeSiliconFlow
+	case constant.ChannelTypeVolcEngine:
+		// Volcano Ark speaks the OpenAI protocol; only the endpoint prefix
+		// differs, which the adaptor handles when building the request URL.
+		apiType = constant.APITypeOpenAI
 	case constant.ChannelTypeAdvancedCustom, constant.ChannelTypeVLLM, constant.ChannelTypeSGLang:
 		apiType = constant.APITypeAdvancedCustom
 	case constant.ChannelTypeSub2API:

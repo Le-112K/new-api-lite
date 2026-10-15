@@ -38,7 +38,7 @@ export const CHANNEL_TYPE_SGLANG = 63
  * 其余类型依然保留数字常量与显示标签（存量渠道数据仍需要它们渲染名称），
  * 但不再出现在渠道类型下拉里；后端 validateChannel 会拒绝新建这些类型。
  */
-export const RETAINED_CHANNEL_TYPES = [1, 14, 24, 40, 58, 59, 60] as const
+export const RETAINED_CHANNEL_TYPES = [1, 14, 24, 40, 45, 58, 59, 60] as const
 
 /**
  * 二开精简中移除的渠道类型：后端不再有对应的 relay 适配器。
@@ -74,7 +74,6 @@ export const REMOVED_CHANNEL_TYPES: ReadonlySet<number> = new Set([
   42, // Mistral
   43, // DeepSeek
   44, // MokaAI
-  45, // VolcEngine
   46, // Baidu V2
   47, // Xinference
   48, // xAI
@@ -172,6 +171,7 @@ const RETAINED_CHANNEL_PRESENTATION: Record<
   14: { descriptionKey: 'Connect to the Anthropic API or compatible services' },
   24: { descriptionKey: 'Connect to models through the Google Gemini API' },
   40: { descriptionKey: 'Connect to SiliconFlow model inference services' },
+  45: { descriptionKey: 'Connect to Volcano Ark model services' },
   58: {
     descriptionKey:
       'Configure endpoint routing, authentication and protocol conversion for different upstream services',
@@ -190,7 +190,7 @@ export const CHANNEL_PROVIDER_PRESENTATION: Partial<
   Record<number, ChannelProviderPresentation>
 > = RETAINED_CHANNEL_PRESENTATION
 
-const CHANNEL_TYPE_DISPLAY_ORDER: number[] = [1, 14, 24, 40, 58, 59, 60]
+const CHANNEL_TYPE_DISPLAY_ORDER: number[] = [1, 14, 24, 40, 45, 58, 59, 60]
 
 export const CHANNEL_TYPE_OPTIONS: { value: number; label: string }[] = (() => {
   const ordered: { value: number; label: string }[] = []

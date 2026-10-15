@@ -542,7 +542,9 @@ var removedChannelTypes = map[int]struct{}{
 	2: {}, 3: {}, 4: {}, 5: {}, 7: {}, 8: {}, 15: {}, 16: {}, 17: {}, 18: {},
 	19: {}, 20: {}, 22: {}, 23: {}, 25: {}, 26: {}, 27: {}, 31: {}, 33: {},
 	34: {}, 35: {}, 36: {}, 37: {}, 38: {}, 39: {}, 41: {}, 42: {}, 43: {},
-	44: {}, 45: {}, 46: {}, 47: {}, 48: {}, 49: {}, 50: {}, 51: {}, 52: {},
+	// 45 (VolcEngine) is retained again: it now serves Volcano Ark, whose
+	// OpenAI-compatible endpoints live under /api/v3 rather than /v1.
+	44: {}, 46: {}, 47: {}, 48: {}, 49: {}, 50: {}, 51: {}, 52: {},
 	53: {}, 54: {}, 55: {}, 56: {}, 57: {}, 61: {}, 62: {}, 63: {},
 }
 
@@ -560,7 +562,7 @@ func validateChannel(channel *model.Channel, isAdd bool) error {
 	// ids so existing rows still render, but new channels must use a retained
 	// type. Editing an existing row is allowed to avoid breaking migrations.
 	if isAdd && isRemovedChannelType(channel.Type) {
-		return fmt.Errorf("渠道类型 %d 已在本版本移除，请改用 OpenAI、Anthropic、Gemini、SiliconFlow、高级自定义、Sub2API 或 New API", channel.Type)
+		return fmt.Errorf("渠道类型 %d 已在本版本移除，请改用 OpenAI、Anthropic、Gemini、SiliconFlow、火山引擎（火山方舟）、高级自定义、Sub2API 或 New API", channel.Type)
 	}
 
 	// 精简移除的渠道类型没有 relay 适配器，留着只会让管理员配出一个永远报

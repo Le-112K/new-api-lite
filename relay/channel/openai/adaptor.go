@@ -166,6 +166,15 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 		return relaycommon.GetFullRequestURL(info.ChannelBaseUrl, requestURL, info.ChannelType), nil
 	//case constant.ChannelTypeMiniMax:
 	//	return minimax.GetRequestURL(info)
+	case constant.ChannelTypeVolcEngine:
+		// Volcano Ark serves the OpenAI protocol under an /api/v3 prefix, which
+		// the channel base URL already carries. The client path brings its own
+		// /v1 version segment, so it is dropped before joining; keeping it
+		// would produce /api/v3/v1/... and the upstream answers 404.
+		return relaycommon.GetFullRequestURL(
+			info.ChannelBaseUrl,
+			strings.TrimPrefix(info.RequestURLPath, "/v1"),
+			info.ChannelType), nil
 	case constant.ChannelTypeCustom:
 		url := info.ChannelBaseUrl
 		url = strings.Replace(url, "{model}", info.UpstreamModelName, -1)
