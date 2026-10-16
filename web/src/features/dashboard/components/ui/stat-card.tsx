@@ -53,6 +53,12 @@ export interface StatCardTrend {
 interface StatCardProps {
   title: string
   value: string | number
+  /**
+   * Full, untruncated value exposed as a hover tooltip on the value line. The
+   * console models KPIs compact long numbers ("2.9M"), so the exact figure has
+   * to stay reachable.
+   */
+  valueTitle?: string
   description: string
   icon: LucideIcon
   sparkline?: number[]
@@ -314,7 +320,10 @@ export function StatCard(props: StatCardProps) {
   } else {
     valueContent = (
       <div className='flex flex-col gap-1'>
-        <div className='text-foreground font-mono text-base font-semibold tracking-tight break-all tabular-nums sm:text-2xl'>
+        <div
+          className='text-foreground font-mono text-base font-semibold tracking-tight break-all tabular-nums sm:text-2xl'
+          title={props.valueTitle}
+        >
           {props.value}
         </div>
         {/* With a trend the description moves into the foot row, so the card

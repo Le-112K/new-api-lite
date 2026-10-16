@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { Filter, X } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, type CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Badge } from '@/components/ui/badge'
@@ -159,9 +159,15 @@ export function FlowNodeFilterControl(props: FlowNodeFilterControlProps) {
                               })
                             }
                           >
+                            {/* The swatch mirrors the node's token colour
+                                (spec §2 categorical ramp). Passed as a custom
+                                property — the node colour is resolved at
+                                runtime, so no palette value is inlined here. */}
                             <span
-                              className='size-2.5 shrink-0 rounded-full'
-                              style={{ backgroundColor: option.color }}
+                              className='bg-[var(--node-tone)] size-2.5 shrink-0 rounded-full'
+                              style={
+                                { '--node-tone': option.color } as CSSProperties
+                              }
                               aria-hidden='true'
                             />
                             <span className='min-w-0 flex-1 truncate'>

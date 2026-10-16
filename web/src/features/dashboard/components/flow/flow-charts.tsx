@@ -45,7 +45,6 @@ import { MultiSelect } from '@/components/multi-select'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   Empty,
-  EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
@@ -61,6 +60,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { getFlowQuotaDates } from '@/features/dashboard/api'
+import { useConsoleChartTheme } from '@/features/dashboard/hooks/use-console-chart-theme'
 import {
   buildDashboardFlowData,
   buildFlowSankeySpec,
@@ -93,6 +93,7 @@ import { cn } from '@/lib/utils'
 import { VCHART_OPTION } from '@/lib/vchart'
 import { useAuthStore } from '@/stores/auth-store'
 
+import { PanelWrapper } from '../ui/panel-wrapper'
 import { FlowNodeFilterControl } from './flow-node-filter'
 
 interface FlowChartsProps {
@@ -255,7 +256,11 @@ function formatFlowMetricNumber(value: number): string {
 
 export function FlowCharts(props: FlowChartsProps) {
   const { t } = useTranslation()
-  const { resolvedTheme, themeReady } = useChartTheme()
+  const { resolvedTheme, themeReady: chartThemeReady } = useChartTheme()
+  const { tokens } = useConsoleChartTheme()
+  // The sankey is handed resolved token colours (see use-console-chart-theme),
+  // so it can only be drawn once those values have been read off the document.
+  const themeReady = chartThemeReady && tokens != null
   const chartInstanceRef = useRef<IVChart | null>(null)
   const user = useAuthStore((state) => state.auth.user)
   const isRoot = Boolean(user?.role && user.role >= ROLE.SUPER_ADMIN)
@@ -357,6 +362,9 @@ export function FlowCharts(props: FlowChartsProps) {
         topNodeLimit,
         overflowMode,
         maskSensitive,
+        // Node / link colours come from the console token layer's categorical
+        // ramp (spec §2); nothing is hardcoded here.
+        colorPalette: tokens?.categorical,
         deletedTokenLabel: (tokenId) => t('Deleted ({{id}})', { id: tokenId }),
         otherNodeLabel: (kind) => t(FLOW_OTHER_NODE_LABEL_KEYS[kind]),
       }),
@@ -373,6 +381,7 @@ export function FlowCharts(props: FlowChartsProps) {
       topNodeLimit,
       visibleStages,
       maskSensitive,
+      tokens,
       t,
     ]
   )
@@ -464,6 +473,65 @@ export function FlowCharts(props: FlowChartsProps) {
       }),
     [chartTitle, flowData.flow, t]
   )
+  /**
+   * Re-skin only. `buildFlowSankeySpec` owns the LAYOUT (column alignment,
+   * direction, gaps, widths, link sorting, the highlight/dim opacity flags) and
+   * is left untouched; the hand-rolled spec hardcodes three *chrome* colours
+   * though, and chrome must be grayscale + theme-flipping (spec §6). So we
+   * overlay those three with resolved console tokens and change nothing else.
+   */
+  const themedFlowSpec = useMemo(() => {
+    if (!tokens) return flowSpec
+    const highlighted = (datum: unknown) =>
+      flowSankeyDatumValue(datum, 'highlighted') === true
+    const node = (flowSpec.node ?? {}) as Record<string, unknown>
+    const nodeStyle = (node.style ?? {}) as Record<string, unknown>
+    const nodeState = (node.state ?? {}) as Record<string, unknown>
+    const label = (flowSpec.label ?? {}) as Record<string, unknown>
+    const labelStyle = (label.style ?? {}) as Record<string, unknown>
+
+    return {
+      ...flowSpec,
+      // Keep a little air on every side so the outside labels of the first and
+      // last columns do not sit hard against the canvas edge.
+      padding: { left: 8, right: 24, top: 8, bottom: 8 },
+      label: {
+        ...label,
+        // Push each label clear of its node bar…
+        offset: 6,
+        style: {
+          ...labelStyle,
+          fill: tokens.text3,
+          fontSize: 12,
+          fontWeight: 500,
+          // …and halo it in the card colour, because the labels sit on top of
+          // the link bands and plain grey-on-link does not hold its contrast.
+          stroke: tokens.tickBg,
+          lineWidth: 3,
+          strokeOpacity: 0.9,
+        },
+      },
+      node: {
+        ...node,
+        style: {
+          ...nodeStyle,
+          stroke: (datum: unknown) =>
+            highlighted(datum) ? tokens.text : tokens.line,
+        },
+        state: {
+          ...nodeState,
+          hover: {
+            ...((nodeState.hover ?? {}) as Record<string, unknown>),
+            stroke: tokens.text,
+          },
+          selected: {
+            ...((nodeState.selected ?? {}) as Record<string, unknown>),
+            stroke: tokens.text,
+          },
+        },
+      },
+    }
+  }, [flowSpec, tokens])
   const chartTheme = resolvedTheme === 'dark' ? 'dark' : 'light'
   const chartKey = [
     metric,
@@ -491,20 +559,36 @@ export function FlowCharts(props: FlowChartsProps) {
     flowError instanceof Error
       ? flowError.message
       : t('Please try again later.')
+  const nodeCount = flowData.flow.nodes.length
+  const linkCount = flowData.flow.links.length
+  const summaryByMetric: Record<FlowMetric, number> = {
+    quota: flowData.summary.quota,
+    tokens: flowData.summary.tokens,
+    requests: flowData.summary.requests,
+  }
+  const panelSubtitle = `${metricLabel} · ${formatNodeMetricValue(summaryByMetric[metric])}`
   let chartContent = (
-    <VChart
-      key={`flow-${chartKey}`}
-      spec={{
-        ...flowSpec,
-        theme: chartTheme,
-        background: 'transparent',
-      }}
-      option={VCHART_OPTION}
-      onReady={(instance: IVChart) => {
-        chartInstanceRef.current = instance
-      }}
-      onPointerDown={handleChartPointerDown}
-    />
+    <div
+      className='h-full w-full'
+      role='img'
+      aria-label={`${chartTitle} · ${nodeCount} / ${linkCount}`}
+      data-flow-nodes={nodeCount}
+      data-flow-links={linkCount}
+    >
+      <VChart
+        key={`flow-${chartKey}`}
+        spec={{
+          ...themedFlowSpec,
+          theme: chartTheme,
+          background: 'transparent',
+        }}
+        option={VCHART_OPTION}
+        onReady={(instance: IVChart) => {
+          chartInstanceRef.current = instance
+        }}
+        onPointerDown={handleChartPointerDown}
+      />
+    </div>
   )
   if (displayState === 'loading') {
     chartContent = <Skeleton className='h-full w-full' />
@@ -525,17 +609,71 @@ export function FlowCharts(props: FlowChartsProps) {
           <EmptyMedia variant='icon'>
             <Route />
           </EmptyMedia>
+          {/* One line only: the panel header already carries the title and the
+              metric total, so a second title + a generic "no data" line would
+              just repeat the chrome. */}
           <EmptyTitle>{t('No flow data available')}</EmptyTitle>
-          <EmptyDescription>{t('No data available')}</EmptyDescription>
         </EmptyHeader>
       </Empty>
     )
   }
 
+  const stageToggleRow = (
+    <TooltipProvider>
+      <div className='flex min-w-0 items-center gap-1 overflow-x-auto pb-1 lg:justify-end lg:pb-0'>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type='button'
+                className='text-muted-foreground hover:text-foreground flex size-6 shrink-0 items-center justify-center rounded-md'
+                aria-label={t('Show or hide flow columns')}
+              />
+            }
+          >
+            <Info className='size-3.5' />
+          </TooltipTrigger>
+          <TooltipContent className='max-w-[16rem]'>
+            {t('Click a stage to show or hide that column')}
+          </TooltipContent>
+        </Tooltip>
+        {stages.map((stage, index) => {
+          const meta = FLOW_STAGE_META[stage]
+          const visible = !hiddenStages.includes(stage)
+          return (
+            <Fragment key={stage}>
+              {index > 0 && (
+                <ChevronRight className='text-muted-foreground/40 size-3.5 shrink-0' />
+              )}
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Toggle
+                      variant='outline'
+                      size='sm'
+                      pressed={visible}
+                      onPressedChange={() => toggleStage(stage)}
+                      aria-label={t(meta.labelKey)}
+                      className={cn('shrink-0', !visible && 'opacity-50')}
+                    />
+                  }
+                >
+                  {!visible && <EyeOff className='size-3' />}
+                  {t(meta.labelKey)}
+                </TooltipTrigger>
+                <TooltipContent>{t(meta.descKey)}</TooltipContent>
+              </Tooltip>
+            </Fragment>
+          )
+        })}
+      </div>
+    </TooltipProvider>
+  )
+
   return (
-    <div className='flex flex-col gap-3'>
-      <div className='flex flex-col gap-2 xl:flex-row xl:items-end xl:justify-between'>
-        <div className='flex min-w-0 flex-wrap items-end gap-2'>
+    <div className='flex flex-col gap-4'>
+      <div className='flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between'>
+        <div className='flex min-w-0 flex-wrap items-end gap-3'>
           <div className='flex min-w-0 flex-col gap-1.5'>
             <div className='flex items-center gap-1.5'>
               <span className='text-muted-foreground text-xs font-medium'>
@@ -666,68 +804,23 @@ export function FlowCharts(props: FlowChartsProps) {
         </div>
       </div>
 
-      <div className='overflow-hidden rounded-lg border'>
-        <div className='flex w-full flex-col gap-2 border-b px-3 py-2 sm:px-5 sm:py-3 lg:flex-row lg:items-center lg:justify-between'>
-          <div className='flex min-w-0 items-center gap-2'>
+      <PanelWrapper
+        title={
+          <span className='flex min-w-0 items-center gap-2'>
             <IconBadge tone='info' size='sm'>
               <GitBranch />
             </IconBadge>
-            <div className='text-sm font-semibold'>{chartTitle}</div>
-          </div>
-          <TooltipProvider>
-            <div className='flex min-w-0 items-center gap-1 overflow-x-auto pb-1 lg:justify-end lg:pb-0'>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <button
-                      type='button'
-                      className='text-muted-foreground/60 hover:text-foreground flex size-6 shrink-0 items-center justify-center rounded-md'
-                      aria-label={t('Show or hide flow columns')}
-                    />
-                  }
-                >
-                  <Info className='size-3.5' />
-                </TooltipTrigger>
-                <TooltipContent className='max-w-[16rem]'>
-                  {t('Click a stage to show or hide that column')}
-                </TooltipContent>
-              </Tooltip>
-              {stages.map((stage, index) => {
-                const meta = FLOW_STAGE_META[stage]
-                const visible = !hiddenStages.includes(stage)
-                return (
-                  <Fragment key={stage}>
-                    {index > 0 && (
-                      <ChevronRight className='text-muted-foreground/40 size-3.5 shrink-0' />
-                    )}
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <Toggle
-                            variant='outline'
-                            size='sm'
-                            pressed={visible}
-                            onPressedChange={() => toggleStage(stage)}
-                            aria-label={t(meta.labelKey)}
-                            className={cn('shrink-0', !visible && 'opacity-50')}
-                          />
-                        }
-                      >
-                        {!visible && <EyeOff className='size-3' />}
-                        {t(meta.labelKey)}
-                      </TooltipTrigger>
-                      <TooltipContent>{t(meta.descKey)}</TooltipContent>
-                    </Tooltip>
-                  </Fragment>
-                )
-              })}
-            </div>
-          </TooltipProvider>
-        </div>
-        <div className='h-[560px] p-1.5 sm:h-[680px] sm:p-2 2xl:h-[760px]'>
+            <span className='text-sm font-semibold'>{chartTitle}</span>
+          </span>
+        }
+        description={panelSubtitle}
+        headerActions={stageToggleRow}
+        contentClassName='p-1.5 sm:p-2'
+      >
+        <div className='h-[560px] w-full sm:h-[680px] 2xl:h-[760px]'>
           {chartContent}
         </div>
-      </div>
+      </PanelWrapper>
     </div>
   )
 }

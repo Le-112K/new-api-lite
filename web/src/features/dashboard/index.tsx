@@ -32,7 +32,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { ROLE } from '@/lib/roles'
-import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { ModelsChartPreferences } from './components/models/models-chart-preferences'
@@ -115,36 +114,33 @@ const LazyFlowCharts = lazy(() =>
 
 function LogStatCardsFallback() {
   return (
-    <div className='overflow-hidden rounded-lg border'>
-      <div className='divide-border/60 grid grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-5'>
-        {LOG_STAT_CARD_FALLBACK_KEYS.map((key, index) => (
-          <div
-            key={key}
-            className={cn(
-              'px-2.5 py-1.5 sm:px-5 sm:py-4',
-              index === LOG_STAT_CARD_FALLBACK_KEYS.length - 1 &&
-                'col-span-2 sm:col-span-1'
-            )}
-          >
-            <div className='flex items-center gap-1.5 sm:gap-2'>
-              <Skeleton className='size-4 rounded-sm sm:size-7 sm:rounded-md' />
-              <Skeleton className='h-4 w-16' />
-            </div>
-            <Skeleton className='mt-1 h-5 w-16 sm:mt-2 sm:h-7 sm:w-20' />
-            <Skeleton className='mt-1 hidden h-3.5 w-28 md:block' />
+    <div className='grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5'>
+      {LOG_STAT_CARD_FALLBACK_KEYS.map((key) => (
+        <div
+          key={key}
+          className='bg-card flex flex-col gap-3 rounded-2xl border p-4 shadow-xs'
+        >
+          <div className='flex items-center gap-2'>
+            <Skeleton className='size-5 rounded-md sm:size-7' />
+            <Skeleton className='h-4 w-20' />
           </div>
-        ))}
-      </div>
+          <Skeleton className='h-5 w-20 sm:h-7 sm:w-24' />
+          <Skeleton className='hidden h-8 w-full sm:block' />
+        </div>
+      ))}
     </div>
   )
 }
 
 function ModelChartsFallback() {
   return (
-    <div className='overflow-hidden rounded-lg border'>
+    <div className='bg-card overflow-hidden rounded-2xl border shadow-xs'>
       <div className='flex items-center justify-between border-b px-4 py-3 sm:px-5'>
-        <Skeleton className='h-5 w-32' />
-        <Skeleton className='h-8 w-72' />
+        <div className='flex flex-col gap-1'>
+          <Skeleton className='h-4 w-32' />
+          <Skeleton className='h-3 w-20' />
+        </div>
+        <Skeleton className='h-8 w-48' />
       </div>
       <div className='h-96 p-2'>
         <Skeleton className='h-full w-full' />
@@ -155,7 +151,7 @@ function ModelChartsFallback() {
 
 function PerformanceOverviewFallback() {
   return (
-    <div className='overflow-hidden rounded-lg border'>
+    <div className='bg-card overflow-hidden rounded-2xl border shadow-xs'>
       <div className='flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-5'>
         <div className='flex items-center gap-2'>
           <Skeleton className='h-4 w-24' />
@@ -347,7 +343,10 @@ export function Dashboard() {
             )}
           </div>
           {activeSection === 'models' && (
-            <>
+            <div className='flex flex-col gap-4 sm:gap-5'>
+              <p className='text-muted-foreground text-sm'>
+                {t('Model usage, quota consumption, and call ranking.')}
+              </p>
               <FadeIn>
                 <Suspense fallback={<LogStatCardsFallback />}>
                   <LazyLogStatCards
@@ -364,32 +363,32 @@ export function Dashboard() {
                 </FadeIn>
               )}
               <FadeIn delay={0.1}>
-                <Suspense fallback={<ModelChartsFallback />}>
-                  <LazyConsumptionDistributionChart
-                    data={modelData}
-                    loading={dataLoading}
-                    defaultChartType={
-                      chartPreferences.consumptionDistributionChart
-                    }
-                    timeGranularity={
-                      modelFilters.time_granularity || DEFAULT_TIME_GRANULARITY
-                    }
-                  />
-                </Suspense>
+                <div className='grid gap-4 xl:grid-cols-2'>
+                  <Suspense fallback={<ModelChartsFallback />}>
+                    <LazyConsumptionDistributionChart
+                      data={modelData}
+                      loading={dataLoading}
+                      defaultChartType={
+                        chartPreferences.consumptionDistributionChart
+                      }
+                      timeGranularity={
+                        modelFilters.time_granularity || DEFAULT_TIME_GRANULARITY
+                      }
+                    />
+                  </Suspense>
+                  <Suspense fallback={<ModelChartsFallback />}>
+                    <LazyModelCharts
+                      data={modelData}
+                      loading={dataLoading}
+                      defaultChartTab={chartPreferences.modelAnalyticsChart}
+                      timeGranularity={
+                        modelFilters.time_granularity || DEFAULT_TIME_GRANULARITY
+                      }
+                    />
+                  </Suspense>
+                </div>
               </FadeIn>
-              <FadeIn delay={0.15}>
-                <Suspense fallback={<ModelChartsFallback />}>
-                  <LazyModelCharts
-                    data={modelData}
-                    loading={dataLoading}
-                    defaultChartTab={chartPreferences.modelAnalyticsChart}
-                    timeGranularity={
-                      modelFilters.time_granularity || DEFAULT_TIME_GRANULARITY
-                    }
-                  />
-                </Suspense>
-              </FadeIn>
-            </>
+            </div>
           )}
           {activeSection === 'users' && (
             <FadeIn>

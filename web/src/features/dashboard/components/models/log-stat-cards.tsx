@@ -16,11 +16,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { IconBadge } from '@/components/ui/icon-badge'
-import { Skeleton } from '@/components/ui/skeleton'
+import {
+  CardStaggerContainer,
+  CardStaggerItem,
+} from '@/components/page-transition'
+import { DEFAULT_TIME_GRANULARITY } from '@/features/dashboard/constants'
 import { getUserQuotaDates } from '@/features/dashboard/api'
 import { useModelStatCardsConfig } from '@/features/dashboard/hooks/use-dashboard-config'
 import {
@@ -34,9 +37,10 @@ import type {
 } from '@/features/dashboard/types'
 import { toIntlLocale } from '@/i18n/languages'
 import { formatCompactNumber, formatNumber, formatQuota } from '@/lib/format'
-import { computeTimeRange } from '@/lib/time'
-import { cn } from '@/lib/utils'
+import { computeTimeRange, formatChartTime, type TimeGranularity } from '@/lib/time'
 import { useAuthStore } from '@/stores/auth-store'
+
+import { StatCard } from '../ui/stat-card'
 
 interface LogStatCardsProps {
   filters?: DashboardFilters
@@ -44,6 +48,8 @@ interface LogStatCardsProps {
 }
 
 const MAX_INLINE_STAT_CHARS = 9
+/** Sparkline window: the last N time buckets of the fetched rows. */
+const SPARKLINE_POINTS = 12
 
 function formatStatNumber(value: number, locale: Intl.LocalesArgument) {
   const fullValue = formatNumber(value, locale)
@@ -58,6 +64,53 @@ function formatStatNumber(value: number, locale: Intl.LocalesArgument) {
   }
 }
 
+/**
+ * The cards carry NO period-over-period trend (this section has no previous
+ * window to compare against), so the foot row shows a sparkline instead — the
+ * same shape the console overview's KPIs draw. The series is bucketed from the
+ * very rows the KPI totals are summed from, so the two can never disagree.
+ */
+function buildSparklines(
+  rows: QuotaDataItem[],
+  granularity: TimeGranularity
+): { count: number[]; quota: number[]; tokens: number[] } {
+  const buckets = new Map<
+    string,
+    { ts: number; count: number; quota: number; tokens: number }
+  >()
+
+  for (const row of rows) {
+    const ts = Number(row.created_at) || 0
+    if (!ts) continue
+    const key = formatChartTime(ts, granularity)
+    const bucket = buckets.get(key) ?? { ts, count: 0, quota: 0, tokens: 0 }
+    bucket.ts = Math.min(bucket.ts, ts)
+    bucket.count += Number(row.count) || 0
+    bucket.quota += Number(row.quota) || 0
+    bucket.tokens += Number(row.token_used) || 0
+    buckets.set(key, bucket)
+  }
+
+  const tail = [...buckets.values()]
+    .sort((a, b) => a.ts - b.ts)
+    .slice(-SPARKLINE_POINTS)
+
+  return {
+    count: tail.map((bucket) => bucket.count),
+    quota: tail.map((bucket) => bucket.quota),
+    tokens: tail.map((bucket) => bucket.tokens),
+  }
+}
+
+/** Which sparkline a metric renders. Rates mirror the series they are derived from. */
+const SERIES_BY_KEY: Record<string, 'count' | 'quota' | 'tokens'> = {
+  count: 'count',
+  quota: 'quota',
+  tokens: 'tokens',
+  avgRpm: 'count',
+  avgTpm: 'tokens',
+}
+
 export function LogStatCards(props: LogStatCardsProps) {
   const { i18n } = useTranslation()
   const statCardsConfig = useModelStatCardsConfig()
@@ -70,10 +123,12 @@ export function LogStatCards(props: LogStatCardsProps) {
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [rows, setRows] = useState<QuotaDataItem[]>([])
 
   const [timeRangeMinutes, setTimeRangeMinutes] = useState(0)
 
-  const { filters, onDataUpdate } = props
+  const filters = props.filters
+  const onDataUpdate = props.onDataUpdate
 
   useEffect(() => {
     const abortController = new AbortController()
@@ -96,11 +151,13 @@ export function LogStatCards(props: LogStatCardsProps) {
         if (abortController.signal.aborted) return
         const data = res?.data || []
         setStats(calculateDashboardStats(data))
+        setRows(data)
         onDataUpdate?.(data, false)
       })
       .catch(() => {
         if (abortController.signal.aborted) return
         setStats(null)
+        setRows([])
         setError(true)
         onDataUpdate?.([], false)
       })
@@ -121,9 +178,15 @@ export function LogStatCards(props: LogStatCardsProps) {
     tpm: stats?.totalTokens ?? 0,
   }
 
+  const granularity = filters?.time_granularity ?? DEFAULT_TIME_GRANULARITY
+  const sparklines = useMemo(
+    () => buildSparklines(rows, granularity),
+    [rows, granularity]
+  )
+
+  const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
   const items = statCardsConfig.map((config) => {
     const rawValue = config.getValue(adaptedStats, timeRangeMinutes)
-    const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
     const formatted =
       config.key === 'quota'
         ? {
@@ -133,83 +196,37 @@ export function LogStatCards(props: LogStatCardsProps) {
         : formatStatNumber(rawValue, locale)
 
     return {
+      key: config.key,
       title: config.title,
       value: formatted.displayValue,
-      fullValue: formatted.fullValue,
-      desc: config.description,
+      valueTitle: formatted.fullValue,
+      description: config.description,
       icon: config.icon,
-      iconTone: config.iconTone,
+      sparkline: sparklines[SERIES_BY_KEY[config.key] ?? 'count'],
     }
   })
 
   return (
-    <div className='overflow-hidden rounded-lg border'>
-      <div className='divide-border/60 grid min-w-0 grid-cols-2 divide-x sm:grid-cols-3 lg:grid-cols-5'>
-        {items.map((it, idx) => {
-          const Icon = it.icon
-          let valueContent
-          if (loading) {
-            valueContent = (
-              <div className='mt-1 flex flex-col gap-1 sm:mt-2 sm:gap-1.5'>
-                <Skeleton className='h-5 w-16 sm:h-7 sm:w-20' />
-                <Skeleton className='hidden h-3.5 w-28 md:block' />
-              </div>
-            )
-          } else if (error) {
-            valueContent = (
-              <>
-                <div className='text-muted-foreground mt-1 font-mono text-base leading-tight font-bold tracking-tight tabular-nums sm:mt-2 sm:text-2xl sm:leading-normal'>
-                  --
-                </div>
-                <div className='text-muted-foreground/40 mt-1 hidden text-xs md:block'>
-                  {it.desc}
-                </div>
-              </>
-            )
-          } else {
-            valueContent = (
-              <>
-                <div
-                  className='text-foreground mt-1 max-w-full truncate font-mono text-base leading-tight font-bold tracking-tight tabular-nums sm:mt-2 sm:text-2xl sm:leading-normal'
-                  title={it.fullValue}
-                >
-                  {it.value}
-                </div>
-                <div className='text-muted-foreground/60 mt-1 hidden text-xs md:block'>
-                  {it.desc}
-                </div>
-              </>
-            )
-          }
-
-          return (
-            <div
-              key={it.title}
-              className={cn(
-                'min-w-0 px-2.5 py-1.5 sm:px-5 sm:py-4',
-                idx === items.length - 1 &&
-                  items.length % 2 !== 0 &&
-                  'col-span-2 sm:col-span-1'
-              )}
-            >
-              <div className='flex min-w-0 items-center gap-1.5 sm:gap-2'>
-                <IconBadge
-                  tone={it.iconTone}
-                  size='stat'
-                  className='size-4 rounded-sm sm:size-7 sm:rounded-md [&>svg]:size-2.5 sm:[&>svg]:size-3.5'
-                >
-                  <Icon />
-                </IconBadge>
-                <div className='text-muted-foreground truncate text-[11px] leading-4 font-medium tracking-wide uppercase sm:text-xs sm:tracking-wider'>
-                  {it.title}
-                </div>
-              </div>
-
-              {valueContent}
-            </div>
-          )
-        })}
-      </div>
-    </div>
+    <CardStaggerContainer className='grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5'>
+      {items.map((item) => (
+        <CardStaggerItem
+          key={item.key}
+          className='bg-card h-full rounded-2xl border p-4 shadow-xs'
+        >
+          <StatCard
+            title={item.title}
+            value={item.value}
+            valueTitle={item.valueTitle}
+            description={item.description}
+            icon={item.icon}
+            iconTone='neutral'
+            sparkline={item.sparkline}
+            sparklineVariant='line'
+            loading={loading}
+            error={error}
+          />
+        </CardStaggerItem>
+      ))}
+    </CardStaggerContainer>
   )
 }
