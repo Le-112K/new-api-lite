@@ -33,10 +33,12 @@ export const Route = createFileRoute('/_authenticated')({
     const { auth } = useAuthStore.getState()
 
     if (!auth.user || !auth.accessToken) {
-      throw redirect({
-        to: '/sign-in',
-        search: { redirect: location.href },
-      })
+      // 不再把未登录用户丢到独立的登录页。留在首页、把弹窗打开，并把用户原本
+      // 想去的地址带在 URL 上（`redirect`），登录成功后回到那里。用 `replace`
+      // 覆盖掉这次注定被拦截的导航，避免后退时又撞回同一次重定向。
+      const params = new URLSearchParams({ auth: 'signin' })
+      params.set('redirect', location.href)
+      throw redirect({ href: `/?${params.toString()}`, replace: true })
     }
   },
   component: AuthenticatedLayout,

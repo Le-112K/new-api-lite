@@ -27,6 +27,8 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AuthDialog } from '@/features/auth/components/auth-dialog'
+import { buildAuthDialogHref } from '@/features/auth/lib/auth-dialog'
 import { SystemUpdateAction } from '@/features/system-update/system-update-action'
 import { useNotifications } from '@/hooks/use-notifications'
 import { useSystemConfig } from '@/hooks/use-system-config'
@@ -93,6 +95,16 @@ export function PublicHeader(props: PublicHeaderProps) {
   const notifications = useNotifications()
   const routerState = useRouterState()
   const pathname = routerState.location.pathname
+  const locationHref = routerState.location.href
+
+  // Sign in opens the auth dialog in place: the pathname must not change, so we
+  // only add `?auth=signin` to the current URL.
+  const openAuthDialog = useCallback(() => {
+    const url = new URL(locationHref, window.location.origin)
+    navigate({
+      href: buildAuthDialogHref(url.pathname, url.search, 'sign-in'),
+    })
+  }, [navigate, locationHref])
 
   const user = auth.user
   const isAuthenticated = !!user
@@ -114,7 +126,7 @@ export function PublicHeader(props: PublicHeaderProps) {
     <Button
       size='sm'
       className='h-8 rounded-lg px-3.5 text-xs font-medium'
-      render={<Link to='/sign-in' />}
+      onClick={openAuthDialog}
     >
       {t('Sign in')}
     </Button>
@@ -415,14 +427,25 @@ export function PublicHeader(props: PublicHeaderProps) {
             )}
             style={{ transitionDelay: mobileOpen ? '250ms' : '0ms' }}
           >
-            {showAuthButtons && (
+            {showAuthButtons && isAuthenticated && (
               <Link
-                to={isAuthenticated ? '/dashboard' : '/sign-in'}
+                to='/dashboard'
                 onClick={() => setMobileOpen(false)}
                 className='bg-foreground text-background inline-flex h-10 items-center justify-center rounded-lg text-sm font-medium transition-opacity hover:opacity-90 active:opacity-80'
               >
-                {isAuthenticated ? t('Go to Dashboard') : t('Sign in')}
+                {t('Go to Dashboard')}
               </Link>
+            )}
+            {showAuthButtons && !isAuthenticated && (
+              <Button
+                onClick={() => {
+                  setMobileOpen(false)
+                  openAuthDialog()
+                }}
+                className='bg-foreground text-background h-10 w-full justify-center rounded-lg text-sm font-medium transition-opacity hover:bg-foreground/90 active:opacity-80'
+              >
+                {t('Sign in')}
+              </Button>
             )}
           </div>
         </div>
@@ -456,6 +479,8 @@ export function PublicHeader(props: PublicHeaderProps) {
           })}
         </div>
       </Dialog>
+
+      <AuthDialog />
     </>
   )
 }
