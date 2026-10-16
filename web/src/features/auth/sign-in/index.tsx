@@ -31,7 +31,7 @@ export function SignIn() {
   const { status } = useStatus()
 
   return (
-    <AuthLayout>
+    <AuthLayout variant='split'>
       <div className='w-full space-y-6'>
         <div className='space-y-2 text-center'>
           <h2 className='text-center text-2xl font-semibold tracking-tight'>
