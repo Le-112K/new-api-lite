@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import type { LucideIcon } from 'lucide-react'
+import { Check, TrendingDown, TrendingUp, type LucideIcon } from 'lucide-react'
 import { useId, type ReactNode } from 'react'
 
 import { IconBadge, type IconBadgeTone } from '@/components/ui/icon-badge'
@@ -38,6 +38,18 @@ export interface StatCardDetail {
   tone?: StatCardDetailTone
 }
 
+/**
+ * Period-over-period movement for the card's foot row.
+ *
+ * `direction` only chooses the token: blue/red never encodes the meaning on its
+ * own, the sign carried in `value` does (plus the arrow icon), per the console
+ * design spec's diverging-scale rule.
+ */
+export interface StatCardTrend {
+  value: string
+  direction: 'up' | 'down' | 'flat'
+}
+
 interface StatCardProps {
   title: string
   value: string | number
@@ -46,6 +58,7 @@ interface StatCardProps {
   sparkline?: number[]
   sparklineVariant?: StatCardSparklineVariant
   details?: StatCardDetail[]
+  trend?: StatCardTrend
   tone?: StatCardTone
   loading?: boolean
   error?: boolean
@@ -144,7 +157,11 @@ function buildLineSparkline(values?: number[]) {
   }
 }
 
-function LineSparkline(props: { values?: number[]; tone: StatCardTone }) {
+function LineSparkline(props: {
+  values?: number[]
+  tone: StatCardTone
+  colorClassName?: string
+}) {
   const rawGradientId = useId()
   const gradientId = `stat-card-line-${rawGradientId.replaceAll(':', '')}`
   const paths = buildLineSparkline(props.values)
@@ -155,7 +172,7 @@ function LineSparkline(props: { values?: number[]; tone: StatCardTone }) {
     <div
       className={cn(
         'relative h-8 overflow-hidden rounded-lg',
-        LINE_TONE_CLASSES[props.tone]
+        props.colorClassName ?? LINE_TONE_CLASSES[props.tone]
       )}
       aria-hidden='true'
     >
@@ -202,6 +219,30 @@ function BarSparkline(props: { values?: number[]; tone: StatCardTone }) {
         />
       ))}
     </div>
+  )
+}
+
+const TREND_ICON: Record<StatCardTrend['direction'], LucideIcon> = {
+  up: TrendingUp,
+  down: TrendingDown,
+  flat: Check,
+}
+
+function StatCardTrendChip(props: { trend: StatCardTrend }) {
+  const Icon = TREND_ICON[props.trend.direction]
+
+  return (
+    <span
+      className={cn(
+        'inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold tabular-nums',
+        props.trend.direction === 'up' && 'text-[var(--div-up-2)]',
+        props.trend.direction === 'down' && 'text-[var(--div-down-2)]',
+        props.trend.direction === 'flat' && 'text-muted-foreground'
+      )}
+    >
+      <Icon className='size-3 shrink-0' aria-hidden='true' />
+      {props.trend.value}
+    </span>
   )
 }
 
@@ -276,23 +317,67 @@ export function StatCard(props: StatCardProps) {
         <div className='text-foreground font-mono text-base font-semibold tracking-tight break-all tabular-nums sm:text-2xl'>
           {props.value}
         </div>
-        <p
-          className={cn(
-            'text-muted-foreground/60 line-clamp-1 text-[11px] leading-relaxed sm:text-xs',
-            props.compactMobile && 'hidden sm:block'
-          )}
-        >
-          {props.description}
-        </p>
+        {/* With a trend the description moves into the foot row, so the card
+            reads label → value → movement, like the console design. */}
+        {props.trend == null && (
+          <p
+            className={cn(
+              'text-muted-foreground/60 line-clamp-1 text-[11px] leading-relaxed sm:text-xs',
+              props.compactMobile && 'hidden sm:block'
+            )}
+          >
+            {props.description}
+          </p>
+        )}
       </div>
     )
   }
 
   let visualization: ReactNode
-  if (props.details?.length) {
+  if (props.trend != null) {
+    visualization = (
+      <div className='flex items-center gap-2'>
+        <StatCardTrendChip trend={props.trend} />
+        <span className='text-muted-foreground/60 line-clamp-1 text-[11px]'>
+          {props.description}
+        </span>
+        {props.sparkline?.length ? (
+          <span className='ml-auto w-22 shrink-0'>
+            <LineSparkline
+              values={props.sparkline}
+              tone={tone}
+              colorClassName='text-[var(--cat-1)]'
+            />
+          </span>
+        ) : null}
+      </div>
+    )
+  } else if (props.details?.length) {
     visualization = <StatCardDetails details={props.details} />
   } else if (sparklineVariant === 'line') {
-    visualization = <LineSparkline values={props.sparkline} tone={tone} />
+    /* Same slot as the trend branch above: a fixed-width sparkline pinned to
+       the right. Left bare it stretched to fill the card, so the one KPI card
+       without a trend (account balance, whose description stays under the
+       value) drew a 252px sparkline while the other three drew 88px — the row
+       visibly disagreed with itself. */
+    visualization = (
+      /* Pinned to the same 88px right-hand slot as the trend row above. Left
+         bare it stretched to fill the card, so the one KPI without a trend
+         (account balance — its description stays under the value) drew a 252px
+         sparkline while the other three drew 88px.
+         The row is deliberately NOT height-matched to the trend row: the four
+         cards share a grid row so their heights are already equal, and padding
+         this row out only pushed every other card taller too. */
+      <div className='flex items-center'>
+        <span className='ml-auto w-22 shrink-0'>
+          <LineSparkline
+            values={props.sparkline}
+            tone={tone}
+            colorClassName='text-[var(--cat-1)]'
+          />
+        </span>
+      </div>
+    )
   } else {
     visualization = <BarSparkline values={props.sparkline} tone={tone} />
   }

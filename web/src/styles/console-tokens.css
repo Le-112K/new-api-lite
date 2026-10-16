@@ -1,0 +1,354 @@
+/*
+Copyright (C) 2023-2026 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
+/* ==========================================================================
+ * console-tokens.css — additive layer: the console extension
+ * --------------------------------------------------------------------------
+ * Ported from `deliverables/console-tokens.css` (the approved console design
+ * layer, see also `deliverables/console-design-spec.md`).
+ *
+ * ADDITIVE ONLY, exactly like `aperture-tokens.css`: this file declares what
+ * the project does NOT already have, so no value ends up with two sources of
+ * truth. Deliberately NOT ported:
+ *
+ *   · the `--chart-1..7` → `--cat-*` bridge. `theme.css:133-137` already owns
+ *     `--chart-1..5`; re-declaring them here would silently recolour the
+ *     models / flow / users / pricing / rankings charts. Console surfaces that
+ *     need a categorical palette consume `--cat-*` directly instead.
+ *   · `--space-*` steps. The project ships only `--space-1/5/12/32`
+ *     (`aperture-tokens.css:86-89`), so the density aliases below use literal
+ *     pixels rather than `var(--space-6)` (which would resolve to nothing and
+ *     silently collapse the console padding to 0).
+ *   · the prototype's component classes (`.cx-panel`, `.cx-btn`, `.badge`,
+ *     `.donut`, `.cx-skeleton`, …). Console UI is built from the project's own
+ *     primitives (`components/ui/*`, Tailwind). Only tokens are carried over.
+ *
+ * Colour discipline (spec §6): CHROME (shell, top bar, page title, buttons,
+ * inputs, tabs, pagination, card containers) stays pure grayscale. The
+ * functional colours below (`--success*`, `--warning*`, `--destructive*`,
+ * `--info*`, `--cat-*`, `--seq-*`, `--div-*`) may only be consumed by CONTENT —
+ * data visualisation, status badges, inline semantics, trend deltas.
+ *
+ * Import order: this file must come last in `styles/index.css`, after
+ * `aperture-tokens.css`, so nothing downstream shadows it.
+ * ========================================================================== */
+
+/* ==========================================================================
+ * 1. Semantic states — soft / strong / text triples (spec §1)
+ *    The base colours (`--success`, `--warning`, …) already exist in
+ *    `theme.css`; only the console's soft-badge / solid / inline-text forms are
+ *    new. Solid fills use the `-strong` tokens because base `--success` + white
+ *    text measured 4.38:1 (below AA).
+ * ========================================================================== */
+:root {
+  --success-soft: #e4f3ea;
+  --success-on-soft: #0e6b3c;
+  --success-strong: #157a45;
+  --success-on-strong: #ffffff;
+  --success-text: #0e6b3c;
+
+  --warning-soft: #fbedd9;
+  --warning-on-soft: #8a4700;
+  --warning-strong: #b25e00;
+  --warning-on-strong: #ffffff;
+  --warning-text: #8a4700;
+
+  --destructive-soft: #fbe7e7;
+  --destructive-on-soft: #a81a1a;
+  --destructive-strong: #d70015;
+  --destructive-on-strong: #ffffff;
+  --destructive-text: #a81a1a;
+
+  --info-soft: #e4eefa;
+  --info-on-soft: #0b5aa8;
+  --info-strong: #0071e3;
+  --info-on-strong: #ffffff;
+  --info-text: #0b5aa8;
+
+  --neutral-soft: var(--gray-100);
+  --neutral-on-soft: var(--gray-700);
+}
+
+.dark {
+  --success-soft: #12291b;
+  --success-on-soft: #4ade80;
+  --success-strong: #30d158;
+  --success-on-strong: #0a0a0a;
+  --success-text: #4ade80;
+
+  --warning-soft: #2a1e08;
+  --warning-on-soft: #ffc24d;
+  --warning-strong: #ff9f0a;
+  --warning-on-strong: #0a0a0a;
+  --warning-text: #ffc24d;
+
+  --destructive-soft: #2c1414;
+  --destructive-on-soft: #ff7b72;
+  --destructive-strong: #ff453a;
+  --destructive-on-strong: #0a0a0a;
+  --destructive-text: #ff7b72;
+
+  --info-soft: #0c1b2e;
+  --info-on-soft: #5ac8fa;
+  --info-strong: #0a84ff;
+  --info-on-strong: #0a0a0a;
+  --info-text: #5ac8fa;
+
+  --neutral-soft: #1c1c1e;
+  --neutral-on-soft: #c7c7cc;
+}
+
+/* ==========================================================================
+ * 2. Categorical chart palette (spec §2) — CVD-checked 7-colour set
+ *    Search: one colour per family (blue / cyan / teal / magenta / orange /
+ *    violet / neutral) maximising the minimum CIELAB ΔE76 pair under
+ *    Machado-2009 protanopia / deuteranopia / tritanopia, severity 1.0.
+ *    Light ΔE76 min: normal 24.7 · protan 18.6 · deutan 14.3 · tritan 13.9
+ *    Dark  ΔE76 min: normal 19.7 · protan 15.6 · deutan 16.2 · tritan 17.4
+ *    `--cat-7` is the neutral catch-all and always means "Other / Unknown".
+ *    Take colours in order; never invent an 8th — fold the tail into cat-7.
+ * ========================================================================== */
+:root {
+  --cat-1: #0c5c93;
+  --cat-2: #3e9bd6;
+  --cat-3: #0a7f68;
+  --cat-4: #cc79a7;
+  --cat-5: #d55e00;
+  --cat-6: #6c5ce0;
+  --cat-7: #4a4a4a;
+
+  /* Chart structure (chrome grayscale, not colour) */
+  --cx-chart-grid: var(--hairline);
+  --cx-chart-axis: var(--cx-text-3);
+  --cx-chart-tick-bg: var(--card);
+  --cx-chart-tick-fg: var(--foreground);
+}
+
+.dark {
+  --cat-1: #3e82c9;
+  --cat-2: #a8d8f5;
+  --cat-3: #34c796;
+  --cat-4: #c77bb0;
+  --cat-5: #ff8a5b;
+  --cat-6: #d0a0f5;
+  --cat-7: #c7c7cc;
+
+  --cx-chart-grid: var(--hairline);
+  --cx-chart-axis: var(--cx-text-3);
+  --cx-chart-tick-bg: var(--popover);
+  --cx-chart-tick-fg: var(--foreground);
+}
+
+/* ==========================================================================
+ * 3. Sequential scale (spec §3) — single-hue blue, 7 steps
+ *    For heat maps / intensity / quota burn. Adjacent ΔE ≥ 10.
+ *    NOT for categories: that is what `--cat-*` is for.
+ * ========================================================================== */
+:root {
+  --seq-1: #eaf0f8;
+  --seq-2: #c9dbf0;
+  --seq-3: #9dbce2;
+  --seq-4: #6c97d0;
+  --seq-5: #3f72b4;
+  --seq-6: #1e4f8c;
+  --seq-7: #0b3a6b;
+  --seq-ink-low: var(--gray-900);
+  --seq-ink-high: #ffffff;
+}
+
+.dark {
+  --seq-1: #12202e;
+  --seq-2: #1b3149;
+  --seq-3: #26466a;
+  --seq-4: #35608e;
+  --seq-5: #4e7cb5;
+  --seq-6: #79a3d6;
+  --seq-7: #a9c9f5;
+  --seq-ink-low: #0a0a0a;
+  --seq-ink-high: #f5f5f7;
+}
+
+/* ==========================================================================
+ * 4. Diverging scale (spec §4) — period-over-period movement
+ *    ⚠️ This product is Chinese-first: UP = RED, DOWN = GREEN. Do not apply the
+ *    Western "green = up" intuition. A diverging value must ALWAYS also carry a
+ *    sign (+ / −) or an arrow — never encode it with colour alone.
+ *    `--div-up-*` (a number rose) and `--destructive-*` (danger) are both red
+ *    but semantically unrelated; never substitute one for the other.
+ * ========================================================================== */
+:root {
+  --div-up-2: #b3261e;
+  --div-up-1: #e08a84;
+  --div-neutral: #e8e8ed;
+  --div-down-1: #7fbf9c;
+  --div-down-2: #1b7f4b;
+  --div-ink-on-up2: #ffffff;
+  --div-ink-on-up1: #111111;
+  --div-ink-on-mid: #111111;
+  --div-ink-on-down1: #111111;
+  --div-ink-on-down2: #ffffff;
+}
+
+.dark {
+  --div-up-2: #ff6b61;
+  --div-up-1: #8e3c36;
+  --div-neutral: #3a3a3c;
+  --div-down-1: #2e6b4a;
+  --div-down-2: #4ed08a;
+  --div-ink-on-up2: #111111;
+  --div-ink-on-up1: #ffffff;
+  --div-ink-on-mid: #ffffff;
+  --div-ink-on-down1: #ffffff;
+  --div-ink-on-down2: #111111;
+}
+
+/* ==========================================================================
+ * 5. Console density (spec §7) — the marketing rhythm (`--section-py: 160px`)
+ *    must never reach the console. Same 8px grid as `--space-*`, bound to
+ *    console roles. Literal values because the project only ships
+ *    `--space-1/5/12/32`.
+ * ========================================================================== */
+:root {
+  --cx-page-pad: 24px;
+  --cx-page-pad-lg: 32px;
+  --cx-content-gap: 24px;
+  --cx-max-w: 1440px;
+
+  --cx-card-pad: 16px;
+  --cx-card-pad-lg: 20px;
+  --cx-card-gap: 16px;
+  --cx-card-radius: var(--radius-md);
+
+  --cx-control-h: 36px;
+  --cx-control-h-sm: 32px;
+  --cx-row-h: 44px;
+  --cx-row-h-dense: 36px;
+  --cx-list-item-py: 12px;
+
+  --cx-text: 0.875rem;
+  --cx-text-sm: 0.8125rem;
+  --cx-label: 0.75rem;
+  --cx-title: 1.25rem;
+  --cx-title-lg: 1.5rem;
+
+  --cx-table-row-h: var(--cx-row-h);
+  --cx-table-cell-x: 12px;
+}
+
+/* ==========================================================================
+ * 6. Layout primitives (spec §8) — persistent sidebar + top bar sizing and
+ *    the frozen-column shadows used when a wide table scrolls inside its own
+ *    container.
+ * ========================================================================== */
+:root {
+  --cx-sidebar-w: 248px;
+  --cx-sidebar-w-collapsed: 64px;
+  --cx-topbar-h: 56px;
+  --cx-shell-bg: var(--background);
+  --cx-content-bg: var(--background);
+  --cx-panel-bg: var(--card);
+
+  --cx-sidebar-item-h: 36px;
+  --cx-sidebar-item-radius: var(--radius-sm);
+  --cx-sidebar-group-gap: 8px;
+  --cx-sidebar-icon: 18px;
+
+  --cx-frozen-shadow: 6px 0 8px -6px rgba(0, 0, 0, 0.1);
+  --cx-frozen-shadow-l: -6px 0 8px -6px rgba(0, 0, 0, 0.1);
+}
+
+.dark {
+  --cx-frozen-shadow: 6px 0 8px -6px rgba(0, 0, 0, 0.55);
+  --cx-frozen-shadow-l: -6px 0 8px -6px rgba(0, 0, 0, 0.55);
+}
+
+/* ==========================================================================
+ * 7. Component tokens — table / focus / quota progress / code (spec §9)
+ * ========================================================================== */
+:root {
+  --cx-table-border: var(--border);
+  --cx-table-head-bg: var(--table-header);
+  --cx-table-head-fg: var(--cx-text-3);
+  --cx-table-row-hover: var(--accent);
+  --cx-table-row-selected: var(--emphasis-soft);
+  --cx-table-empty-fg: var(--muted-foreground);
+
+  --cx-focus-ring: var(--ring);
+  --cx-focus-offset: var(--background);
+
+  --cx-progress-track: var(--whisper);
+  --cx-progress-fill: var(--emphasis);
+  --cx-progress-fill-warn: var(--warning-strong);
+  --cx-progress-fill-over: var(--destructive-strong);
+
+  --cx-code-bg: var(--code-bg);
+}
+
+/* ==========================================================================
+ * 8. CJK headline tracking fix (spec §11) — APP-GLOBAL
+ * --------------------------------------------------------------------------
+ * `theme-apple-bw.css:110` sets `h1,h2,h3 { letter-spacing: -0.02em }`, which
+ * is tuned for Latin text. CJK glyphs fill their em box, so negative tracking
+ * makes strokes collide. Neutralise it for zh/ja only; Latin keeps the negative
+ * tracking. Depends on `<html lang>` being kept in sync by i18n.
+ * ========================================================================== */
+:is(h1, h2, h3, h4, .display, .h1, .h2, .h3, .cx-page-title):lang(zh),
+:is(h1, h2, h3, h4, .display, .h1, .h2, .h3, .cx-page-title):lang(ja) {
+  letter-spacing: 0;
+}
+/* Display-size CJK needs a little air, but far less than Latin positive tracking. */
+:is(.display, .h1, .cx-page-title):lang(zh),
+:is(.display, .h1, .cx-page-title):lang(ja) {
+  letter-spacing: 0.01em;
+}
+:lang(zh),
+:lang(ja) {
+  line-break: strict;
+}
+
+/* ==========================================================================
+ * 9. Console semantic text / line / fill (spec §11, rule R-G1)
+ * --------------------------------------------------------------------------
+ * Console components must never consume the raw `--gray-*` ramp: those are
+ * declared once in `:root` and do NOT flip with the theme, so a dark surface
+ * ends up with dark text on dark (measured 2.02:1 on the sidebar). These
+ * aliases flip. `--cx-text-disabled` is for disabled states only (AA exempt).
+ * ========================================================================== */
+:root {
+  --cx-text: var(--foreground);
+  --cx-text-2: var(--gray-700);
+  --cx-text-3: var(--gray-600);
+  --cx-text-disabled: var(--gray-400);
+  --cx-line: var(--border);
+  --cx-line-strong: var(--gray-300);
+  --cx-fill-1: var(--muted);
+  --cx-fill-2: var(--accent);
+  --cx-fill-3: var(--gray-200);
+}
+
+.dark {
+  --cx-text: var(--foreground);
+  --cx-text-2: var(--gray-300);
+  --cx-text-3: var(--muted-foreground);
+  --cx-text-disabled: var(--gray-600);
+  --cx-line: var(--border);
+  --cx-line-strong: var(--gray-700);
+  --cx-fill-1: var(--muted);
+  --cx-fill-2: var(--accent);
+  --cx-fill-3: var(--gray-800);
+}

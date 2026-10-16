@@ -34,6 +34,11 @@ For commercial licensing, please contact support@quantumnous.com
  * space scale, emphasis/hairline tokens the base themes do not declare).
  * Kept last so nothing downstream can shadow it. */
 @import './aperture-tokens.css';
+/* Console extension layer: semantic state triples, the CVD-checked
+ * categorical chart palette, sequential/diverging scales, console density and
+ * the theme-flipping cx-* aliases. Additive only — it never re-declares a value
+ * the base themes already own. Must stay last. */
+@import './console-tokens.css';
 
 @layer base {
   :root {
