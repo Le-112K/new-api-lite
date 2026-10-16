@@ -16,6 +16,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
+import { Cancel01Icon } from '@hugeicons/core-free-icons'
+import { HugeiconsIcon } from '@hugeicons/react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import {
@@ -35,17 +38,16 @@ import { useTranslation } from 'react-i18next'
 
 import { CopyButton } from '@/components/copy-button'
 import { StaticDataTable } from '@/components/data-table'
-import { sideDrawerContentClassName } from '@/components/drawer-layout'
 import { GroupBadge } from '@/components/group-badge'
 import { PublicLayout } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+  DialogClose,
+  DialogDescription,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { getPerfMetrics } from '@/features/performance-metrics/api'
@@ -79,7 +81,7 @@ import {
 import { parseTags } from '../lib/filters'
 import { getAvailableGroups, isTokenBasedModel } from '../lib/model-helpers'
 import { withPluginPricing } from '../lib/plugin-pricing'
-import { formatFixedPrice, formatGroupPrice } from '../lib/price'
+import { formatFixedPrice, formatGroupPrice, formatPrice } from '../lib/price'
 import {
   evaluateTaskUsageExamples,
   getTaskEnumFields,
@@ -1554,6 +1556,250 @@ export function ModelDetailsContent(props: ModelDetailsContentProps) {
 }
 
 // ----------------------------------------------------------------------------
+// Centred detail modal (deliverables/aperture-models.html)
+// ----------------------------------------------------------------------------
+
+/**
+ * Same compaction the model card uses: 128000 -> "128K", 1500000 -> "1.5M".
+ * Returns null when the backend did not supply a value so the modal can dash it
+ * instead of synthesising a number.
+ */
+function formatContextLength(value?: number | null): string | null {
+  const formatted = formatCatalogTokenCount(value ?? 0)
+  return formatted.length > 0 ? formatted : null
+}
+
+const DETAILS_MODAL_DASH = (
+  <span className='text-muted-foreground font-normal'>&mdash;</span>
+)
+
+function DetailsModalSection(props: {
+  title: string
+  first?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <section
+      className={cn(
+        'border-border/60 border-t pt-5',
+        props.first ? 'mt-0 border-t-0 pt-0' : 'mt-5'
+      )}
+    >
+      <h3 className='text-muted-foreground mb-3 text-[11px] font-bold tracking-[0.1em] uppercase'>
+        {props.title}
+      </h3>
+      {props.children}
+    </section>
+  )
+}
+
+function DetailsModalKv(props: { label: string; children: React.ReactNode }) {
+  return (
+    <div className='min-w-0'>
+      <dt className='text-muted-foreground mb-0.5 text-[13px]'>
+        {props.label}
+      </dt>
+      <dd className='text-foreground text-sm font-semibold tabular-nums'>
+        {props.children}
+      </dd>
+    </div>
+  )
+}
+
+function DetailsModalPillList(props: { items: string[] }) {
+  return (
+    <div className='flex flex-wrap gap-2'>
+      {props.items.map((item) => (
+        <span
+          key={item}
+          className='bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[11px] font-semibold'
+        >
+          {item}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+interface ModelDetailsModalProps {
+  model: PricingModel
+  usableGroup: Record<string, { desc: string; ratio: number }>
+  priceRate: number
+  usdExchangeRate: number
+  tokenUnit: TokenUnit
+  showRechargePrice?: boolean
+}
+
+function ModelDetailsModal(props: ModelDetailsModalProps) {
+  const { t } = useTranslation()
+  const model = props.model
+  const showRechargePrice = props.showRechargePrice ?? false
+  const tokenUnitLabel = props.tokenUnit === 'K' ? '1K' : '1M'
+  // The prototype's `.m-unit` keeps the value's size and only lightens the
+  // weight/colour, so the modal's unit reads at 14px rather than the card's
+  // compact 11px (the card's columns are far narrower).
+  const unit = (label: string) => (
+    <span className='text-muted-foreground font-normal'>{` /${label}`}</span>
+  )
+  const isTokenBased = isTokenBasedModel(model)
+  const contextLength = formatContextLength(model.context_length)
+  const endpoints = normalizeCatalogItems(model.supported_endpoint_types)
+  const tags = parseTags(model.tags)
+  const availableGroups = getAvailableGroups(model, props.usableGroup || {})
+  const tokenPrice = (type: PriceType) => (
+    <>
+      {formatPrice(
+        model,
+        type,
+        props.tokenUnit,
+        showRechargePrice,
+        props.priceRate,
+        props.usdExchangeRate
+      )}
+      {unit(tokenUnitLabel)}
+    </>
+  )
+
+  const priceCells: { key: string; label: string; value: React.ReactNode }[] = [
+    {
+      key: 'input',
+      label: t('Input'),
+      value: isTokenBased ? tokenPrice('input') : DETAILS_MODAL_DASH,
+    },
+    {
+      key: 'output',
+      label: t('Output'),
+      value: isTokenBased ? tokenPrice('output') : DETAILS_MODAL_DASH,
+    },
+    {
+      key: 'cache',
+      label: t('Cache read'),
+      value:
+        isTokenBased && model.cache_ratio != null
+          ? tokenPrice('cache')
+          : DETAILS_MODAL_DASH,
+    },
+    {
+      key: 'cache-write',
+      label: t('Cache write'),
+      value:
+        isTokenBased && model.create_cache_ratio != null
+          ? tokenPrice('create_cache')
+          : DETAILS_MODAL_DASH,
+    },
+  ]
+
+  return (
+    <div className='min-w-0'>
+      <header className='mb-5 flex items-start justify-between gap-4'>
+        {/* The close button leads the DOM (and therefore the initial focus
+            target) so opening the modal does not pop the model-name tooltip;
+            `order` keeps it on the right, where the design puts it. */}
+        <DialogClose
+          aria-label={t('Close')}
+          className='border-border text-muted-foreground hover:bg-accent hover:text-foreground order-2 inline-flex size-9 shrink-0 items-center justify-center rounded-full border transition-colors'
+        >
+          <HugeiconsIcon
+            icon={Cancel01Icon}
+            strokeWidth={1.8}
+            className='size-4'
+          />
+          <span className='sr-only'>{t('Close')}</span>
+        </DialogClose>
+        <div className='order-1 min-w-0'>
+          <DialogTitle className='text-[1.375rem] leading-[1.2] font-bold tracking-[-0.02em]'>
+            {model.model_name}
+          </DialogTitle>
+          <DialogDescription className='text-muted-foreground mt-1.5 flex min-w-0 items-center gap-1.5 text-xs'>
+            {model.vendor_name && (
+              <span className='truncate'>{model.vendor_name}</span>
+            )}
+            {model.vendor_name && (
+              <span aria-hidden className='text-muted-foreground/40'>
+                &middot;
+              </span>
+            )}
+            <span className='truncate font-mono'>{model.model_name}</span>
+            <CopyButton
+              value={model.model_name || ''}
+              tooltip={t('Copy model name')}
+              successTooltip={t('Copied!')}
+              className='size-5 shrink-0'
+              iconClassName='size-3'
+            />
+          </DialogDescription>
+        </div>
+      </header>
+
+      <DetailsModalSection
+        first
+        title={t('Pricing · per {{unit}} tokens', { unit: tokenUnitLabel })}
+      >
+        <dl className='grid grid-cols-2 gap-x-6 gap-y-3.5'>
+          {priceCells.map((cell) => (
+            <DetailsModalKv key={cell.key} label={cell.label}>
+              {cell.value}
+            </DetailsModalKv>
+          ))}
+        </dl>
+      </DetailsModalSection>
+
+      <DetailsModalSection title={t('Protocol endpoints')}>
+        {endpoints.length > 0 ? (
+          <ul className='flex flex-wrap gap-2'>
+            {endpoints.map((endpoint) => (
+              <li
+                key={endpoint}
+                className='border-border bg-background text-foreground rounded-full border px-2.5 py-1 font-mono text-[13px]'
+              >
+                {endpoint}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          DETAILS_MODAL_DASH
+        )}
+      </DetailsModalSection>
+
+      <DetailsModalSection title={t('Specifications')}>
+        <dl className='grid grid-cols-2 gap-x-6 gap-y-3.5'>
+          <DetailsModalKv label={t('Provider')}>
+            {model.vendor_name || DETAILS_MODAL_DASH}
+          </DetailsModalKv>
+          <DetailsModalKv label={t('Context')}>
+            {contextLength ?? DETAILS_MODAL_DASH}
+          </DetailsModalKv>
+          <DetailsModalKv label={t('Capability tags')}>
+            {tags.length > 0 ? (
+              <DetailsModalPillList items={tags} />
+            ) : (
+              DETAILS_MODAL_DASH
+            )}
+          </DetailsModalKv>
+          <DetailsModalKv label={t('Availability')}>
+            {availableGroups.length > 0 ? (
+              <span className='inline-flex items-center gap-2'>
+                <span
+                  aria-hidden
+                  className='bg-foreground size-1.5 rounded-full'
+                />
+                {t('Available')}
+              </span>
+            ) : (
+              DETAILS_MODAL_DASH
+            )}
+          </DetailsModalKv>
+        </dl>
+      </DetailsModalSection>
+
+      <p className='text-muted-foreground border-border/60 mt-5 border-t pt-4 text-[13px]'>
+        {t('Prices shown per {{unit}} tokens', { unit: tokenUnitLabel })}
+      </p>
+    </div>
+  )
+}
+
+// ----------------------------------------------------------------------------
 // Drawer & page wrappers
 // ----------------------------------------------------------------------------
 
@@ -1563,26 +1809,27 @@ export interface ModelDetailsDrawerProps extends ModelDetailsContentProps {
 }
 
 export function ModelDetailsDrawer(props: ModelDetailsDrawerProps) {
-  const { t } = useTranslation()
-  const { open, onOpenChange, ...contentProps } = props
-
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side='right'
-        className={sideDrawerContentClassName(
-          'sm:max-w-2xl lg:max-w-3xl xl:max-w-4xl 2xl:max-w-5xl'
-        )}
-      >
-        <SheetHeader className='sr-only'>
-          <SheetTitle>{props.model.model_name}</SheetTitle>
-          <SheetDescription>{t('Model details')}</SheetDescription>
-        </SheetHeader>
-        <div className='flex-1 overflow-y-auto px-4 pt-11 pb-5 sm:px-6 sm:pt-12 sm:pb-6'>
-          <ModelDetailsContent {...contentProps} />
-        </div>
-      </SheetContent>
-    </Sheet>
+    <DialogPrimitive.Root open={props.open} onOpenChange={props.onOpenChange}>
+      <DialogPortal>
+        <DialogOverlay className='bg-black/45' />
+        <DialogPrimitive.Popup
+          className={cn(
+            'bg-card text-foreground border-border fixed top-[var(--dialog-viewport-center,50dvh)] left-1/2 z-50 max-h-[min(82vh,760px)] w-[min(560px,calc(100vw-48px))] max-w-none -translate-x-1/2 -translate-y-1/2 overflow-y-auto overscroll-contain rounded-[24px] border p-6 text-sm shadow-[var(--shadow-floating)] outline-none duration-100',
+            'data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0'
+          )}
+        >
+          <ModelDetailsModal
+            model={props.model}
+            usableGroup={props.usableGroup}
+            priceRate={props.priceRate}
+            usdExchangeRate={props.usdExchangeRate}
+            tokenUnit={props.tokenUnit}
+            showRechargePrice={props.showRechargePrice}
+          />
+        </DialogPrimitive.Popup>
+      </DialogPortal>
+    </DialogPrimitive.Root>
   )
 }
 
