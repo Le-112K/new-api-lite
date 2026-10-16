@@ -21,10 +21,11 @@ import { isAxiosError } from 'axios'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { DataTablePage, useDataTable } from '@/components/data-table'
+import { DataTablePage, DataTablePagination, useDataTable } from '@/components/data-table'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { requireServerSuccess } from '@/lib/server-error-message'
+import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { getAuditLogs, type AuditFilters, type AuditLog } from '../api'
@@ -109,7 +110,10 @@ export function AuditLogViewer(props: {
     setFilters((previous) => ({ ...previous, ...patch, p: 1 }))
 
   return (
-    <div className='flex h-full min-h-0 flex-col'>
+    // Same console panel language as the common-logs page: the (shared) filter
+    // toolbar is the panel's top strip, the table scrolls inside, and the pager
+    // lives in a hairline-topped bar at the panel's foot.
+    <div className='bg-card shadow-xs flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border'>
       <DataTablePage
         table={table}
         columns={columns}
@@ -119,11 +123,14 @@ export function AuditLogViewer(props: {
           query.isError ? t('Failed to load audit records') : t('No records')
         }
         hideMobile={props.accessOnly}
-        paginationInFooter={!props.accessOnly}
-        className='h-auto min-h-0 flex-1'
+        showPagination={false}
+        className='min-h-0 flex-1 gap-0'
         applyHeaderSize
-        getColumnClassName={() => 'py-2'}
-        tableClassName='[&_[data-slot=table]]:text-[13px] [&_[data-slot=table]_td]:text-[13px] [&_[data-slot=table]_td_*]:text-[13px] [&_[data-slot=table]_th]:text-[13px] [&_[data-slot=table]_th_*]:text-[13px]'
+        getColumnClassName={() => 'py-1.5'}
+        tableClassName={cn(
+          'rounded-none border-0',
+          '[&_[data-slot=table]]:text-[13px] [&_[data-slot=table]_td]:text-[13px] [&_[data-slot=table]_td_*]:text-[13px] [&_[data-slot=table]_th]:text-[12px] [&_[data-slot=table]_th]:font-semibold [&_[data-slot=table]_th]:text-muted-foreground [&_[data-slot=table]_th_*]:text-[12px]'
+        )}
         toolbar={
           <div className='shrink-0 space-y-2'>
             <AuditLogFilterBar
@@ -172,6 +179,13 @@ export function AuditLogViewer(props: {
           </div>
         }
       />
+
+      {/* Pagination is always present (the previous footer portal rendered it
+          for both the main and the access-only viewer); it just lives in the
+          panel now. */}
+      <div className='shrink-0 border-t px-4 py-2'>
+        <DataTablePagination table={table} />
+      </div>
     </div>
   )
 }

@@ -16,17 +16,19 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useQuery } from '@tanstack/react-query'
-import { getRouteApi } from '@tanstack/react-router'
-import type { ColumnDef } from '@tanstack/react-table'
-import { useCallback } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { getRouteApi, useNavigate } from '@tanstack/react-router'
+import type { ColumnDef, Table } from '@tanstack/react-table'
+import { useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import {
   DataTablePage,
+  DataTablePagination,
   DataTableRow,
   useDataTable,
 } from '@/components/data-table'
+import { Button } from '@/components/ui/button'
 import {
   getAdminPlans,
   getSelfSubscriptionFull,
@@ -44,10 +46,11 @@ import {
 } from '../constants'
 import { shouldShowBillingSource } from '../lib/billing-source'
 import { parseLogOther } from '../lib/format'
-import { fetchUsageLogs } from '../lib/utils'
+import { fetchUsageLogs, getDefaultTimeRange } from '../lib/utils'
 import { useCommonLogsColumns } from './columns/common-logs-columns'
 import { CommonLogsFilterBar } from './common-logs-filter-bar'
 import { UsageLogsMobileList } from './usage-logs-mobile-card'
+import { UsageLogsPageTotal } from './usage-logs-page-total'
 import { useLogsViewScope, type LogsViewAccess } from './usage-logs-provider'
 
 const route = getRouteApi('/_authenticated/usage-logs/$section')
@@ -60,6 +63,11 @@ const logTypeRowTint: Record<number, string> = {
 // Warning tint for logs where a quota conversion saturated (admin-only marker).
 // Takes precedence over the per-type tint since it flags a billing anomaly.
 const quotaSaturationRowTint = 'bg-amber-50/60 dark:bg-amber-950/25'
+
+// Dense console table: 13px body, muted 12px header on the panel's hairline
+// (design: small grey column labels, no zebra rows).
+const usageTableFontClassName =
+  '[&_[data-slot=table]]:text-[13px] [&_[data-slot=table]_td]:text-[13px] [&_[data-slot=table]_td_*]:text-[13px] [&_[data-slot=table]_th]:text-[12px] [&_[data-slot=table]_th]:font-semibold [&_[data-slot=table]_th]:text-muted-foreground [&_[data-slot=table]_th_*]:text-[12px]'
 
 function getColumnVisibilityStorageKey(viewAccess: LogsViewAccess): string {
   return `usage-logs:common:${viewAccess}:column-visibility`
@@ -75,9 +83,18 @@ function deserializeLogTypeFilter(value: unknown): unknown[] {
   return values.filter((item) => String(item) !== LOG_TYPE_ALL_VALUE)
 }
 
-export function UsageLogsTable() {
+export function UsageLogsTable(props: {
+  /**
+   * Hands the TanStack table instance to the page header so the "导出 CSV"
+   * action can export exactly the rows on screen. The table lives here, the
+   * button lives in the page head — this is the one wire between them.
+   */
+  onTableReady?: (table: Table<Record<string, unknown>>) => void
+}) {
   const { t } = useTranslation()
-  const getColumnClassName = useCallback(() => 'py-2', [])
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const getColumnClassName = useCallback(() => 'py-1.5', [])
   const {
     isAdminView: isAdmin,
     isRootView: isRoot,
@@ -200,48 +217,111 @@ export function UsageLogsTable() {
     ensurePageInRange,
   })
 
-  return (
-    <DataTablePage
-      table={table}
-      compactPagination={isMobile}
-      columns={columns as ColumnDef<Record<string, unknown>>[]}
-      isLoading={isLoadingData}
-      isFetching={isFetching}
-      emptyTitle={t('No Logs Found')}
-      emptyDescription={t(
-        'No usage logs available. Logs will appear here once API calls are made.'
-      )}
-      skeletonKeyPrefix='usage-log-skeleton'
-      applyHeaderSize
-      tableClassName={cn(
-        '[&_[data-slot=table]]:text-[13px] [&_[data-slot=table]_td]:text-[13px] [&_[data-slot=table]_td_*]:text-[13px] [&_[data-slot=table]_th]:text-[13px] [&_[data-slot=table]_th_*]:text-[13px]'
-      )}
-      mobile={<UsageLogsMobileList table={table} isLoading={isLoadingData} />}
-      toolbar={<CommonLogsFilterBar table={table} />}
-      renderRow={(row) => {
-        const logType = (row.original as Record<string, unknown>).type as
-          | number
-          | undefined
-        let tintClass = logType != null ? (logTypeRowTint[logType] ?? '') : ''
-        if (isAdmin) {
-          const other = parseLogOther(
-            ((row.original as Record<string, unknown>).other as string) ?? ''
-          )
-          if (other?.admin_info?.quota_saturation) {
-            tintClass = quotaSaturationRowTint
-          }
-        }
+  const onTableReady = props.onTableReady
+  useEffect(() => {
+    onTableReady?.(table)
+  }, [onTableReady, table])
 
-        return (
-          <DataTableRow
-            key={row.id}
-            row={row}
-            className={cn('transition-colors', tintClass)}
-            getColumnClassName={getColumnClassName}
-            cellRenderColumns={table.options.columns}
-          />
-        )
-      }}
-    />
+  // Empty-state CTA. Mirrors the filter bar's Reset so the always-visible
+  // "重置" button and this button cannot drift apart.
+  const handleClearFilters = useCallback(() => {
+    const { start, end } = getDefaultTimeRange()
+    navigate({
+      to: '/usage-logs/$section',
+      params: { section: 'common' },
+      search: {
+        page: 1,
+        type: [LOG_TYPE_ALL_VALUE],
+        startTime: start.getTime(),
+        endTime: end.getTime(),
+      },
+    })
+    queryClient.invalidateQueries({ queryKey: ['logs'] })
+    queryClient.invalidateQueries({ queryKey: ['usage-logs-stats'] })
+  }, [navigate, queryClient])
+
+  // The design's `本页合计 / Page total` — summed from the rows on screen, so
+  // the strip and the table can always be checked against each other.
+  const pageRows = table.getRowModel().rows
+  let pageInputTokens = 0
+  let pageOutputTokens = 0
+  let pageQuota = 0
+  let pageSuccessCount = 0
+  for (const row of pageRows) {
+    const log = row.original
+    pageInputTokens += Number(log.prompt_tokens) || 0
+    pageOutputTokens += Number(log.completion_tokens) || 0
+    pageQuota += Number(log.quota) || 0
+    if (Number(log.type) === LOG_TYPE_ENUM.CONSUME) pageSuccessCount += 1
+  }
+  const showPageFooter = pageRows.length > 0
+
+  return (
+    <div className='bg-card shadow-xs flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border'>
+      <DataTablePage
+        table={table}
+        columns={columns as ColumnDef<Record<string, unknown>>[]}
+        isLoading={isLoadingData}
+        isFetching={isFetching}
+        emptyTitle={t('No Logs Found')}
+        emptyDescription={t(
+          'No usage logs available. Logs will appear here once API calls are made.'
+        )}
+        emptyAction={
+          <Button type='button' variant='outline' onClick={handleClearFilters}>
+            {t('Reset')}
+          </Button>
+        }
+        skeletonKeyPrefix='usage-log-skeleton'
+        applyHeaderSize
+        // Pagination moves inside the panel (design's pager bar), so the shared
+        // page-footer portal is not used here.
+        showPagination={false}
+        className='min-h-0 flex-1 gap-0'
+        // The shared table draws its own rounded, bordered frame; inside the
+        // console panel only the panel's chrome should show.
+        tableClassName={cn('rounded-none border-0', usageTableFontClassName)}
+        mobile={<UsageLogsMobileList table={table} isLoading={isLoadingData} />}
+        toolbar={<CommonLogsFilterBar table={table} />}
+        renderRow={(row) => {
+          const logType = (row.original as Record<string, unknown>).type as
+            | number
+            | undefined
+          let tintClass = logType != null ? (logTypeRowTint[logType] ?? '') : ''
+          if (isAdmin) {
+            const other = parseLogOther(
+              ((row.original as Record<string, unknown>).other as string) ?? ''
+            )
+            if (other?.admin_info?.quota_saturation) {
+              tintClass = quotaSaturationRowTint
+            }
+          }
+
+          return (
+            <DataTableRow
+              key={row.id}
+              row={row}
+              className={cn('transition-colors', tintClass)}
+              getColumnClassName={getColumnClassName}
+              cellRenderColumns={table.options.columns}
+            />
+          )
+        }}
+      />
+
+      {showPageFooter && (
+        <UsageLogsPageTotal
+          inputTokens={pageInputTokens}
+          outputTokens={pageOutputTokens}
+          quota={pageQuota}
+          successCount={pageSuccessCount}
+          rowCount={pageRows.length}
+        />
+      )}
+
+      <div className='shrink-0 border-t px-4 py-2'>
+        <DataTablePagination table={table} compact={isMobile} />
+      </div>
+    </div>
   )
 }

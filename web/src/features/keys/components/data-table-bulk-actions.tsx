@@ -16,22 +16,16 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { type Table } from '@tanstack/react-table'
-import { Copy, Trash2, Loader2 } from 'lucide-react'
+import type { Table } from '@tanstack/react-table'
+import { Copy, KeyRound, Loader2, Trash2 } from 'lucide-react'
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
-import { DataTableBulkActions as BulkActionsToolbar } from '@/components/data-table'
 import { Button } from '@/components/ui/button'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 import { copyToClipboard } from '@/lib/copy-to-clipboard'
 
-import { type ApiKey } from '../types'
+import type { ApiKey } from '../types'
 import { ApiKeysMultiDeleteDialog } from './api-keys-multi-delete-dialog'
 import { useApiKeys } from './api-keys-provider'
 
@@ -39,14 +33,21 @@ type DataTableBulkActionsProps<TData> = {
   table: Table<TData>
 }
 
-export function DataTableBulkActions<TData>({
-  table,
-}: DataTableBulkActionsProps<TData>) {
+/**
+ * Selection bar, rendered *inside* the table card so it reads as part of the
+ * panel (the console design's flush footer) rather than a floating toolbar.
+ *
+ * Both bulk capabilities the page already had are kept: copy the selected real
+ * keys as a `name<TAB>key` block, and revoke the selection through the existing
+ * two-step confirm dialog.
+ */
+export function DataTableBulkActions<TData>(props: DataTableBulkActionsProps<TData>) {
   const { t } = useTranslation()
   const { resolveRealKeysBatch } = useApiKeys()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isCopying, setIsCopying] = useState(false)
-  const selectedRows = table.getFilteredSelectedRowModel().rows
+  const selectedRows = props.table.getFilteredSelectedRowModel().rows
+  const selectedCount = selectedRows.length
 
   const handleBatchCopy = useCallback(async () => {
     if (selectedRows.length === 0) return
@@ -80,58 +81,62 @@ export function DataTableBulkActions<TData>({
     }
   }, [selectedRows, resolveRealKeysBatch, t])
 
+  if (selectedCount === 0) {
+    return null
+  }
+
   return (
     <>
-      <BulkActionsToolbar table={table} entityName='API key'>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant='outline'
-                size='icon'
-                className='size-8'
-                onClick={handleBatchCopy}
-                disabled={isCopying}
-                aria-label={t('Copy selected keys')}
-              />
-            }
-          >
-            {isCopying ? (
-              <Loader2 className='size-4 animate-spin' />
-            ) : (
-              <Copy className='size-4' />
-            )}
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{t('Copy selected keys')}</p>
-          </TooltipContent>
-        </Tooltip>
+      <div className='bg-[var(--emphasis-soft)] flex flex-wrap items-center gap-2.5 border-t px-4 py-2.5 text-sm sm:px-5'>
+        <KeyRound
+          className='text-muted-foreground size-4 shrink-0'
+          aria-hidden='true'
+        />
+        <span className='text-muted-foreground'>
+          <span className='text-foreground font-semibold tabular-nums'>
+            {selectedCount}
+          </span>{' '}
+          {t('selected')}
+        </span>
+        <span className='flex-1' />
 
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant='destructive'
-                size='icon'
-                onClick={() => setShowDeleteConfirm(true)}
-                className='size-8'
-                aria-label={t('Delete selected API keys')}
-              />
-            }
-          >
-            <Trash2 />
-            <span className='sr-only'>{t('Delete selected API keys')}</span>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{t('Delete selected API keys')}</p>
-          </TooltipContent>
-        </Tooltip>
-      </BulkActionsToolbar>
+        <Button
+          variant='outline'
+          size='sm'
+          onClick={handleBatchCopy}
+          disabled={isCopying}
+          className='h-7 gap-1.5 px-2.5 text-xs'
+        >
+          {isCopying ? (
+            <Loader2 className='size-3.5 animate-spin' />
+          ) : (
+            <Copy className='size-3.5' />
+          )}
+          {t('Copy selected keys')}
+        </Button>
+        <Button
+          variant='destructive'
+          size='sm'
+          onClick={() => setShowDeleteConfirm(true)}
+          className='h-7 gap-1.5 px-2.5 text-xs'
+        >
+          <Trash2 className='size-3.5' />
+          {t('Delete selected API keys')}
+        </Button>
+        <Button
+          variant='ghost'
+          size='sm'
+          onClick={() => props.table.resetRowSelection()}
+          className='text-muted-foreground hover:text-foreground h-7 px-2.5 text-xs'
+        >
+          {t('Cancel')}
+        </Button>
+      </div>
 
       <ApiKeysMultiDeleteDialog
         open={showDeleteConfirm}
         onOpenChange={setShowDeleteConfirm}
-        table={table}
+        table={props.table}
       />
     </>
   )

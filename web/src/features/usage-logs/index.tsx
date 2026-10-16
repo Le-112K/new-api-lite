@@ -16,7 +16,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useCallback } from 'react'
+import type { Table } from '@tanstack/react-table'
+import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { SectionPageLayout } from '@/components/layout'
@@ -24,6 +25,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CacheStatsDialog } from '@/features/system-settings/general/channel-affinity/cache-stats-dialog'
 
 import { UserInfoDialog } from './components/dialogs/user-info-dialog'
+import { UsageLogsExportButton } from './components/usage-logs-export-button'
 import {
   type LogsViewScope,
   UsageLogsProvider,
@@ -43,6 +45,10 @@ function UsageLogsContent() {
     setAffinityDialogOpen,
   } = useUsageLogsContext()
   const { canManageScope, viewScope, setViewScope } = useLogsViewScope()
+  // Registered by the table, consumed by the header's export action.
+  const [logsTable, setLogsTable] = useState<Table<
+    Record<string, unknown>
+  > | null>(null)
 
   const handleViewScopeChange = useCallback(
     (scope: string) => {
@@ -56,7 +62,14 @@ function UsageLogsContent() {
   return (
     <>
       <SectionPageLayout fixedContent>
-        <SectionPageLayout.Title>{t('Common Logs')}</SectionPageLayout.Title>
+        <SectionPageLayout.Title>
+          <span className='block'>{t('Usage Logs')}</span>
+          <span className='text-muted-foreground mt-0.5 block text-xs font-normal'>
+            {t(
+              'Every request record, filterable by time, model, token, and status.'
+            )}
+          </span>
+        </SectionPageLayout.Title>
         <SectionPageLayout.Actions>
           {canManageScope && (
             <Tabs value={viewScope} onValueChange={handleViewScopeChange}>
@@ -66,11 +79,12 @@ function UsageLogsContent() {
               </TabsList>
             </Tabs>
           )}
+          <UsageLogsExportButton table={logsTable} />
         </SectionPageLayout.Actions>
         <SectionPageLayout.Content>
           <div className='flex h-full min-h-0 flex-col gap-4'>
             <div className='min-h-0 flex-1'>
-              <UsageLogsTable />
+              <UsageLogsTable onTableReady={setLogsTable} />
             </div>
           </div>
         </SectionPageLayout.Content>

@@ -17,12 +17,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { Check, Copy, Loader2 } from 'lucide-react'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { BadgeCell } from '@/components/data-table'
 import { MaskedValueTrigger } from '@/components/masked-value-display'
-import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import {
   Popover,
@@ -36,11 +34,30 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { copyToClipboard } from '@/lib/copy-to-clipboard'
+import { cn } from '@/lib/utils'
 
 import type { ApiKey } from '../types'
 import { useApiKeys } from './api-keys-provider'
 
-export function ApiKeyCell({ apiKey }: { apiKey: ApiKey }) {
+/**
+ * Neutral chip, the console design's unit of "a value, not a status". Grayscale
+ * only (spec §6: chrome stays colorless), so it reads as data rather than as a
+ * semantic state.
+ */
+export function NeutralChip(props: { children: ReactNode; className?: string }) {
+  return (
+    <span
+      className={cn(
+        'bg-muted text-muted-foreground inline-flex max-w-40 items-center truncate rounded-md px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap',
+        props.className
+      )}
+    >
+      {props.children}
+    </span>
+  )
+}
+
+export function ApiKeyCell(props: { apiKey: ApiKey }) {
   const { t } = useTranslation()
   const {
     resolveRealKey,
@@ -51,28 +68,28 @@ export function ApiKeyCell({ apiKey }: { apiKey: ApiKey }) {
   } = useApiKeys()
   const [popoverOpen, setPopoverOpen] = useState(false)
 
-  const isLoading = !!loadingKeys[apiKey.id]
-  const resolvedFullKey = resolvedKeys[apiKey.id]
-  const isCopied = copiedKeyId === apiKey.id
-  const maskedKey = `sk-${apiKey.key}`
+  const isLoading = !!loadingKeys[props.apiKey.id]
+  const resolvedFullKey = resolvedKeys[props.apiKey.id]
+  const isCopied = copiedKeyId === props.apiKey.id
+  const maskedKey = `sk-${props.apiKey.key}`
 
   const handlePopoverOpen = useCallback(
     (open: boolean) => {
       setPopoverOpen(open)
       if (open && !resolvedFullKey) {
-        resolveRealKey(apiKey.id)
+        resolveRealKey(props.apiKey.id)
       }
     },
-    [resolvedFullKey, resolveRealKey, apiKey.id]
+    [resolvedFullKey, resolveRealKey, props.apiKey.id]
   )
 
   const handleCopy = useCallback(async () => {
-    const realKey = resolvedFullKey || (await resolveRealKey(apiKey.id))
+    const realKey = resolvedFullKey || (await resolveRealKey(props.apiKey.id))
     if (!realKey) return
 
     const ok = await copyToClipboard(realKey)
-    if (ok) markKeyCopied(apiKey.id)
-  }, [resolvedFullKey, resolveRealKey, apiKey.id, markKeyCopied])
+    if (ok) markKeyCopied(props.apiKey.id)
+  }, [resolvedFullKey, resolveRealKey, props.apiKey.id, markKeyCopied])
 
   let copyIcon = <Copy className='size-3.5' />
   let copyTooltip = t('Copy API key')
@@ -80,12 +97,12 @@ export function ApiKeyCell({ apiKey }: { apiKey: ApiKey }) {
     copyIcon = <Loader2 className='size-3.5 animate-spin' />
     copyTooltip = t('Loading...')
   } else if (isCopied) {
-    copyIcon = <Check className='size-3.5 text-green-600' />
+    copyIcon = <Check className='size-3.5 text-[var(--success-text)]' />
     copyTooltip = t('Copied!')
   }
 
   return (
-    <div className='flex max-w-full min-w-0 items-center'>
+    <div className='flex max-w-full min-w-0 items-center gap-1'>
       <Popover open={popoverOpen} onOpenChange={handlePopoverOpen}>
         <PopoverTrigger render={<MaskedValueTrigger />}>
           <span className='truncate'>{maskedKey}</span>
@@ -121,7 +138,7 @@ export function ApiKeyCell({ apiKey }: { apiKey: ApiKey }) {
             <Button
               variant='ghost'
               size='icon'
-              className='size-7 shrink-0'
+              className='text-muted-foreground hover:text-foreground size-6 shrink-0'
               onClick={handleCopy}
               disabled={isLoading}
             />
@@ -151,7 +168,7 @@ export function ModelLimitsCell(props: ApiKeyRestrictionProps) {
       items={models}
       label={t('{{count}} models', { count: models.length })}
       title={t('Models')}
-      emptyLabel={t('Unlimited')}
+      emptyLabel={t('All models')}
       detailsTrigger={props.detailsTrigger}
     />
   )
@@ -191,14 +208,7 @@ function ApiKeyRestrictionCell(props: {
         </span>
       )
     }
-    return (
-      <StatusBadge
-        label={props.emptyLabel}
-        variant='neutral'
-        copyable={false}
-        className='-ml-1.5'
-      />
-    )
+    return <NeutralChip>{props.emptyLabel}</NeutralChip>
   }
 
   const details = (
@@ -234,10 +244,20 @@ function ApiKeyRestrictionCell(props: {
     )
   }
 
+  const visible = props.items.slice(0, 2)
+  const overflow = props.items.length - visible.length
+
   return (
     <Tooltip>
-      <TooltipTrigger render={<BadgeCell />}>
-        <StatusBadge label={props.label} variant='neutral' copyable={false} />
+      <TooltipTrigger
+        render={
+          <span className='flex max-w-full min-w-0 flex-wrap items-center gap-1' />
+        }
+      >
+        {visible.map((item) => (
+          <NeutralChip key={item}>{item}</NeutralChip>
+        ))}
+        {overflow > 0 && <NeutralChip>{`+${overflow}`}</NeutralChip>}
       </TooltipTrigger>
       <TooltipContent side='top' className='max-w-xs'>
         {details}

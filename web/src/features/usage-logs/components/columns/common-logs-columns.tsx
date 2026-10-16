@@ -22,7 +22,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { GroupBadge } from '@/components/group-badge'
-import { StatusBadge, type StatusBadgeProps } from '@/components/status-badge'
+import { StatusBadge } from '@/components/status-badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   Popover,
@@ -66,7 +66,6 @@ import {
 import {
   isDisplayableLogType,
   isTimingLogType,
-  getLogTypeConfig,
   isPerCallBilling,
 } from '../../lib/utils'
 import type { LogOtherData } from '../../types'
@@ -75,6 +74,7 @@ import { LogCostDisplay } from '../log-cost-display'
 import { ModelBadge } from '../model-badge'
 import { TimingMetricsCell, StreamTpsCell } from '../timing-metrics-cell'
 import { useUsageLogsContext } from '../usage-logs-provider'
+import { UsageLogsStatusPill } from '../usage-logs-status-pill'
 
 interface DetailSegment {
   text: string
@@ -333,23 +333,15 @@ export function useCommonLogsColumns(
         accessorKey: 'created_at',
         header: t('Time'),
         cell: ({ row }) => {
-          const log = row.original
           const timestamp = row.getValue('created_at') as number
-          const config = getLogTypeConfig(log.type)
 
+          // The design's time cell is a bare mono timestamp; the log-type
+          // badge that used to sit underneath it moved into the dedicated
+          // status column, where the design puts it.
           return (
-            <div className='flex min-w-0 flex-col gap-0.5'>
-              <span className='truncate font-mono text-xs tabular-nums'>
-                {formatTimestampToDate(timestamp)}
-              </span>
-              <StatusBadge
-                label={t(config.label)}
-                variant={config.color as StatusBadgeProps['variant']}
-                size='sm'
-                copyable={false}
-                className='-ml-1.5 !text-xs [&_span]:!text-xs'
-              />
-            </div>
+            <span className='font-mono text-xs whitespace-nowrap tabular-nums'>
+              {formatTimestampToDate(timestamp)}
+            </span>
           )
         },
         filterFn: (row, _id, value) => {
@@ -358,7 +350,7 @@ export function useCommonLogsColumns(
           return value.includes(String(row.original.type))
         },
         enableHiding: false,
-        size: 180,
+        size: 152,
       },
     ]
 
@@ -367,6 +359,7 @@ export function useCommonLogsColumns(
         {
           id: 'channel',
           header: t('Channel'),
+          size: 88,
           accessorFn: (row) => row.channel,
           cell: function ChannelCell({ row }) {
             const {
@@ -404,7 +397,7 @@ export function useCommonLogsColumns(
                 <Tooltip>
                   <TooltipTrigger
                     render={
-                      <div className='flex max-w-[160px] flex-col gap-0.5' />
+                      <div className='flex max-w-[96px] flex-col gap-0.5' />
                     }
                   >
                     <div className='relative inline-flex w-fit items-center gap-1'>
@@ -527,6 +520,7 @@ export function useCommonLogsColumns(
         {
           id: 'user',
           header: t('User'),
+          size: 96,
           accessorFn: (row) => row.username,
           cell: function UserCell({ row }) {
             const {
@@ -569,7 +563,7 @@ export function useCommonLogsColumns(
                   <Tooltip>
                     <TooltipTrigger
                       render={
-                        <span className='text-muted-foreground max-w-[100px] truncate text-sm hover:underline' />
+                        <span className='text-muted-foreground max-w-[72px] truncate text-sm hover:underline' />
                       }
                     >
                       {sensitiveVisible ? log.username : '••••'}
@@ -604,7 +598,7 @@ export function useCommonLogsColumns(
         const groupRatio = getGroupRatio(other)
 
         return (
-          <div className='flex max-w-[200px] flex-col gap-0.5'>
+          <div className='flex max-w-[138px] flex-col gap-0.5'>
             <TooltipProvider delay={300}>
               <Tooltip>
                 <TooltipTrigger render={<div className='max-w-full' />}>
@@ -646,12 +640,13 @@ export function useCommonLogsColumns(
           </div>
         )
       },
-      size: 160,
+      size: 144,
     })
     columns.push(
       {
         accessorKey: 'model_name',
         header: t('Model'),
+        size: 140,
         cell: function ModelCell({ row }) {
           const log = row.original
           if (!isDisplayableLogType(log.type)) return null
@@ -673,6 +668,7 @@ export function useCommonLogsColumns(
       {
         accessorKey: 'is_stream',
         header: t('Stream'),
+        size: 68,
         cell: ({ row }) => {
           const log = row.original
           if (!isTimingLogType(log.type)) return null
@@ -698,7 +694,10 @@ export function useCommonLogsColumns(
       },
       {
         accessorKey: 'prompt_tokens',
-        header: t('Tokens', { context: 'usage' }),
+        header: t('Input tokens'),
+        // Split out of the old combined "Tokens" cell so the design's two
+        // columns (and the per-column page total) exist. The cache breakdown
+        // stays attached to the input side, where the tokens belong.
         cell: ({ row }) => {
           const log = row.original
           if (!isDisplayableLogType(log.type)) return null
@@ -722,8 +721,7 @@ export function useCommonLogsColumns(
           return (
             <div className='flex flex-col gap-0.5'>
               <span className='font-mono text-xs font-medium tabular-nums'>
-                {promptTokens.toLocaleString()} /{' '}
-                {completionTokens.toLocaleString()}
+                {promptTokens.toLocaleString()}
               </span>
               {(cacheReadTokens > 0 || cacheWriteTokens > 0) && (
                 <div className='flex items-center gap-1 text-[11px]'>
@@ -742,10 +740,35 @@ export function useCommonLogsColumns(
             </div>
           )
         },
+        meta: { label: t('Input tokens') },
+        size: 80,
+      },
+      {
+        accessorKey: 'completion_tokens',
+        header: t('Output tokens'),
+        cell: ({ row }) => {
+          const log = row.original
+          if (!isDisplayableLogType(log.type)) return null
+
+          const promptTokens = log.prompt_tokens || 0
+          const completionTokens = log.completion_tokens || 0
+          if (promptTokens === 0 && completionTokens === 0) {
+            return <span className='text-muted-foreground text-xs'>-</span>
+          }
+
+          return (
+            <span className='font-mono text-xs font-medium tabular-nums'>
+              {completionTokens.toLocaleString()}
+            </span>
+          )
+        },
+        meta: { label: t('Output tokens') },
+        size: 80,
       },
       {
         accessorKey: 'quota',
         header: t('Cost'),
+        size: 84,
         cell: ({ row }) => {
           const log = row.original
           if (!isDisplayableLogType(log.type)) return null
@@ -765,6 +788,7 @@ export function useCommonLogsColumns(
       {
         accessorKey: 'use_time',
         header: t('Timing'),
+        size: 104,
         cell: ({ row }) => {
           const log = row.original
           if (!isTimingLogType(log.type)) return null
@@ -781,6 +805,15 @@ export function useCommonLogsColumns(
             />
           )
         },
+      },
+
+      {
+        accessorKey: 'type',
+        header: t('Status'),
+        // The design's 状态 column: soft outcome pill (+ failure reason).
+        cell: ({ row }) => <UsageLogsStatusPill log={row.original} />,
+        meta: { label: t('Status') },
+        size: 136,
       },
 
       {
@@ -847,7 +880,7 @@ export function useCommonLogsColumns(
             <>
               <button
                 type='button'
-                className='group flex max-w-[200px] items-center gap-1 text-left text-xs'
+                className='group flex min-w-0 max-w-[92px] items-center gap-1 text-left text-xs'
                 onClick={() => setDialogOpen(true)}
                 title={t('Click to view full details')}
               >
@@ -863,10 +896,37 @@ export function useCommonLogsColumns(
             </>
           )
         },
-        size: 180,
-        maxSize: 200,
+        size: 92,
       }
     )
+
+    // The console design's column order — time · model · token · input ·
+    // output · cost · latency · status. Everything the design does not show
+    // (admin-only channel/user, stream, details) keeps its data and follows
+    // on; the table container scrolls sideways for it, which is where the
+    // spec (§10) puts horizontal overflow. Nothing is dropped, only reordered.
+    const designOrder = [
+      'created_at',
+      'model_name',
+      'token_name',
+      'prompt_tokens',
+      'completion_tokens',
+      'quota',
+      'use_time',
+      'type',
+      'channel',
+      'user',
+      'is_stream',
+      'content',
+    ]
+    const orderOf = (column: ColumnDef<UsageLog>) => {
+      const id =
+        column.id ??
+        ('accessorKey' in column ? String(column.accessorKey) : '')
+      const index = designOrder.indexOf(id)
+      return index === -1 ? designOrder.length : index
+    }
+    columns.sort((a, b) => orderOf(a) - orderOf(b))
 
     return columns
     // Log formatters read currency settings from the store.

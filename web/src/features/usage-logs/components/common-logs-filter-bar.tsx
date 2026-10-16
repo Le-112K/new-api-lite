@@ -319,7 +319,7 @@ export function CommonLogsFilterBar<TData>(
   )
 
   const dateRangeFilter = (
-    <LogsFilterField wide>
+    <LogsFilterField wide label={t('Time range')}>
       <CompactDateTimeRangePicker
         start={filters.startTime}
         end={filters.endTime}
@@ -334,7 +334,7 @@ export function CommonLogsFilterBar<TData>(
     </LogsFilterField>
   )
   const modelFilter = (
-    <LogsFilterField>
+    <LogsFilterField label={t('Model')}>
       <LogsFilterInput
         placeholder={t('Model Name')}
         value={filters.model || ''}
@@ -344,7 +344,7 @@ export function CommonLogsFilterBar<TData>(
     </LogsFilterField>
   )
   const groupFilter = (
-    <LogsFilterField className={sensitiveInputClass}>
+    <LogsFilterField label={t('Group')} className={sensitiveInputClass}>
       <Combobox
         options={groupOptions}
         allowCustomValue
@@ -360,7 +360,7 @@ export function CommonLogsFilterBar<TData>(
     </LogsFilterField>
   )
   const typeFilter = (
-    <LogsFilterField>
+    <LogsFilterField label={t('Type')}>
       <Select
         items={logTypeItems}
         value={logType}
@@ -434,7 +434,7 @@ export function CommonLogsFilterBar<TData>(
   )
   const advancedFilters = (
     <>
-      <LogsFilterField>
+      <LogsFilterField label={t('Token Name')}>
         <LogsFilterInput
           placeholder={t('Token Name')}
           className={sensitiveInputClass}
@@ -444,7 +444,7 @@ export function CommonLogsFilterBar<TData>(
         />
       </LogsFilterField>
       {isAdmin && (
-        <LogsFilterField>
+        <LogsFilterField label={t('Username')}>
           <LogsFilterInput
             placeholder={t('Username')}
             className={sensitiveInputClass}
@@ -455,7 +455,7 @@ export function CommonLogsFilterBar<TData>(
         </LogsFilterField>
       )}
       {isAdmin && (
-        <LogsFilterField>
+        <LogsFilterField label={t('Channel ID')}>
           <LogsFilterInput
             placeholder={t('Channel ID')}
             value={filters.channel || ''}
@@ -464,7 +464,7 @@ export function CommonLogsFilterBar<TData>(
           />
         </LogsFilterField>
       )}
-      <LogsFilterField>
+      <LogsFilterField label={t('Request ID')}>
         <LogsFilterInput
           placeholder={t('Request ID')}
           value={filters.requestId || ''}
@@ -472,7 +472,7 @@ export function CommonLogsFilterBar<TData>(
           onKeyDown={handleKeyDown}
         />
       </LogsFilterField>
-      <LogsFilterField>
+      <LogsFilterField label={t('Upstream Request ID')}>
         <LogsFilterInput
           placeholder={t('Upstream Request ID')}
           value={filters.upstreamRequestId || ''}

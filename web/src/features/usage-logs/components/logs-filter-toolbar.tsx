@@ -61,6 +61,8 @@ interface LogsFilterToolbarProps<TData> {
 
 interface LogsFilterFieldProps {
   children: ReactNode
+  /** Console field label, rendered above the control (design's filter bar). */
+  label?: string
   wide?: boolean
   className?: string
 }
@@ -69,11 +71,16 @@ export function LogsFilterField(props: LogsFilterFieldProps) {
   return (
     <div
       className={cn(
-        'min-w-0 [&_[data-slot=select-trigger]]:w-full [&_[data-slot=select-trigger]]:text-sm [&_[data-slot=select-value]]:leading-5',
+        'flex min-w-0 flex-col gap-1 [&_[data-slot=select-trigger]]:w-full [&_[data-slot=select-trigger]]:text-sm [&_[data-slot=select-value]]:leading-5',
         props.wide && 'sm:col-span-2',
         props.className
       )}
     >
+      {props.label != null && (
+        <span className='text-muted-foreground text-[11px] leading-none font-medium'>
+          {props.label}
+        </span>
+      )}
       {props.children}
     </div>
   )
@@ -243,7 +250,10 @@ export function LogsFilterToolbar<TData>(props: LogsFilterToolbarProps<TData>) {
   return (
     <div
       className={cn(
-        'bg-card/50 rounded-lg border p-2.5 sm:p-3',
+        // The filter bar is the console panel's top strip (design: always
+        // visible page chrome, separated from the table by a hairline); the
+        // panel frame itself is owned by the page.
+        'shrink-0 border-b px-3 py-2.5 sm:px-4 sm:py-3',
         props.className
       )}
     >

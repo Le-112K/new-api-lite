@@ -20,12 +20,10 @@ import type { Row } from '@tanstack/react-table'
 import {
   Trash2,
   Edit,
-  Power,
-  PowerOff,
+  Loader2,
   ArrowRightLeft,
   Copy,
   Link,
-  Loader2,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -38,11 +36,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
 } from '@/components/ui/dropdown-menu'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 import { encodeChannelConnectionInfo } from '@/lib/channel-connection-info'
 import { copyToClipboard } from '@/lib/copy-to-clipboard'
 import { handleServerError } from '@/lib/handle-server-error'
@@ -69,11 +62,17 @@ type DataTableRowActionsProps<TData> = {
   row: Row<TData>
 }
 
-export function DataTableRowActions<TData>({
-  row,
-}: DataTableRowActionsProps<TData>) {
+/**
+ * Row actions, laid out the way the console design reads them: the two
+ * reversible/primary verbs (enable-disable, revoke) sit in the open, and the
+ * long tail (edit, copy, connection string, CC Switch) folds into a menu so the
+ * row stays quiet. Nothing the previous page offered was dropped — the menu is
+ * the same set of operations it had, plus the toggle and revoke that used to be
+ * icon buttons.
+ */
+export function DataTableRowActions<TData>(props: DataTableRowActionsProps<TData>) {
   const { t } = useTranslation()
-  const apiKey = apiKeySchema.parse(row.original)
+  const apiKey = apiKeySchema.parse(props.row.original)
   const {
     setOpen,
     setCurrentRow,
@@ -88,10 +87,7 @@ export function DataTableRowActions<TData>({
 
   const toggleLabel = isEnabled ? t('Disable') : t('Enable')
 
-  const handleToggleStatus = async (
-    event?: React.MouseEvent<HTMLButtonElement>
-  ) => {
-    event?.stopPropagation()
+  const handleToggleStatus = async () => {
     const newStatus = isEnabled
       ? API_KEY_STATUS.DISABLED
       : API_KEY_STATUS.ENABLED
@@ -115,61 +111,53 @@ export function DataTableRowActions<TData>({
     }
   }
 
-  let statusIcon = <Power className='size-4' />
-  if (isTogglingStatus) {
-    statusIcon = <Loader2 className='size-4 animate-spin' />
-  } else if (isEnabled) {
-    statusIcon = <PowerOff className='size-4' />
-  }
-
   return (
-    <div className='-ml-1.5 flex items-center gap-1'>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              variant='ghost'
-              size='icon-sm'
-              onClick={handleToggleStatus}
-              disabled={isTogglingStatus}
-              aria-label={toggleLabel}
-              className={
-                isEnabled
-                  ? 'text-destructive hover:text-destructive'
-                  : 'text-emerald-600 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400'
-              }
-            />
-          }
-        >
-          {statusIcon}
-        </TooltipTrigger>
-        <TooltipContent>{toggleLabel}</TooltipContent>
-      </Tooltip>
+    <div className='flex items-center justify-end gap-1'>
+      <Button
+        variant='ghost'
+        size='sm'
+        onClick={handleToggleStatus}
+        disabled={isTogglingStatus}
+        className='text-muted-foreground hover:text-foreground h-7 px-2 text-xs font-medium'
+      >
+        {isTogglingStatus && <Loader2 className='size-3.5 animate-spin' />}
+        {toggleLabel}
+      </Button>
 
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              variant='ghost'
-              size='icon-sm'
-              onClick={() => {
-                setCurrentRow(apiKey)
-                setOpen('update')
-              }}
-              aria-label={t('Edit')}
-            />
-          }
-        >
-          <Edit />
-        </TooltipTrigger>
-        <TooltipContent>{t('Edit')}</TooltipContent>
-      </Tooltip>
+      <Button
+        variant='destructive'
+        size='sm'
+        onClick={() => {
+          setCurrentRow(apiKey)
+          setOpen('delete')
+        }}
+        /* Revoking is irreversible, so the spec (§5.1) wants the controlled
+           red as a SOLID fill — the theme's own `--destructive` is grayscaled by
+           the apple-bw skin, which is why the `-strong` console token is used
+           here. The verb stays explicit and the click opens the confirm dialog
+           (rules R-D1/R-D2). */
+        className='h-7 bg-[var(--destructive-strong)] px-2 text-xs font-medium text-[var(--destructive-on-strong)] hover:bg-[var(--destructive-strong)]/90 dark:bg-[var(--destructive-strong)] dark:text-[var(--destructive-on-strong)] dark:hover:bg-[var(--destructive-strong)]/90'
+      >
+        {t('Revoke key')}
+      </Button>
 
       <DataTableRowActionMenu
         ariaLabel={t('Open menu')}
         contentClassName='w-[200px]'
         modal={false}
       >
+        <DropdownMenuItem
+          onClick={() => {
+            setCurrentRow(apiKey)
+            setOpen('update')
+          }}
+        >
+          {t('Edit')}
+          <DropdownMenuShortcut>
+            <Edit size={16} />
+          </DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           disabled={isRealKeyLoading}
           onClick={async () => {
@@ -202,7 +190,6 @@ export function DataTableRowActions<TData>({
             <Link size={16} />
           </DropdownMenuShortcut>
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={async () => {
             const realKey = await resolveRealKey(apiKey.id)

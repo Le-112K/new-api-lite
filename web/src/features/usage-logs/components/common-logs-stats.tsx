@@ -88,20 +88,23 @@ export function CommonLogsStats() {
 
   return (
     <div className='flex flex-wrap items-center gap-2'>
+      {/* Accent bars come from the console categorical palette (taken in
+          order) rather than raw Tailwind hues, so the chips stay inside the
+          token layer — badges are CONTENT, so colour is allowed (spec §6). */}
       <StatBadge
         label={t('Usage')}
         value={sensitiveVisible ? formatLogQuota(stats?.quota || 0) : '••••'}
-        accent='bg-sky-500/70'
+        accent='bg-[var(--cat-1)]'
       />
       <StatBadge
         label={t('RPM')}
         value={stats?.rpm || 0}
-        accent='bg-rose-500/65'
+        accent='bg-[var(--cat-2)]'
       />
       <StatBadge
         label={t('TPM')}
         value={stats?.tpm || 0}
-        accent='bg-slate-400/70'
+        accent='bg-[var(--cat-3)]'
       />
     </div>
   )

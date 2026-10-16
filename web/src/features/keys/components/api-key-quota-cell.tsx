@@ -25,7 +25,6 @@ import { formatQuotaWithCurrency, getCurrencyDisplay } from '@/lib/currency'
 import { cn } from '@/lib/utils'
 import { useSystemConfigStore } from '@/stores/system-config-store'
 
-import { API_KEY_STATUS } from '../constants'
 import type { ApiKey } from '../types'
 
 type ApiKeyQuotaCellProps = {
@@ -34,16 +33,29 @@ type ApiKeyQuotaCellProps = {
   variant?: 'table' | 'card'
 }
 
+/**
+ * Quota cell.
+ *
+ * The table variant matches the console design: a burn meter plus
+ * `used / total · share%`, where the meter and the share both describe the
+ * USED share of the quota (spec §9.5 — normal fill, `-warn` from 80%,
+ * `-over` at 100%). The mobile card variant keeps its labelled key/value
+ * layout. All figures stay exact; only the presentation differs.
+ */
 export function ApiKeyQuotaCell(props: ApiKeyQuotaCellProps) {
   const { t, i18n } = useTranslation()
   useSystemConfigStore((state) => state.config.currency)
-  const { meta: currency } = getCurrencyDisplay()
+  const { config, meta: currency } = getCurrencyDisplay()
   const quotaUnit = currency.kind === 'tokens' ? t('Tokens') : currency.symbol
   const used = props.apiKey.used_quota
   const remaining = props.apiKey.remain_quota
+  const unlimited = props.apiKey.unlimited_quota
   const total = used + remaining
-  const hasProgress = !props.apiKey.unlimited_quota && total > 0
-  const percentage = hasProgress
+  const hasProgress = !unlimited && total > 0
+  const usedPercentage = hasProgress
+    ? Math.min(100, Math.max(0, (used / total) * 100))
+    : 0
+  const remainingPercentage = hasProgress
     ? Math.min(100, Math.max(0, (remaining / total) * 100))
     : 0
   const formattedUsed = formatQuotaWithCurrency(used, { showSymbol: false })
@@ -51,53 +63,124 @@ export function ApiKeyQuotaCell(props: ApiKeyQuotaCellProps) {
     showSymbol: false,
   })
   const formattedTotal = formatQuotaWithCurrency(total, { showSymbol: false })
-  const formattedPercentage = new Intl.NumberFormat(
-    toIntlLocale(i18n.resolvedLanguage || i18n.language),
-    { maximumFractionDigits: 1 }
-  ).format(percentage)
-  const isInactive =
-    props.apiKey.status !== API_KEY_STATUS.ENABLED ||
-    remaining <= 0 ||
-    (props.apiKey.expired_time !== -1 &&
-      props.apiKey.expired_time * 1000 <= props.now)
-  let progressColor = 'text-emerald-500'
-  if (isInactive) progressColor = 'text-muted-foreground/60'
-  else if (percentage <= 10) progressColor = 'text-rose-500'
-  else if (percentage <= 30) progressColor = 'text-amber-500'
+  /* The desktop cell is the design's `$6.12 / $20.00 · 31%`: the currency rides
+     in the cell (so the column header stays a bare「额度」) and money keeps its
+     trailing zeros so the column lines up. `keepTrailingZeros` alone would print
+     $0.4000 for a sub-dollar amount (its small-value branch keeps four decimals),
+     so two decimals are requested whenever they survive rounding and the
+     currency module's precise default is left alone below that. */
+  const moneyCell = (quota: number) =>
+    formatQuotaWithCurrency(
+      quota,
+      Math.abs(quota) / config.quotaPerUnit >= 0.01
+        ? { keepTrailingZeros: true, digitsSmall: 2 }
+        : { keepTrailingZeros: true }
+    )
+  const formattedUsedCell = moneyCell(used)
+  const formattedTotalCell = moneyCell(total)
+  const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
+  const formatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 })
+  const formattedUsedPercentage = formatter.format(usedPercentage)
+  const formattedRemainingPercentage = formatter.format(remainingPercentage)
+
   const usageDescription = `${t('Used amount')} ${formattedUsed}`
   const remainingDescription = hasProgress
-    ? `${t('Remaining')} ${formattedRemaining}; ${t('Remaining percentage')} ${formattedPercentage}%`
+    ? `${t('Remaining')} ${formattedRemaining}; ${t('Remaining percentage')} ${formattedRemainingPercentage}%`
     : `${t('Remaining')} ${formattedRemaining}`
-  const triggerLabel = props.apiKey.unlimited_quota
-    ? `${t('Unlimited')}; ${usageDescription}`
-    : `${remainingDescription}; ${usageDescription}`
+
+  /* Burn tone per spec §9.5: grayscale until 80%, warning from 80%, the
+     controlled red only at (or past) the limit. */
+  let meterTone = 'text-[var(--cx-progress-fill)]'
+  if (usedPercentage >= 100) meterTone = 'text-[var(--cx-progress-fill-over)]'
+  else if (usedPercentage >= 80) meterTone = 'text-[var(--cx-progress-fill-warn)]'
 
   const details = []
-  if (!props.apiKey.unlimited_quota) {
+  if (!unlimited) {
     details.push({ label: t('Remaining'), value: formattedRemaining })
   }
   details.push({ label: t('Used amount'), value: formattedUsed })
-  if (!props.apiKey.unlimited_quota) {
+  if (!unlimited) {
     details.push({ label: t('Current total quota'), value: formattedTotal })
   }
   if (hasProgress) {
     details.push({
       label: t('Remaining percentage'),
-      value: `${formattedPercentage}%`,
+      value: `${formattedRemainingPercentage}%`,
     })
   }
+
+  if (props.variant === 'card') {
+    const triggerLabel = unlimited
+      ? `${t('Unlimited')}; ${usageDescription}`
+      : `${remainingDescription}; ${usageDescription}`
+
+    return (
+      <QuotaDetailsPopover
+        title={`${t('Quota')} (${quotaUnit})`}
+        triggerLabel={`${t('Quota')} (${quotaUnit}); ${triggerLabel}`}
+        details={details}
+        description={
+          unlimited
+            ? t(
+                'This API key has no quota limit. Requests still require available wallet or subscription quota.'
+              )
+            : t(
+                'Total = used + remaining. It is not an initial allocation or a periodic budget; changing the remaining quota changes the total and percentage.'
+              )
+        }
+        className='space-y-2.5'
+        triggerClassName='py-0'
+        afterTrigger={
+          !unlimited && (
+            <Progress
+              value={usedPercentage}
+              aria-label={t('Used amount')}
+              className={cn(
+                'w-full [&_[data-slot=progress-indicator]]:bg-current',
+                meterTone
+              )}
+            />
+          )
+        }
+      >
+        <span
+          data-slot='api-key-quota-values'
+          className='grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-2 gap-y-1 text-sm'
+        >
+          <span className='text-muted-foreground'>
+            {t('Remaining')}
+            <span className='ml-1'>({quotaUnit})</span>
+          </span>
+          <span
+            className={cn(
+              'min-w-0 truncate text-right text-sm leading-5 font-normal',
+              !unlimited && 'tabular-nums',
+              !unlimited && remaining < 0 && 'text-destructive',
+              remaining === 0 && !unlimited && 'text-muted-foreground'
+            )}
+          >
+            {unlimited ? t('Unlimited') : formattedRemaining}
+          </span>
+          <span className='text-muted-foreground'>{t('Used amount')}</span>
+          <span className='text-muted-foreground min-w-0 truncate text-right text-sm leading-5 font-normal tabular-nums'>
+            {formattedUsed}
+          </span>
+        </span>
+      </QuotaDetailsPopover>
+    )
+  }
+
+  const triggerLabel = unlimited
+    ? t('Unlimited')
+    : `${formattedUsedCell} / ${formattedTotalCell} · ${formattedUsedPercentage}%`
 
   return (
     <QuotaDetailsPopover
       title={`${t('Quota')} (${quotaUnit})`}
-      triggerLabel={
-        props.variant === 'card'
-          ? `${t('Quota')} (${quotaUnit}); ${triggerLabel}`
-          : triggerLabel
-      }
+      triggerLabel={triggerLabel}
       details={details}
       description={
-        props.apiKey.unlimited_quota
+        unlimited
           ? t(
               'This API key has no quota limit. Requests still require available wallet or subscription quota.'
             )
@@ -105,66 +188,36 @@ export function ApiKeyQuotaCell(props: ApiKeyQuotaCellProps) {
               'Total = used + remaining. It is not an initial allocation or a periodic budget; changing the remaining quota changes the total and percentage.'
             )
       }
-      className={
-        props.variant === 'card' ? 'space-y-2.5' : 'max-w-45 space-y-1.5'
-      }
-      triggerClassName={props.variant === 'card' ? 'py-0' : undefined}
+      className='max-w-45 flex w-full flex-col-reverse gap-1.5'
+      triggerClassName='py-0.5'
       afterTrigger={
-        !props.apiKey.unlimited_quota && (
-          <Progress
-            value={percentage}
-            aria-label={t('Remaining percentage')}
-            className={cn(
-              'w-full [&_[data-slot=progress-indicator]]:bg-current',
-              progressColor
-            )}
-          />
-        )
+        <Progress
+          value={usedPercentage}
+          aria-label={t('Used amount')}
+          className={cn(
+            'w-full [&_[data-slot=progress-indicator]]:bg-current',
+            meterTone
+          )}
+        />
       }
     >
       <span
         data-slot='api-key-quota-values'
-        className={cn(
-          'grid w-full min-w-0 items-baseline gap-x-2 gap-y-1 text-sm',
-          props.variant === 'card'
-            ? 'grid-cols-[auto_minmax(0,1fr)]'
-            : 'grid-cols-2'
-        )}
+        className='min-w-0 truncate text-xs leading-none font-medium tabular-nums'
       >
-        {props.variant === 'card' && (
-          <span className='text-muted-foreground'>
-            {t('Remaining')}
-            <span className='ml-1'>({quotaUnit})</span>
-          </span>
+        {unlimited ? (
+          t('Unlimited')
+        ) : (
+          <>
+            <span className='text-foreground'>{formattedUsedCell}</span>
+            <span className='text-muted-foreground/60 mx-1'>/</span>
+            <span className='text-muted-foreground'>{formattedTotalCell}</span>
+            <span className='text-muted-foreground/60 mx-1'>·</span>
+            <span className='text-muted-foreground'>
+              {formattedUsedPercentage}%
+            </span>
+          </>
         )}
-        <span
-          className={cn(
-            'min-w-0 truncate',
-            props.variant === 'card'
-              ? 'text-right text-sm leading-5 font-normal'
-              : 'text-left font-medium',
-            !props.apiKey.unlimited_quota && 'tabular-nums',
-            !props.apiKey.unlimited_quota &&
-              remaining < 0 &&
-              'text-destructive',
-            remaining === 0 &&
-              !props.apiKey.unlimited_quota &&
-              'text-muted-foreground'
-          )}
-        >
-          {props.apiKey.unlimited_quota ? t('Unlimited') : formattedRemaining}
-        </span>
-        {props.variant === 'card' && (
-          <span className='text-muted-foreground'>{t('Used amount')}</span>
-        )}
-        <span
-          className={cn(
-            'text-muted-foreground min-w-0 truncate text-right tabular-nums',
-            props.variant === 'card' && 'text-sm leading-5 font-normal'
-          )}
-        >
-          {formattedUsed}
-        </span>
       </span>
     </QuotaDetailsPopover>
   )

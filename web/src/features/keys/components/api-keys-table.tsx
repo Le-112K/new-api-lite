@@ -18,19 +18,22 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useQuery } from '@tanstack/react-query'
 import { getRouteApi } from '@tanstack/react-router'
-import { flexRender, type Table as TanstackTable } from '@tanstack/react-table'
-import { Database } from 'lucide-react'
+import {
+  flexRender,
+  type Table as TanstackTable,
+} from '@tanstack/react-table'
+import { Plus, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import {
-  DISABLED_ROW_DESKTOP,
   DISABLED_ROW_MOBILE,
-  DataTablePage,
+  DataTableViewOptions,
   useDebouncedColumnFilter,
   useDataTable,
 } from '@/components/data-table'
 import { StatusBadge } from '@/components/status-badge'
+import { Button } from '@/components/ui/button'
 import {
   Empty,
   EmptyDescription,
@@ -39,7 +42,16 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useMediaQuery } from '@/hooks'
 import { useTableUrlState } from '@/hooks/use-table-url-state'
 import { createServerError } from '@/lib/server-error-message'
 import { cn } from '@/lib/utils'
@@ -52,14 +64,16 @@ import {
   ERROR_MESSAGES,
 } from '../constants'
 import type { ApiKey } from '../types'
+import { ApiKeysConsole } from './api-keys-console'
+import { ApiKeyGroupCell } from './api-key-group-cell'
 import { ApiKeyQuotaCell } from './api-key-quota-cell'
 import { ApiKeyActivityCell } from './api-key-timestamp-cell'
 import {
   ApiKeyCell,
-  ModelLimitsCell,
   IpRestrictionsCell,
+  ModelLimitsCell,
 } from './api-keys-cells'
-import { useApiKeysColumns } from './api-keys-columns'
+import { useApiKeysColumns, useGroupRatios } from './api-keys-columns'
 import { useApiKeys } from './api-keys-provider'
 import { DataTableBulkActions } from './data-table-bulk-actions'
 import { DataTableRowActions } from './data-table-row-actions'
@@ -71,8 +85,31 @@ const API_KEYS_MOBILE_SKELETON_IDS = Array.from(
   (_, index) => `api-key-mobile-skeleton-${index + 1}`
 )
 
+/**
+ * Columns that existed before the console redraw but that the approved design's
+ * seven-column card has no room for. They are hidden, not removed: the toolbar's
+ * column chooser (`DataTableViewOptions`) turns them back on per user, and the
+ * choice persists in localStorage like every other table on the site.
+ */
+const DEFAULT_HIDDEN_COLUMNS = {
+  group: false,
+  allow_ips: false,
+  activity_time: false,
+}
+
 function isDisabledApiKeyRow(apiKey: ApiKey) {
   return apiKey.status !== API_KEY_STATUS.ENABLED
+}
+
+function CreateKeyButton() {
+  const { t } = useTranslation()
+  const { setOpen } = useApiKeys()
+  return (
+    <Button size='sm' onClick={() => setOpen('create')}>
+      <Plus className='size-4' />
+      {t('Create API Key')}
+    </Button>
+  )
 }
 
 function ApiKeysMobileSkeleton() {
@@ -98,6 +135,12 @@ function ApiKeysMobileSkeleton() {
   )
 }
 
+/**
+ * Mobile cards keep the full information set the previous page showed — group,
+ * models, IP restrictions, created/last-used and expiry — even though the
+ * desktop card hides the first four behind the column chooser. On a phone there
+ * is no column chooser to reach for, so nothing is withheld here.
+ */
 function ApiKeysMobileList({
   table,
   isLoading,
@@ -108,17 +151,19 @@ function ApiKeysMobileList({
   now: number
 }) {
   const { t } = useTranslation()
+  const groupRatios = useGroupRatios()
+  const shouldReduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
   const rows = table.getRowModel().rows
 
   if (isLoading) return <ApiKeysMobileSkeleton />
 
   if (!rows.length) {
     return (
-      <div className='rounded-lg border p-8'>
+      <div className='bg-card rounded-2xl border p-8'>
         <Empty className='border-none p-0'>
           <EmptyHeader>
             <EmptyMedia variant='icon'>
-              <Database className='size-6' />
+              <Search className='size-6' />
             </EmptyMedia>
             <EmptyTitle>{t('No API Keys Found')}</EmptyTitle>
             <EmptyDescription>
@@ -137,9 +182,6 @@ function ApiKeysMobileList({
       {rows.map((row) => {
         const apiKey = row.original
         const statusConfig = API_KEY_STATUSES[apiKey.status]
-        const groupCell = row
-          .getAllCells()
-          .find((cell) => cell.column.id === 'group')
         const expiryCell = row
           .getAllCells()
           .find((cell) => cell.column.id === 'expired_time')
@@ -177,11 +219,12 @@ function ApiKeysMobileList({
 
             <div className='min-w-0 space-y-3 py-1'>
               <div className='min-w-0'>
-                {groupCell &&
-                  flexRender(
-                    groupCell.column.columnDef.cell,
-                    groupCell.getContext()
-                  )}
+                <ApiKeyGroupCell
+                  group={apiKey.group ?? ''}
+                  ratio={groupRatios[apiKey.group ?? '']}
+                  crossGroupRetry={apiKey.cross_group_retry}
+                  shouldReduceMotion={shouldReduceMotion}
+                />
               </div>
               <ApiKeyQuotaCell apiKey={apiKey} now={now} variant='card' />
             </div>
@@ -215,9 +258,96 @@ function ApiKeysMobileList({
   )
 }
 
+function ApiKeysToolbar({
+  table,
+  globalFilter,
+  onGlobalFilterChange,
+  tokenFilterInput,
+  onTokenFilterInputChange,
+  total,
+}: {
+  table: TanstackTable<ApiKey>
+  globalFilter: string
+  onGlobalFilterChange: (value: string) => void
+  tokenFilterInput: string
+  onTokenFilterInputChange: (value: string) => void
+  total: number
+}) {
+  const { t } = useTranslation()
+  const statusColumn = table.getColumn('status')
+  const statusFilter = (
+    statusColumn?.getFilterValue() as string[] | undefined
+  )?.[0]
+  const statusItems = [
+    { value: 'all', label: t('All') },
+    ...API_KEY_STATUS_OPTIONS.map((option) => ({
+      value: option.value,
+      label: t(option.label),
+    })),
+  ]
+
+  return (
+    <div className='flex flex-wrap items-center gap-2.5 px-4 pt-4 pb-4 sm:px-5'>
+      <div className='relative w-full sm:w-[230px]'>
+        <Search
+          className='text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2'
+          aria-hidden='true'
+        />
+        <Input
+          value={globalFilter}
+          onChange={(event) => onGlobalFilterChange(event.target.value)}
+          placeholder={t('Filter by name...')}
+          aria-label={t('Filter by name...')}
+          className='h-9 pl-8'
+        />
+      </div>
+
+      <Input
+        value={tokenFilterInput}
+        onChange={(event) => onTokenFilterInputChange(event.target.value)}
+        placeholder={t('Filter by API key...')}
+        aria-label={t('Filter by API key...')}
+        className='h-9 w-full sm:w-[190px]'
+      />
+
+      <Select
+        items={statusItems}
+        value={statusFilter ?? 'all'}
+        onValueChange={(value) =>
+          statusColumn?.setFilterValue(value === 'all' ? undefined : [value])
+        }
+      >
+        <SelectTrigger
+          className='text-foreground h-9 w-[128px]'
+          aria-label={t('Status')}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {statusItems.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+
+      <span className='flex-1' />
+
+      <span className='text-muted-foreground text-xs tabular-nums'>
+        {t('{{count}} keys', { count: total })}
+      </span>
+      <DataTableViewOptions table={table} />
+    </div>
+  )
+}
+
 export function ApiKeysTable() {
   const { t } = useTranslation()
   const { refreshTrigger } = useApiKeys()
+  const isMobile = useMediaQuery('(max-width: 640px)')
   const [now, setNow] = useState(() => Date.now())
   const columns = useApiKeysColumns(now)
 
@@ -259,7 +389,6 @@ export function ApiKeysTable() {
   })
   const shouldSearch = Boolean(globalFilter?.trim() || tokenFilter.trim())
 
-  // Fetch data with React Query
   // eslint-disable-next-line @tanstack/query/exhaustive-deps
   const { data, isLoading, isFetching } = useQuery({
     queryKey: [
@@ -303,11 +432,13 @@ export function ApiKeysTable() {
   })
 
   const apiKeys = data?.items || []
+  const total = data?.total || 0
 
   const { table } = useDataTable({
     data: apiKeys,
     columns,
     enableRowSelection: true,
+    initialColumnVisibility: DEFAULT_HIDDEN_COLUMNS,
     columnFilters,
     columnVisibilityStorageKey: API_KEYS_COLUMN_VISIBILITY_STORAGE_KEY,
     globalFilter,
@@ -317,65 +448,30 @@ export function ApiKeysTable() {
     onGlobalFilterChange,
     onColumnFiltersChange,
     manualPagination: true,
-    totalCount: data?.total || 0,
+    totalCount: total,
     ensurePageInRange,
   })
 
-  const columnVisibility = table.getState().columnVisibility
-  useEffect(() => {
-    // Restore the dates hidden by the previous default when adopting the combined time column.
-    if (
-      columnVisibility.activity_time === undefined &&
-      columnVisibility.created_time === false &&
-      columnVisibility.accessed_time === false &&
-      columnVisibility.expired_time === false
-    ) {
-      table.setColumnVisibility((previous) => ({
-        ...previous,
-        activity_time: true,
-        expired_time: true,
-      }))
-    }
-  }, [columnVisibility, table])
+  if (isMobile) {
+    return <ApiKeysMobileList table={table} isLoading={isLoading} now={now} />
+  }
 
   return (
-    <DataTablePage
+    <ApiKeysConsole
       table={table}
-      columns={columns}
+      total={total}
       isLoading={isLoading}
       isFetching={isFetching}
-      emptyTitle={t('No API Keys Found')}
-      emptyDescription={t(
-        'No API keys available. Create your first API key to get started.'
-      )}
-      skeletonKeyPrefix='api-keys-skeleton'
-      applyHeaderSize
-      toolbarProps={{
-        searchPlaceholder: t('Filter by name...'),
-        searchDebounceMs: 500,
-        additionalSearch: (
-          <Input
-            placeholder={t('Filter by API key...')}
-            aria-label={t('Filter by API key...')}
-            value={tokenFilterInput}
-            onChange={(e) => setTokenFilterInput(e.target.value)}
-            className='w-full sm:w-50 lg:w-60'
-          />
-        ),
-        filters: [
-          {
-            columnId: 'status',
-            title: t('Status'),
-            options: API_KEY_STATUS_OPTIONS,
-            singleSelect: true,
-          },
-        ],
-      }}
-      mobile={
-        <ApiKeysMobileList table={table} isLoading={isLoading} now={now} />
-      }
-      getRowClassName={(row) =>
-        isDisabledApiKeyRow(row.original) ? DISABLED_ROW_DESKTOP : undefined
+      emptyAction={<CreateKeyButton />}
+      toolbar={
+        <ApiKeysToolbar
+          table={table}
+          total={total}
+          globalFilter={globalFilter ?? ''}
+          onGlobalFilterChange={(value) => onGlobalFilterChange?.(value)}
+          tokenFilterInput={tokenFilterInput}
+          onTokenFilterInputChange={setTokenFilterInput}
+        />
       }
       bulkActions={<DataTableBulkActions table={table} />}
     />
