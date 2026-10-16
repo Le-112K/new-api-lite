@@ -112,12 +112,12 @@ export function ResetPasswordConfirm({
 
   return (
     <AuthLayout>
-      <div className='w-full space-y-8'>
-        <div className='space-y-2'>
-          <h2 className='text-center text-2xl font-semibold tracking-tight sm:text-left'>
+      <div className='w-full space-y-6'>
+        <div className='space-y-2 text-center'>
+          <h2 className='text-center text-2xl font-semibold tracking-tight'>
             {t('Reset password')}
           </h2>
-          <p className='text-muted-foreground text-left text-sm sm:text-base'>
+          <p className='text-muted-foreground text-sm'>
             {newPassword
               ? t('auth.resetPasswordConfirm.success')
               : t('auth.resetPasswordConfirm.description')}
@@ -140,6 +140,7 @@ export function ResetPasswordConfirm({
               type='email'
               value={email || ''}
               disabled
+              className='h-11 rounded-xl'
               placeholder={t('Waiting for email...')}
             />
           </div>
@@ -152,12 +153,13 @@ export function ResetPasswordConfirm({
                   id='password'
                   value={newPassword}
                   disabled
-                  className='font-mono'
+                  className='h-11 rounded-xl font-mono'
                 />
                 <Button
                   type='button'
                   size='icon'
                   variant='outline'
+                  className='h-11 w-11 shrink-0 rounded-xl'
                   onClick={handleCopy}
                 >
                   {copied ? (
@@ -174,7 +176,7 @@ export function ResetPasswordConfirm({
           )}
 
           <Button
-            className='w-full'
+            className='h-12 w-full justify-center gap-2 rounded-full'
             onClick={
               newPassword
                 ? () => navigate({ to: '/sign-in', replace: true })

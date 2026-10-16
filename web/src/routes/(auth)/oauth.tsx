@@ -18,9 +18,12 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { createFileRoute, useNavigate, useSearch } from '@tanstack/react-router'
 import i18next from 'i18next'
+import { Loader2 } from 'lucide-react'
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { wechatLoginByCode } from '@/features/auth/api'
+import { AuthLayout } from '@/features/auth/auth-layout'
 import { sanitizeAuthRedirect } from '@/features/auth/lib/auth-redirect'
 import { applyAuthBundle, isAuthBundle } from '@/lib/api'
 import { handleServerError } from '@/lib/handle-server-error'
@@ -28,6 +31,7 @@ import { AuthOperationError } from '@/lib/secure-verification'
 import { createServerError } from '@/lib/server-error-message'
 
 function OAuthComponent() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const search = useSearch({ from: '/(auth)/oauth' }) as {
     redirect?: string
@@ -61,7 +65,16 @@ function OAuthComponent() {
     })()
   }, [navigate, search])
 
-  return null
+  return (
+    <AuthLayout>
+      <div className='flex flex-col items-center gap-3 py-6 text-center'>
+        <Loader2 className='h-6 w-6 animate-spin' />
+        <p className='text-muted-foreground text-sm'>
+          {t('Processing OAuth response...')}
+        </p>
+      </div>
+    </AuthLayout>
+  )
 }
 
 export const Route = createFileRoute('/(auth)/oauth')({
