@@ -225,8 +225,16 @@ export const PricingFilterBar = memo(function PricingFilterBar(
     })
   }
 
+  // Endpoint kinds this catalog does not offer are noise in a filter bar — the
+  // page was rendering "Response 0 / Rerank 0 / 嵌入 0", which is a row of
+  // choices that cannot do anything. The provider row already hides its empty
+  // options; this makes the two consistent. The currently-applied one is never
+  // hidden, so an active filter can always be seen and cleared.
   const endpointEntries = Object.entries(endpointTypeLabels).filter(
-    ([value]) => value !== ENDPOINT_TYPES.ALL
+    ([value]) =>
+      value !== ENDPOINT_TYPES.ALL &&
+      ((counts.endpoints.get(value) ?? 0) > 0 ||
+        props.endpointTypeFilter === value)
   )
 
   return (

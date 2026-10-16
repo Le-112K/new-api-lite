@@ -79,6 +79,7 @@ import {
   type DynamicPriceEntry,
 } from '../lib/dynamic-price'
 import { parseTags } from '../lib/filters'
+import { formatModelDisplayName } from '../lib/model-display-name'
 import { getAvailableGroups, isTokenBasedModel } from '../lib/model-helpers'
 import { withPluginPricing } from '../lib/plugin-pricing'
 import { formatFixedPrice, formatGroupPrice, formatPrice } from '../lib/price'
@@ -1708,7 +1709,7 @@ function ModelDetailsModal(props: ModelDetailsModalProps) {
         </DialogClose>
         <div className='order-1 min-w-0'>
           <DialogTitle className='text-[1.375rem] leading-[1.2] font-bold tracking-[-0.02em]'>
-            {model.model_name}
+            {formatModelDisplayName(model.model_name)}
           </DialogTitle>
           <DialogDescription className='text-muted-foreground mt-1.5 flex min-w-0 items-center gap-1.5 text-xs'>
             {model.vendor_name && (

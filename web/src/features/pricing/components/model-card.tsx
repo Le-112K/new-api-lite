@@ -35,6 +35,7 @@ import {
   type DynamicPriceEntry,
 } from '../lib/dynamic-price'
 import { parseTags } from '../lib/filters'
+import { formatModelDisplayName } from '../lib/model-display-name'
 import { isTokenBasedModel } from '../lib/model-helpers'
 import { formatPrice, formatRequestPrice } from '../lib/price'
 import { taskUsageUnitLabel } from '../lib/task-price-display'
@@ -85,6 +86,7 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
   const modelIcon = modelIconKey ? getLobeIcon(modelIconKey, 20) : null
   const markName = props.model.vendor_name || props.model.model_name
   const initial = markName?.charAt(0).toUpperCase() || '?'
+  const displayName = formatModelDisplayName(props.model.model_name)
   const isUnconfiguredTaskUsage = isUnconfiguredTaskUsageModel(props.model)
   const billingTime = useBillingTime(props.model.billing_expr)
   const currency = useSystemConfigStore((state) => state.config.currency)
@@ -229,16 +231,23 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
             className='truncate text-base font-semibold tracking-[-0.01em]'
             title={props.model.model_name}
           >
-            {props.model.model_name}
+            {displayName}
           </h3>
-          {props.model.vendor_name && (
-            <p
-              className='text-muted-foreground mt-1 truncate text-xs font-medium'
-              title={props.model.vendor_name}
-            >
-              {props.model.vendor_name}
-            </p>
-          )}
+          {/* Provider in the normal sans, then the raw API identifier in mono:
+              the machine string stays on the card (selectable for copy-paste)
+              while the heading carries the brand-cased display name. */}
+          <p
+            className='text-muted-foreground mt-1 truncate text-xs font-medium'
+            title={props.model.model_name}
+          >
+            {props.model.vendor_name && <span>{props.model.vendor_name}</span>}
+            {props.model.vendor_name && (
+              <span aria-hidden className='text-muted-foreground/40'>
+                {' · '}
+              </span>
+            )}
+            <span className='font-mono'>{props.model.model_name}</span>
+          </p>
         </div>
         <div className='col-start-3 row-start-1 justify-self-end'>
           <CopyButton

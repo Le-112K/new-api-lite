@@ -21,11 +21,6 @@ import { useTranslation } from 'react-i18next'
 
 import { PublicLayout } from '@/components/layout'
 import { PageTransition } from '@/components/page-transition'
-// Deliberate cross-feature import: the approved model-square prototype closes
-// the page with the same provider strip the landing page uses (`.trust`), so
-// the marquee is shared rather than duplicated here.
-import { ProvidersMarquee } from '@/features/home/components/sections/providers-marquee'
-import { cn } from '@/lib/utils'
 
 import {
   LoadingSkeleton,
@@ -40,21 +35,8 @@ import { EXCLUDED_GROUPS, VIEW_MODES } from './constants'
 import { useFilters } from './hooks/use-filters'
 import { usePricingData } from './hooks/use-pricing-data'
 
-import './pricing-page.css'
-
-function Stat(props: { value: number; label: string }) {
-  return (
-    <span className='bg-card text-muted-foreground inline-flex items-center gap-[7px] rounded-full border px-3 py-1.5 text-[0.8125rem]'>
-      <b className='text-foreground text-[1.0625rem] font-bold tabular-nums'>
-        {props.value}
-      </b>
-      <span className='tracking-[0.01em]'>{props.label}</span>
-    </span>
-  )
-}
-
 export function Pricing() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const [selectedModelName, setSelectedModelName] = useState<string | null>(
     null
   )
@@ -99,13 +81,6 @@ export function Pricing() {
     clearFilters,
     clearSearch,
   } = useFilters(models || [])
-
-  // The document `lang` is a static "en" and never tracks the UI language, so
-  // `:lang(zh)` is unusable — derive the headline tracking in JS, mirroring the
-  // home hero's Latin-optimised vs. CJK-zeroed letter-spacing.
-  const isZh = (i18n.resolvedLanguage || i18n.language || '')
-    .toLowerCase()
-    .startsWith('zh')
 
   const handleModelClick = useCallback((modelName: string) => {
     setSelectedModelName(modelName)
@@ -186,43 +161,14 @@ export function Pricing() {
     <PublicLayout showMainContainer={false}>
       <PageTransition className='relative mx-auto w-full max-w-[1800px] px-3 pt-16 pb-8 sm:px-6 sm:pt-20 sm:pb-10 xl:px-8'>
         <header className='pt-5 sm:pt-8'>
-          <div className='bg-card text-muted-foreground mb-2 inline-flex items-center gap-[9px] rounded-full border px-3.5 py-1.5 text-[11px] font-bold tracking-[0.1em]'>
-            <span
-              aria-hidden
-              className='pricing-live-dot size-1.5 rounded-full bg-[var(--live)]'
-            />
-            <span className={cn(!isZh && 'uppercase')}>
-              {t('Model square · Gateway connected')}
-            </span>
-          </div>
-
-          <h1
-            data-lang={isZh ? 'zh' : 'en'}
-            className='pricing-title text-foreground mb-2 max-w-[22ch] text-[clamp(1.875rem,3.2vw,2.75rem)] leading-[1.08] font-bold'
-          >
-            <span className='block'>{t('One gateway.')}</span>
-            <span className='pricing-title-l2 text-muted-foreground block font-normal'>
-              {t('Compare every model you use.')}
-            </span>
+          <h1 className='text-foreground text-[clamp(1.75rem,2.6vw,2.25rem)] leading-tight font-bold'>
+            {t('Model Square')}
           </h1>
-
-          <p className='text-muted-foreground mb-2.5 max-w-[60rem] text-[1.1875rem] leading-[1.5]'>
-            {t(
-              'Every model is called through the same OpenAI-compatible API. Filter by provider, capability and unit price to pick the right one for the task.'
-            )}
+          <p className='text-muted-foreground mt-1 text-sm'>
+            {t('This site currently has {{count}} models enabled', {
+              count: models?.length ?? 0,
+            })}
           </p>
-
-          <div className='flex flex-wrap gap-2.5'>
-            <Stat
-              value={vendors?.length ?? 0}
-              label={t('upstream providers')}
-            />
-            <Stat value={models?.length ?? 0} label={t('models available')} />
-            <Stat
-              value={availableTags.length}
-              label={t('capability tags')}
-            />
-          </div>
         </header>
 
         <div className='pt-3'>
@@ -284,8 +230,6 @@ export function Pricing() {
 
           {renderPricingContent()}
         </section>
-
-        <ProvidersMarquee />
 
         {selectedModel && (
           <ModelDetailsDrawer

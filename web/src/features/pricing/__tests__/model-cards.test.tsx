@@ -146,7 +146,14 @@ describe('model cards', () => {
     render(
       <ModelCard model={pricingModel({ model_name: name })} onClick={onClick} />
     )
-    expect(screen.getByRole('heading', { name })).toHaveAttribute('title', name)
+    // The heading carries the brand-cased display name and keeps the raw API id
+    // on its title, so hovering reveals the exact machine string.
+    const heading = screen.getByRole('heading', { level: 3 })
+    expect(heading).toHaveAttribute('title', name)
+    expect(heading).not.toHaveTextContent(name)
+    // The raw identifier is still rendered on the card (mono, selectable), so it
+    // survives even without the clipboard button.
+    expect(screen.getByText(name)).toHaveClass('font-mono')
     await user.click(screen.getByRole('button', { name: 'Copy model name' }))
     expect(await navigator.clipboard.readText()).toBe(name)
     expect(onClick).not.toHaveBeenCalled()
@@ -239,17 +246,19 @@ describe('model cards', () => {
     expect(screen.getByText('vision')).toBeVisible()
   })
 
-  it('renders the model name verbatim with the sans font', () => {
-    const name = 'OpenAI/gpt-4o-2026-09-06'
+  it('renders the brand-cased display name in sans, keeping the raw id in mono on the meta line', () => {
+    const name = 'deepseek-reasoner'
     render(
       <ModelCard
         model={pricingModel({ model_name: name })}
         onClick={vi.fn()}
       />
     )
-    const heading = screen.getByRole('heading', { name })
-    expect(heading).toHaveTextContent(name)
+    const heading = screen.getByRole('heading', { level: 3 })
+    expect(heading).toHaveTextContent('DeepSeek Reasoner')
+    expect(heading).toHaveAttribute('title', name)
     expect(heading).not.toHaveClass('font-mono')
+    expect(screen.getByText(name)).toHaveClass('font-mono')
   })
 
   it('keeps group and recharge pricing correct when changing the token unit, including a free cache price', () => {
@@ -440,10 +449,10 @@ describe('model cards', () => {
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(20)
     await user.click(screen.getByRole('button', { name: 'Next page' }))
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(1)
-    expect(screen.getByRole('heading', { name: 'model-21' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Model 21' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: 'Previous page' }))
-    expect(screen.getByRole('heading', { name: 'model-1' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Model 1' })).toBeVisible()
   })
 
   it('switches the card grid to three columns at the xl breakpoint instead of 2xl', () => {
@@ -457,7 +466,7 @@ describe('model cards', () => {
       </QueryClientProvider>
     )
     const grid = screen
-      .getByRole('heading', { name: 'example-model' })
+      .getByRole('heading', { name: 'Example Model' })
       .closest('.grid-cols-1')
     expect(grid).toHaveClass('xl:grid-cols-3')
     expect(grid).not.toHaveClass('2xl:grid-cols-3')
