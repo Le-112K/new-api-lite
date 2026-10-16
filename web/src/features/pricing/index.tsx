@@ -21,23 +21,40 @@ import { useTranslation } from 'react-i18next'
 
 import { PublicLayout } from '@/components/layout'
 import { PageTransition } from '@/components/page-transition'
+// Deliberate cross-feature import: the approved model-square prototype closes
+// the page with the same provider strip the landing page uses (`.trust`), so
+// the marquee is shared rather than duplicated here.
+import { ProvidersMarquee } from '@/features/home/components/sections/providers-marquee'
+import { cn } from '@/lib/utils'
 
 import {
   LoadingSkeleton,
   EmptyState,
-  SearchBar,
   PricingTable,
-  PricingSidebar,
   PricingToolbar,
   ModelCardGrid,
   ModelDetailsDrawer,
 } from './components'
+import { PricingFilterBar } from './components/pricing-filter-bar'
 import { EXCLUDED_GROUPS, VIEW_MODES } from './constants'
 import { useFilters } from './hooks/use-filters'
 import { usePricingData } from './hooks/use-pricing-data'
 
+import './pricing-page.css'
+
+function Stat(props: { value: number; label: string }) {
+  return (
+    <span className='bg-card text-muted-foreground inline-flex items-center gap-[7px] rounded-full border px-3 py-1.5 text-[0.8125rem]'>
+      <b className='text-foreground text-[1.0625rem] font-bold tabular-nums'>
+        {props.value}
+      </b>
+      <span className='tracking-[0.01em]'>{props.label}</span>
+    </span>
+  )
+}
+
 export function Pricing() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [selectedModelName, setSelectedModelName] = useState<string | null>(
     null
   )
@@ -82,6 +99,13 @@ export function Pricing() {
     clearFilters,
     clearSearch,
   } = useFilters(models || [])
+
+  // The document `lang` is a static "en" and never tracks the UI language, so
+  // `:lang(zh)` is unusable — derive the headline tracking in JS, mirroring the
+  // home hero's Latin-optimised vs. CJK-zeroed letter-spacing.
+  const isZh = (i18n.resolvedLanguage || i18n.language || '')
+    .toLowerCase()
+    .startsWith('zh')
 
   const handleModelClick = useCallback((modelName: string) => {
     setSelectedModelName(modelName)
@@ -160,130 +184,132 @@ export function Pricing() {
 
   return (
     <PublicLayout showMainContainer={false}>
-      <div className='relative'>
-        <div
-          aria-hidden
-          className='pointer-events-none absolute inset-x-0 top-0 h-[600px] opacity-20 dark:opacity-[0.10]'
-          style={{
-            background: [
-              'radial-gradient(ellipse 60% 50% at 20% 20%, oklch(0.72 0.18 250 / 80%) 0%, transparent 70%)',
-              'radial-gradient(ellipse 50% 40% at 80% 15%, oklch(0.65 0.15 200 / 60%) 0%, transparent 70%)',
-              'radial-gradient(ellipse 40% 35% at 50% 70%, oklch(0.70 0.12 280 / 40%) 0%, transparent 70%)',
-            ].join(', '),
-            maskImage:
-              'linear-gradient(to bottom, black 40%, transparent 100%)',
-            WebkitMaskImage:
-              'linear-gradient(to bottom, black 40%, transparent 100%)',
-          }}
-        />
-        <PageTransition className='relative mx-auto w-full max-w-[1800px] px-3 pt-16 pb-8 sm:px-6 sm:pt-20 sm:pb-10 xl:px-8'>
-          <header className='mx-auto mb-5 max-w-3xl pt-5 text-center sm:mb-10 sm:pt-10'>
-            <h1 className='text-[clamp(2rem,5.5vw,3.5rem)] leading-[1.15] font-bold tracking-tight'>
-              {t('Model Square')}
-            </h1>
-            <p className='text-muted-foreground/80 mt-3 text-sm sm:mt-4 sm:text-base'>
-              {t('This site currently has {{count}} models enabled', {
-                count: models?.length || 0,
-              })}
-            </p>
-            <p className='text-muted-foreground/60 mx-auto mt-2 max-w-2xl text-xs leading-relaxed sm:text-sm'>
-              {t(
-                'Discover curated AI models, compare pricing and capabilities, and choose the right model for every scenario.'
-              )}
-            </p>
-            <SearchBar
-              value={searchInput}
-              onChange={setSearchInput}
-              onClear={clearSearch}
-              placeholder={t(
-                'Search model name, provider, endpoint, or tag...'
-              )}
-              className='mx-auto mt-4 max-w-2xl sm:mt-6'
+      <PageTransition className='relative mx-auto w-full max-w-[1800px] px-3 pt-16 pb-8 sm:px-6 sm:pt-20 sm:pb-10 xl:px-8'>
+        <header className='pt-5 sm:pt-8'>
+          <div className='bg-card text-muted-foreground mb-2 inline-flex items-center gap-[9px] rounded-full border px-3.5 py-1.5 text-[11px] font-bold tracking-[0.1em]'>
+            <span
+              aria-hidden
+              className='pricing-live-dot size-1.5 rounded-full bg-[var(--live)]'
             />
-          </header>
-
-          <div className='grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]'>
-            <PricingSidebar
-              quotaTypeFilter={quotaTypeFilter}
-              endpointTypeFilter={endpointTypeFilter}
-              vendorFilter={vendorFilter}
-              groupFilter={groupFilter}
-              tagFilter={tagFilter}
-              onQuotaTypeChange={setQuotaTypeFilter}
-              onEndpointTypeChange={setEndpointTypeFilter}
-              onVendorChange={setVendorFilter}
-              onGroupChange={setGroupFilter}
-              onTagChange={setTagFilter}
-              vendors={vendors || []}
-              groups={availableGroups}
-              groupRatios={groupRatio}
-              tags={availableTags}
-              models={models || []}
-              hasActiveFilters={hasActiveFilters}
-              onClearFilters={clearFilters}
-              className='hover-scrollbar sticky top-20 hidden max-h-[calc(100dvh-6rem)] self-start overflow-y-auto xl:block'
-            />
-
-            <main className='min-w-0 space-y-4'>
-              <PricingToolbar
-                filteredCount={filteredModels.length}
-                totalCount={models?.length}
-                sortBy={sortBy}
-                onSortChange={setSortBy}
-                tokenUnit={tokenUnit}
-                onTokenUnitChange={setTokenUnit}
-                showRechargePrice={showRechargePrice}
-                onRechargePriceChange={setShowRechargePrice}
-                viewMode={viewMode}
-                onViewModeChange={setViewMode}
-                quotaTypeFilter={quotaTypeFilter}
-                endpointTypeFilter={endpointTypeFilter}
-                vendorFilter={vendorFilter}
-                groupFilter={groupFilter}
-                tagFilter={tagFilter}
-                onQuotaTypeChange={setQuotaTypeFilter}
-                onEndpointTypeChange={setEndpointTypeFilter}
-                onVendorChange={setVendorFilter}
-                onGroupChange={setGroupFilter}
-                onTagChange={setTagFilter}
-                vendors={vendors || []}
-                groups={availableGroups}
-                groupRatios={groupRatio}
-                tags={availableTags}
-                models={models || []}
-                hasActiveFilters={hasActiveFilters}
-                activeFilterCount={activeFilterCount}
-                onClearFilters={clearFilters}
-              />
-
-              {renderPricingContent()}
-            </main>
+            <span className={cn(!isZh && 'uppercase')}>
+              {t('Model square · Gateway connected')}
+            </span>
           </div>
 
-          {selectedModel && (
-            <ModelDetailsDrawer
-              open={Boolean(selectedModel)}
-              onOpenChange={(open) => {
-                if (!open) setSelectedModelName(null)
-              }}
-              model={selectedModel}
-              groupRatio={groupRatio || {}}
-              usableGroup={usableGroup || {}}
-              endpointMap={
-                (endpointMap as Record<
-                  string,
-                  { path?: string; method?: string }
-                >) || {}
-              }
-              autoGroups={autoGroups || []}
-              priceRate={priceRate ?? 1}
-              usdExchangeRate={usdExchangeRate ?? 1}
-              tokenUnit={tokenUnit}
-              showRechargePrice={showRechargePrice}
+          <h1
+            data-lang={isZh ? 'zh' : 'en'}
+            className='pricing-title text-foreground mb-2 max-w-[22ch] text-[clamp(1.875rem,3.2vw,2.75rem)] leading-[1.08] font-bold'
+          >
+            <span className='block'>{t('One gateway.')}</span>
+            <span className='pricing-title-l2 text-muted-foreground block font-normal'>
+              {t('Compare every model you use.')}
+            </span>
+          </h1>
+
+          <p className='text-muted-foreground mb-2.5 max-w-[60rem] text-[1.1875rem] leading-[1.5]'>
+            {t(
+              'Every model is called through the same OpenAI-compatible API. Filter by provider, capability and unit price to pick the right one for the task.'
+            )}
+          </p>
+
+          <div className='flex flex-wrap gap-2.5'>
+            <Stat
+              value={vendors?.length ?? 0}
+              label={t('upstream providers')}
             />
-          )}
-        </PageTransition>
-      </div>
+            <Stat value={models?.length ?? 0} label={t('models available')} />
+            <Stat
+              value={availableTags.length}
+              label={t('capability tags')}
+            />
+          </div>
+        </header>
+
+        <div className='pt-3'>
+          <PricingFilterBar
+            searchInput={searchInput}
+            onSearchChange={setSearchInput}
+            onClearSearch={clearSearch}
+            quotaTypeFilter={quotaTypeFilter}
+            endpointTypeFilter={endpointTypeFilter}
+            vendorFilter={vendorFilter}
+            groupFilter={groupFilter}
+            tagFilter={tagFilter}
+            onQuotaTypeChange={setQuotaTypeFilter}
+            onEndpointTypeChange={setEndpointTypeFilter}
+            onVendorChange={setVendorFilter}
+            onGroupChange={setGroupFilter}
+            onTagChange={setTagFilter}
+            vendors={vendors || []}
+            groups={availableGroups}
+            groupRatios={groupRatio}
+            tags={availableTags}
+            models={models || []}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={clearFilters}
+          />
+        </div>
+
+        <section className='pt-4 pb-10'>
+          <PricingToolbar
+            filteredCount={filteredModels.length}
+            totalCount={models?.length}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            tokenUnit={tokenUnit}
+            onTokenUnitChange={setTokenUnit}
+            showRechargePrice={showRechargePrice}
+            onRechargePriceChange={setShowRechargePrice}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            quotaTypeFilter={quotaTypeFilter}
+            endpointTypeFilter={endpointTypeFilter}
+            vendorFilter={vendorFilter}
+            groupFilter={groupFilter}
+            tagFilter={tagFilter}
+            onQuotaTypeChange={setQuotaTypeFilter}
+            onEndpointTypeChange={setEndpointTypeFilter}
+            onVendorChange={setVendorFilter}
+            onGroupChange={setGroupFilter}
+            onTagChange={setTagFilter}
+            vendors={vendors || []}
+            groups={availableGroups}
+            groupRatios={groupRatio}
+            tags={availableTags}
+            models={models || []}
+            hasActiveFilters={hasActiveFilters}
+            activeFilterCount={activeFilterCount}
+            onClearFilters={clearFilters}
+          />
+
+          {renderPricingContent()}
+        </section>
+
+        <ProvidersMarquee />
+
+        {selectedModel && (
+          <ModelDetailsDrawer
+            open={Boolean(selectedModel)}
+            onOpenChange={(open) => {
+              if (!open) setSelectedModelName(null)
+            }}
+            model={selectedModel}
+            groupRatio={groupRatio || {}}
+            usableGroup={usableGroup || {}}
+            endpointMap={
+              (endpointMap as Record<
+                string,
+                { path?: string; method?: string }
+              >) || {}
+            }
+            autoGroups={autoGroups || []}
+            priceRate={priceRate ?? 1}
+            usdExchangeRate={usdExchangeRate ?? 1}
+            tokenUnit={tokenUnit}
+            showRechargePrice={showRechargePrice}
+          />
+        )}
+      </PageTransition>
     </PublicLayout>
   )
 }

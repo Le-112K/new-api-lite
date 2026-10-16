@@ -155,7 +155,7 @@ describe('model cards', () => {
     expect(onClick).toHaveBeenCalledWith(name)
   })
 
-  it('always renders three fixed price columns in order, dashing the cache slot without a cache price', () => {
+  it('always renders four fixed spec columns in order, dashing the cache slot without a cache price', () => {
     render(
       <ModelCard
         model={pricingModel({ context_length: 128000, cache_ratio: null })}
@@ -170,8 +170,9 @@ describe('model cards', () => {
       within(specRow)
         .getAllByRole('term')
         .map((el) => el.textContent)
-    ).toEqual(['Input', 'Output', 'Cache'])
-    expect(within(specRow).getAllByRole('definition')).toHaveLength(3)
+    ).toEqual(['Context', 'Input', 'Output', 'Cache'])
+    expect(within(specRow).getAllByRole('definition')).toHaveLength(4)
+    expect(screen.getByText('Context').parentElement).toHaveTextContent('128K')
     expect(screen.getByText('Input').parentElement).toHaveTextContent('$2')
     expect(screen.getByText('Output').parentElement).toHaveTextContent('$6')
     // The cache slot must never be dropped: a missing column would silently
@@ -179,7 +180,7 @@ describe('model cards', () => {
     expect(screen.getByText('Cache').parentElement).toHaveTextContent('—')
   })
 
-  it('joins vendor and context on the meta line, omitting the segment when no context length is provided', () => {
+  it('keeps the vendor on the meta line and the context size in the spec row', () => {
     const { rerender } = render(
       <ModelCard
         model={pricingModel({
@@ -189,30 +190,32 @@ describe('model cards', () => {
         onClick={vi.fn()}
       />
     )
-    expect(screen.getByText(/Context/)).toHaveTextContent(
-      'Anthropic · Context 200K'
-    )
+    // The meta line carries the vendor alone; the context size reads as a spec.
+    const meta = screen.getByText('Anthropic')
+    expect(meta).not.toHaveTextContent('Context')
+    expect(screen.getByText('Context').parentElement).toHaveTextContent('200K')
     rerender(
       <ModelCard
         model={pricingModel({ vendor_name: 'Anthropic' })}
         onClick={vi.fn()}
       />
     )
-    // A missing context length drops the whole segment rather than fabricating
-    // a value or leaving a dangling separator after the vendor.
-    expect(screen.queryByText(/Context/)).not.toBeInTheDocument()
-    expect(screen.getByText('Anthropic')).not.toHaveTextContent('·')
+    // A missing context length must not fabricate a value, and must not drop
+    // the column — it dashes in place so its neighbours keep their positions.
+    expect(screen.getByText('Context').parentElement).toHaveTextContent('—')
   })
 
-  it('renders the context on the meta line without a dangling separator when the vendor is absent', () => {
+  it('keeps the spec row intact for a model with no vendor', () => {
     render(
       <ModelCard
-        model={pricingModel({ context_length: 200000 })}
+        model={pricingModel({ vendor_name: '', context_length: 200000 })}
         onClick={vi.fn()}
       />
     )
-    const meta = screen.getByText('Context 200K')
-    expect(meta).not.toHaveTextContent('·')
+    // No vendor means no meta line at all — never an empty row or a dangling
+    // separator. The context size is unaffected: it lives in the spec row.
+    expect(screen.queryByText('·')).not.toBeInTheDocument()
+    expect(screen.getByText('Context').parentElement).toHaveTextContent('200K')
   })
 
   it('keeps description, tags, groups and endpoints off the card', () => {

@@ -202,7 +202,12 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
   }
 
   const contextLength = formatContextLength(props.model.context_length)
+  // Context leads the spec row, as in the approved design. It only moved out to
+  // the meta line while the 280px filter rail squeezed this row to ~57px per
+  // column, which could not hold even "$2.50/1M" (76px). The rail is gone and
+  // the row now has ~120px per column at 1440 (102px at 1280), so it fits again.
   const specCells = [
+    { key: 'context', label: t('Context'), value: contextLength ?? dash },
     { key: 'input', label: t('Input'), value: inputPrice },
     { key: 'output', label: t('Output'), value: outputPrice },
     { key: 'cache', label: t('Cache'), value: cachePrice },
@@ -226,20 +231,12 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
           >
             {props.model.model_name}
           </h3>
-          {(props.model.vendor_name || contextLength) && (
+          {props.model.vendor_name && (
             <p
               className='text-muted-foreground mt-1 truncate text-xs font-medium'
               title={props.model.vendor_name}
             >
               {props.model.vendor_name}
-              {props.model.vendor_name && contextLength && (
-                <span className='text-muted-foreground/60'> · </span>
-              )}
-              {contextLength && (
-                <>
-                  {t('Context')} {contextLength}
-                </>
-              )}
             </p>
           )}
         </div>
@@ -251,7 +248,10 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
             iconClassName='size-3.5'
           />
         </div>
-        <dl className='col-span-2 col-start-2 row-start-2 grid grid-cols-[repeat(3,minmax(0,1fr))] gap-x-3'>
+        {/* Four fixed columns, Context leading, exactly as designed. Context
+            takes a smaller share because its values are short ("200K", "1M")
+            while the prices need the room. */}
+        <dl className='col-span-2 col-start-2 row-start-2 grid grid-cols-[minmax(0,0.72fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-x-3'>
           {specCells.map((cell) => (
             <div key={cell.key} className='grid min-w-0 gap-1'>
               <dt className='text-muted-foreground text-[11px] font-semibold tracking-[0.07em] whitespace-nowrap uppercase'>
