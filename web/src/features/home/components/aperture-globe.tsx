@@ -18,23 +18,43 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useEffect, useRef } from 'react'
 
+import { cn } from '@/lib/utils'
+
 /**
  * ApertureGlobe — the rotating dot-field earth that anchors the Aperture hero.
  *
  * The land is real: Natural Earth 110m coastlines rasterised into a 256x128
  * 1bpp mask (base64, ~5.5 KB), sampled with a Fibonacci sphere distribution so
  * point density stays uniform on the sphere instead of piling up at the poles.
- * Points are projected orthographically with a fixed 26° tilt and spun at one
- * revolution per 32 s, linear — the earth rotates at a constant rate, so easing
- * it would read as wrong.
+ * The mask is the resolution limit for the coastline, so legibility comes from
+ * sampling it densely (N) rather than from regenerating the mask.
+ *
+ * Rendering had to get cheaper before it could get denser: every land dot used
+ * to be its own beginPath/arc/fill. Dots are now bucketed by quantised depth
+ * into `BANDS` Path2D objects and filled in a single pass per bucket, so the
+ * per-frame cost is dominated by path building, not by fill calls.
+ *
+ * What makes it read as a sphere rather than a speckled disc: a very faint
+ * per-30° graticule under the land, a depth ramp that drives both radius and
+ * opacity, and a subtle limb gradient that deepens toward the edge. Orthographic
+ * projection, fixed 26° tilt, one revolution per 32 s when left alone.
+ *
+ * Each route carries a travelling pulse that sweeps A -> B and then rests; the
+ * seven periods/offsets are deliberately incommensurate so they never fire in
+ * unison. The pulse head is the brightest element on the canvas by construction
+ * (fully opaque, larger radius) — keep it that way, the visual verification
+ * probe locates pulses by that saturation.
  *
  * Everything is drawn in `--foreground`, re-read whenever the theme flips, so
  * the field follows light/dark without any colour literal in this file.
+ * Vertical panning is left to the browser (`touch-action: pan-y`) so the hero
+ * can still be scrolled past on touch; horizontal drag spins the sphere with
+ * momentum that decays back into the automatic drift.
  *
- * Ported from the approved prototype (`deliverables/aperture-landing.html`).
- * Deliberately grayscale + `aria-hidden`: it is decoration, not content.
+ * Grows out of the approved prototype (`deliverables/aperture-landing.html`),
+ * deliberately grayscale + `aria-hidden`: it is decoration, not content.
  */
-export function ApertureGlobe({ className }: { className?: string }) {
+export function ApertureGlobe(props: { className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   useEffect(() => {
@@ -62,8 +82,22 @@ export function ApertureGlobe({ className }: { className?: string }) {
     }
 
     /* Fibonacci sphere sampling — identical to build.py, so the field matches
-       the approved option-3 mockup. Store unit vectors; spin is applied later. */
-    const N = 9000, GA = Math.PI * (3 - Math.sqrt(5));
+       the approved option-3 mockup. Store unit vectors; spin is applied later.
+       N is deliberately large: the mask cell size is fixed, so only density
+       turns the coastline from a blobby stipple into a legible edge. */
+    const N = 26000, GA = Math.PI * (3 - Math.sqrt(5));
+    /* Deterministic hash -> [0,1), so the stipple is identical on every repaint
+       (including the single static frame under reduced motion). */
+    function hash(k: number, salt: number) {
+      const x = Math.sin(k * 127.1 + salt * 311.7) * 43758.5453;
+      return x - Math.floor(x);
+    }
+    /* A pure Fibonacci lattice is even but not random, and at this density its
+       own structure shows as spiral arms with concentric rings near the poles.
+       Jittering the drawn position by ~half a sample breaks that moiré. The land
+       test below still uses the exact sample position, so a dot can never jump
+       off the coast — only where it is painted moves, well inside one 1.4° cell. */
+    const JITTER = 0.016;
     const vx: number[] = [], vy: number[] = [], vz: number[] = [];
     for (let k = 0; k < N; k++) {
       const sy = 1 - (k + 0.5) * 2 / N;
@@ -76,9 +110,16 @@ export function ApertureGlobe({ className }: { className?: string }) {
       const gy = Math.min(Math.max(Math.floor((90 - lat) / 180 * MH), 0), MH - 1);
       if (!isLand(gx, gy)) continue;
       const la = lat * Math.PI / 180, lo = lon * Math.PI / 180;
-      vx.push(Math.cos(la) * Math.cos(lo));
-      vy.push(Math.sin(la));
-      vz.push(Math.cos(la) * Math.sin(lo));
+      let ux = Math.cos(la) * Math.cos(lo);
+      let uy = Math.sin(la);
+      let uz = Math.cos(la) * Math.sin(lo);
+      ux += (hash(k, 1) - 0.5) * JITTER;
+      uy += (hash(k, 2) - 0.5) * JITTER;
+      uz += (hash(k, 3) - 0.5) * JITTER;
+      const inv = 1 / Math.sqrt(ux * ux + uy * uy + uz * uz);
+      vx.push(ux * inv);
+      vy.push(uy * inv);
+      vz.push(uz * inv);
     }
     const COUNT = vx.length;
 
@@ -92,14 +133,78 @@ export function ApertureGlobe({ className }: { className?: string }) {
 
     const TILT = 26 * Math.PI / 180;
     const SPIN0 = -15 * Math.PI / 180;
-    const PERIOD = 32000;          /* 32 s per revolution, linear — self-rotation is steady */
+    const AUTO_PERIOD = 32000;                  /* 32 s per revolution when left alone */
+    const AUTO_OMEGA = 2 * Math.PI / AUTO_PERIOD;  /* rad per ms */
+    const TAU = Math.PI * 2;
+    const INERTIA_TAU = 130;                    /* ms — drag momentum decay constant */
+    const DRAG_GAIN = 1.15;                     /* full-diameter drag ~ 207° */
+
+    /* Depth handling. Z_CULL drops the extreme foreshortened rim, where uniform
+       sphere sampling piles dots up into an opaque smear; `d` is what is left,
+       normalised to [0,1], and it drives radius AND opacity so the field reads
+       front-to-back instead of as a flat speckle. */
+    const Z_CULL = 0.10;
+    const INV_ZSPAN = 1 / (1 - Z_CULL);
+    const BANDS = 16;                           /* depth buckets -> 16 Path2D fills per frame */
+    /* Contrast floor: the faintest *rendered* land dot has to clear 3:1 against
+       the page in BOTH themes. Light theme (#F5F5F7 bg, #0a0a0a ink) is the
+       binding case — 3:1 needs a composited luminance low enough that the peak
+       pixel alpha must stay >= ~0.44. A_MIN is the nominal floor and the radius
+       floor is kept at ~1px so antialiasing (and a dot landing on a pixel
+       corner, the worst case: ~0.79 of nominal) cannot eat that coverage.
+       Do not lower either without re-measuring; the verify probe checks it. */
+    const A_MIN = 0.72, A_SPAN = 0.20;
+    const R_BASE = 1.12;
+    const bandAlpha = new Float32Array(BANDS);
+    const bandRadius = new Float32Array(BANDS);
+    const bandInk: string[] = [];
+    for (let k = 0; k < BANDS; k++) {
+      const d = (k + 0.5) / BANDS;
+      bandAlpha[k] = A_MIN + A_SPAN * Math.pow(d, 1.25);
+      bandRadius[k] = R_BASE * (0.80 + 0.20 * Math.pow(d, 0.7));
+    }
+
+    /* Faint graticule — the strongest "this is a sphere" cue. Must stay strictly
+       under GA_ALPHA so the field does not turn into a wireframe; it also sits
+       below the land in visual weight. Kept below 0.20 on purpose: the contrast
+       probe separates land dots from the graticule at alpha 0.30. */
+    const DEG = Math.PI / 180;
+    const GA_ALPHA = 0.12;
+    const GA_WIDTH = 0.7;
+    const PARALLELS = [-60, -30, 0, 30, 60];
+    const MERIDIANS: number[] = [];
+    for (let lo = -180; lo < 180; lo += 30) MERIDIANS.push(lo);
+
+    /* Route pulses. SWEEP is the fraction of the period used by the sweep; the
+       rest is the rest. Periods and offsets are incommensurate on purpose. */
+    const ARC_BASE = 0.51;
+    const PULSE_ADD = 0.90;                     /* head saturates at alpha 1.0 */
+    const PULSE_W = 0.11;
+    const SWEEP = 0.42;
+    const ARC_PERIOD = [5200, 6084, 4316, 6812, 4732, 5668, 6396];
+    const ARC_OFFSET = [0.00, 0.37, 0.71, 0.14, 0.55, 0.88, 0.26];
+
     let W = 384, cx = 192, cy = 192, R = 192;
+    let spin = SPIN0, vel = 0;
 
     /* project a unit vector: spin about the pole, then the fixed 26deg tilt */
     function proj(v: number[], cs: number, ss: number, ct: number, st: number) {
       const x = v[0] * cs - v[2] * ss;
       const z = v[0] * ss + v[2] * cs;
       return [x, v[1] * ct - z * st, v[1] * st + z * ct];
+    }
+
+    /* same projection, but from a lat/lon on the sphere — used by the graticule
+       so the grid is welded to the earth and spins with it. */
+    function sphere(lat: number, lon: number, cs: number, ss: number, ct: number, st: number) {
+      const la = lat * DEG, lo = lon * DEG;
+      const cosLa = Math.cos(la);
+      const x0 = cosLa * Math.cos(lo);
+      const y0 = Math.sin(la);
+      const z0 = cosLa * Math.sin(lo);
+      const x = x0 * cs - z0 * ss;
+      const z = x0 * ss + z0 * cs;
+      return [x, y0 * ct - z * st, y0 * st + z * ct];
     }
 
     /* colour: read from --foreground at runtime so the field follows the theme */
@@ -120,6 +225,8 @@ export function ApertureGlobe({ className }: { className?: string }) {
       const rgb = parseRGB(raw) || parseRGB(getComputedStyle(document.body).color);
       if (rgb) INK = rgb;
       inkCache = {};
+      /* the band fills are colour strings too — they must be rebuilt with the ink */
+      for (let k = 0; k < BANDS; k++) bandInk[k] = ink(bandAlpha[k]);
     }
     function ink(a: number) {
       const q = (a * 100) | 0;
@@ -131,72 +238,160 @@ export function ApertureGlobe({ className }: { className?: string }) {
       return s;
     }
 
-    function draw(spin: number) {
-      LAST = spin;                        /* remember the angle — resize() repaints it */
-      ctx.clearRect(0, 0, W, W);
-      const cs = Math.cos(spin), ss = Math.sin(spin);
-      const ct = Math.cos(TILT), st = Math.sin(TILT);
-      let i, x0, y0, z0, x, z, y2, z2, a, rr;
-      /* land dots — depth-shaded: front dots bigger and more opaque */
-      for (i = 0; i < COUNT; i++) {
-        x0 = vx[i]; y0 = vy[i]; z0 = vz[i];
-        x = x0 * cs - z0 * ss;
-        z = x0 * ss + z0 * cs;
-        y2 = y0 * ct - z * st;
-        z2 = y0 * st + z * ct;
-        if (z2 <= 0.02) continue;                    /* back of the sphere */
-        /* depth shade — lifted 0.10/0.62 -> 0.14/0.66 (review P1-2): on the
-           light theme the rim dots at z~0.3 were ~1.86:1, below the 3:1 floor
-           for readable decoration; the extra 0.04 floor + 0.04 span brings the
-           rim back into range while keeping the depth gradient. */
-        a = 0.14 + 0.66 * Math.pow(z2, 0.8);
-        /* v19 — dot radius now scales WITH the sphere: the canvas grew 384 -> 560,
-           so the old absolute 1.3px would read too sparse. 1.5 keeps the mockup's
-           dot/diameter ratio while holding contrast (cap: never above 1.6, or the
-           field smears into a solid surface). */
-        rr = 1.5 * (0.6 + 0.4 * z2);
-        ctx.fillStyle = ink(a);
-        ctx.beginPath();
-        ctx.arc(cx + x * R, cy - y2 * R, rr, 0, 6.2832);
-        ctx.fill();
+    /* Lat/long grid, front hemisphere only, welded to the earth so it rotates
+       with it. Orthographic projection of a unit sphere lands inside the disc by
+       construction, so no clipping is needed — only the back-face cull. */
+    function drawGraticule(cs: number, ss: number, ct: number, st: number) {
+      const path = new Path2D();
+      let pen = false, sx = 0, sy = 0;
+      let pt: number[] = [0, 0, 0];
+      for (let pi = 0; pi < PARALLELS.length; pi++) {
+        pen = false;
+        for (let lon = -180; lon <= 180; lon += 4) {
+          pt = sphere(PARALLELS[pi], lon, cs, ss, ct, st);
+          if (pt[2] <= Z_CULL) { pen = false; continue; }
+          sx = cx + pt[0] * R; sy = cy - pt[1] * R;
+          if (pen) path.lineTo(sx, sy); else { path.moveTo(sx, sy); pen = true; }
+        }
       }
-      /* connection arcs — quadratic bezier bowed outward, clipped to the disc */
+      for (let mi = 0; mi < MERIDIANS.length; mi++) {
+        pen = false;
+        for (let lat = -88; lat <= 88; lat += 4) {
+          pt = sphere(lat, MERIDIANS[mi], cs, ss, ct, st);
+          if (pt[2] <= Z_CULL) { pen = false; continue; }
+          sx = cx + pt[0] * R; sy = cy - pt[1] * R;
+          if (pen) path.lineTo(sx, sy); else { path.moveTo(sx, sy); pen = true; }
+        }
+      }
+      ctx.strokeStyle = ink(GA_ALPHA);
+      ctx.lineWidth = GA_WIDTH;
+      ctx.stroke(path);
+    }
+
+    /* The land. One Path2D per depth band, then BANDS fills — this is what buys
+       the extra density. Each dot needs its own moveTo: Path2D.arc() draws a
+       connecting line from the current point otherwise, which turns the field
+       into a spiderweb. Bands are filled back-to-front. */
+    function drawLand(cs: number, ss: number, ct: number, st: number) {
+      const paths: Path2D[] = [];
+      for (let k = 0; k < BANDS; k++) paths.push(new Path2D());
+      for (let i = 0; i < COUNT; i++) {
+        const x0 = vx[i], y0 = vy[i], z0 = vz[i];
+        const x = x0 * cs - z0 * ss;
+        const z = x0 * ss + z0 * cs;
+        const y2 = y0 * ct - z * st;
+        const z2 = y0 * st + z * ct;
+        if (z2 <= Z_CULL) continue;                  /* back of the sphere */
+        let k = ((z2 - Z_CULL) * INV_ZSPAN * BANDS) | 0;
+        if (k >= BANDS) k = BANDS - 1;
+        const sx = cx + x * R, sy = cy - y2 * R, rr = bandRadius[k];
+        const p = paths[k];
+        p.moveTo(sx + rr, sy);
+        p.arc(sx, sy, rr, 0, TAU);
+      }
+      for (let k = 0; k < BANDS; k++) {
+        ctx.fillStyle = bandInk[k];
+        ctx.fill(paths[k]);
+      }
+    }
+
+    /* Limb: a near-monochrome dot field has no shading of its own, so the disc
+       reads as flat-cut. This breathes a whisper of ink into a band just inside
+       the edge and lets it fall away again at the very rim, so the silhouette
+       curves off instead of stopping. Additive ink only — never a fade, which
+       would push the faintest dots back under the 3:1 floor — and deliberately
+       narrow: a wide gradient reads as a grey glass disc over the ocean, not as
+       shading on the sphere. */
+    function drawLimb() {
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+      g.addColorStop(0, ink(0));
+      g.addColorStop(0.8, ink(0));
+      g.addColorStop(0.93, ink(0.045));
+      g.addColorStop(1, ink(0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, TAU);
+      ctx.fill();
+    }
+
+    /* Routes: the dotted base curve keeps the line readable when nothing is on
+       it; the pulse is a saturated head that runs A -> B for the first SWEEP of
+       the period, then rests. `env` ramps the head in and out so it does not pop. */
+    function drawArcs(cs: number, ss: number, ct: number, st: number, tMs: number) {
       for (let ai = 0; ai < ARCS.length; ai++) {
         const p1 = proj(hub[ARCS[ai][0]], cs, ss, ct, st);
         const p2 = proj(hub[ARCS[ai][1]], cs, ss, ct, st);
-        if (p1[2] <= 0.02 || p2[2] <= 0.02) continue;
+        if (p1[2] <= Z_CULL || p2[2] <= Z_CULL) continue;
         const ax = cx + p1[0] * R, ay = cy - p1[1] * R;
         const bx = cx + p2[0] * R, by = cy - p2[1] * R;
         const ux2 = (ax + bx) / 2 - cx, uy2 = (ay + by) / 2 - cy;
         const L = Math.sqrt(ux2 * ux2 + uy2 * uy2) || 1;
         const kk = 1 + 0.24 * (1 - L / R);
         const qx = cx + ux2 * kk, qy = cy + uy2 * kk;
+        let uP = -1, env = 0;
+        if (!reduce) {
+          const ph = ((tMs / ARC_PERIOD[ai]) + ARC_OFFSET[ai]) % 1;
+          if (ph < SWEEP) {
+            uP = ph / SWEEP;
+            env = Math.min(1, 5 * Math.sin(Math.PI * uP));
+          }
+        }
         for (let t = 0; t <= 100; t += 2) {
           const u = t / 100;
           const ix = (1 - u) * (1 - u) * ax + 2 * (1 - u) * u * qx + u * u * bx;
           const iy = (1 - u) * (1 - u) * ay + 2 * (1 - u) * u * qy + u * u * by;
           if (Math.hypot(ix - cx, iy - cy) > R) continue;   /* never leave the sphere */
-          ctx.fillStyle = ink(0.51 * Math.pow(Math.sin(Math.PI * u), 0.65));
+          const base = ARC_BASE * Math.pow(Math.sin(Math.PI * u), 0.65);
+          let a = base, rr = 1.1;
+          if (uP >= 0) {
+            const step = (u - uP) / PULSE_W;
+            const bump = env * Math.exp(-step * step);
+            if (bump > 0.002) {
+              a = Math.min(1, base + PULSE_ADD * bump);
+              /* the head has to be fat enough that consecutive samples overlap —
+                 at the base radius they stay separate specks and the "signal"
+                 never reads as a moving segment. */
+              rr = 1.1 + 2.2 * bump;
+            }
+          }
+          ctx.fillStyle = ink(a);
           ctx.beginPath();
-          ctx.arc(ix, iy, 1.1, 0, 6.2832);
+          ctx.arc(ix, iy, rr, 0, TAU);
           ctx.fill();
         }
       }
-      /* hub nodes — a solid dot plus a faint halo ring */
+    }
+
+    /* Hub nodes — a solid dot plus a faint halo ring. Kept below 0.95 so the
+       pulse head stays the only saturated ink on the canvas. */
+    function drawHubs(cs: number, ss: number, ct: number, st: number) {
       for (let hi = 0; hi < hub.length; hi++) {
         const hp = proj(hub[hi], cs, ss, ct, st);
-        if (hp[2] <= 0.02) continue;
+        if (hp[2] <= Z_CULL) continue;
         const hx = cx + hp[0] * R, hy = cy - hp[1] * R;
-        ctx.fillStyle = ink(0.43 + 0.55 * hp[2]);
+        ctx.fillStyle = ink(0.40 + 0.50 * hp[2]);
         ctx.beginPath();
-        ctx.arc(hx, hy, 3.4 * (0.7 + 0.3 * hp[2]), 0, 6.2832);
+        ctx.arc(hx, hy, 3.4 * (0.7 + 0.3 * hp[2]), 0, TAU);
         ctx.fill();
-        ctx.strokeStyle = ink(0.12 + 0.16 * hp[2]);
+        ctx.strokeStyle = ink(0.10 + 0.14 * hp[2]);
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(hx, hy, 10 * (0.7 + 0.3 * hp[2]), 0, 6.2832);
+        ctx.arc(hx, hy, 10 * (0.7 + 0.3 * hp[2]), 0, TAU);
         ctx.stroke();
       }
+    }
+
+    function draw(angle: number, tMs: number) {
+      LAST = angle;                       /* remember the angle — resize() repaints it */
+      spin = angle;
+      ctx.clearRect(0, 0, W, W);
+      const cs = Math.cos(angle), ss = Math.sin(angle);
+      const ct = Math.cos(TILT), st = Math.sin(TILT);
+      drawGraticule(cs, ss, ct, st);       /* sphere cue, under the land in weight */
+      drawLand(cs, ss, ct, st);
+      drawLimb();
+      drawArcs(cs, ss, ct, st, tMs);
+      drawHubs(cs, ss, ct, st);
     }
 
     /* ★ Assigning `canvas.width` / `canvas.height` CLEARS the bitmap. Previously the
@@ -207,6 +402,8 @@ export function ApertureGlobe({ className }: { className?: string }) {
        scrolled out of view (`stop()` has cancelled the loop) and the band comes back
        empty. Repainting at the last angle inside resize() closes both holes. */
     let LAST = SPIN0;
+    let dragging = false, pointerId: number | null = null, lastX = 0, lastMoveT = 0;
+    function nowMs() { return window.performance ? window.performance.now() : Date.now(); }
     function resize() {
       const cssW = canvasEl.clientWidth || 384;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -214,17 +411,69 @@ export function ApertureGlobe({ className }: { className?: string }) {
       canvasEl.height = Math.round(cssW * dpr);
       W = cssW; cx = cssW / 2; cy = cssW / 2; R = cssW / 2;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      draw(LAST);                         /* repaint immediately — never leave it blank */
+      draw(LAST, nowMs());                /* repaint immediately — never leave it blank */
     }
 
-    let rafId: number | null = null, running = false, t0 = 0;
+    /* One accumulated angle drives everything. While dragging the pointer owns
+       it; after release momentum decays exponentially until it falls to the auto
+       drift speed and the steady rotation simply takes over — no seam, no snap.
+       dt is clamped so a long off-screen pause cannot teleport the ball. */
+    let rafId: number | null = null, running = false, lastTs = 0;
     function tick(ts: number) {
-      if (!t0) t0 = ts;
-      draw(SPIN0 + (ts - t0) / PERIOD * 2 * Math.PI);
+      const dt = lastTs ? Math.min(ts - lastTs, 50) : 16;
+      lastTs = ts;
+      if (!dragging) {
+        if (Math.abs(vel) > AUTO_OMEGA) {
+          spin += vel * dt;
+          vel *= Math.exp(-dt / INERTIA_TAU);
+        } else {
+          vel = 0;
+          spin += AUTO_OMEGA * dt;
+        }
+      }
+      draw(spin, ts);
       rafId = requestAnimationFrame(tick);
     }
-    function start() { if (running || reduce) return; running = true; rafId = requestAnimationFrame(tick); }
-    function stop() { running = false; if (rafId) { cancelAnimationFrame(rafId); rafId = null; } t0 = 0; }
+    function start() { if (running || reduce) return; running = true; lastTs = 0; rafId = requestAnimationFrame(tick); }
+    function stop() { running = false; if (rafId) { cancelAnimationFrame(rafId); rafId = null; } lastTs = 0; }
+
+    /* Drag to spin. Pointer events so mouse, pen and touch all work. The canvas
+       only captures the pointer while a drag is actually in flight, and its
+       touch-action is `pan-y` (see the className) so a vertical swipe still
+       scrolls the page — the browser then fires pointercancel and we let go. */
+    function onPointerDown(e: PointerEvent) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      dragging = true;
+      pointerId = e.pointerId;
+      lastX = e.clientX;
+      lastMoveT = nowMs();
+      vel = 0;
+      canvasEl.dataset.dragging = 'true';
+      if (canvasEl.setPointerCapture) {
+        try { canvasEl.setPointerCapture(e.pointerId); } catch { /* not capturable */ }
+      }
+    }
+    function onPointerMove(e: PointerEvent) {
+      if (!dragging || e.pointerId !== pointerId) return;
+      const t = nowMs();
+      const dt = Math.max(1, t - lastMoveT);
+      const dSpin = -(e.clientX - lastX) * (Math.PI / (2 * R)) * DRAG_GAIN;
+      spin += dSpin;
+      vel = vel * 0.6 + (dSpin / dt) * 0.4;
+      lastX = e.clientX;
+      lastMoveT = t;
+      if (reduce) draw(spin, 0);          /* no loop to paint for us */
+    }
+    function endDrag(e: PointerEvent) {
+      if (!dragging || (e.pointerId !== undefined && e.pointerId !== pointerId)) return;
+      dragging = false;
+      delete canvasEl.dataset.dragging;
+      if (pointerId !== null && canvasEl.releasePointerCapture) {
+        try { canvasEl.releasePointerCapture(pointerId); } catch { /* already gone */ }
+      }
+      pointerId = null;
+      if (reduce) vel = 0;                /* nothing may keep moving on its own */
+    }
 
     let gio: IntersectionObserver | null = null;
     let themeObs: MutationObserver | null = null;
@@ -232,7 +481,8 @@ export function ApertureGlobe({ className }: { className?: string }) {
     readInk();                            /* must precede resize() — resize() now paints */
     resize();
     if (reduce) {
-      /* nothing else to do — resize() already painted the static frame */
+      /* nothing else to do — resize() already painted the static frame. A drag
+         still repaints from onPointerMove, but nothing animates on its own. */
     } else {
       if ('IntersectionObserver' in window) {
         gio = new IntersectionObserver(function (es) {
@@ -242,6 +492,11 @@ export function ApertureGlobe({ className }: { className?: string }) {
       }
       start();
     }
+    canvasEl.addEventListener('pointerdown', onPointerDown);
+    canvasEl.addEventListener('pointermove', onPointerMove);
+    canvasEl.addEventListener('pointerup', endDrag);
+    canvasEl.addEventListener('pointercancel', endDrag);
+    canvasEl.addEventListener('lostpointercapture', endDrag);
 
     /* theme follow — re-read --foreground when the root class flips, and repaint
        unconditionally: with the loop paused (globe off-screen) a bare readInk() would
@@ -249,7 +504,7 @@ export function ApertureGlobe({ className }: { className?: string }) {
     if (window.MutationObserver) {
       themeObs = new MutationObserver(function () {
         readInk();
-        draw(LAST);
+        draw(LAST, nowMs());
       });
       themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
     }
@@ -259,6 +514,11 @@ export function ApertureGlobe({ className }: { className?: string }) {
       stop()
       if (gio) gio.disconnect()
       if (themeObs) themeObs.disconnect()
+      canvasEl.removeEventListener('pointerdown', onPointerDown)
+      canvasEl.removeEventListener('pointermove', onPointerMove)
+      canvasEl.removeEventListener('pointerup', endDrag)
+      canvasEl.removeEventListener('pointercancel', endDrag)
+      canvasEl.removeEventListener('lostpointercapture', endDrag)
       window.removeEventListener('resize', onResize)
     }
   }, [])
@@ -266,7 +526,10 @@ export function ApertureGlobe({ className }: { className?: string }) {
   return (
     <canvas
       ref={canvasRef}
-      className={className}
+      className={cn(
+        'touch-pan-y cursor-grab active:cursor-grabbing data-[dragging=true]:cursor-grabbing',
+        props.className,
+      )}
       aria-hidden='true'
       role='presentation'
     />
