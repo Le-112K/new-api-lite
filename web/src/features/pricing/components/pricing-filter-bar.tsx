@@ -16,11 +16,16 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { X } from 'lucide-react'
+import { ChevronDown, X } from 'lucide-react'
 import { memo, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { getLobeIcon } from '@/lib/lobe-icon'
 import { cn } from '@/lib/utils'
 
@@ -127,6 +132,51 @@ function FilterRow(props: { label: string; children: ReactNode }) {
         {props.children}
       </div>
     </div>
+  )
+}
+
+/* A collapsed-by-default filter category: the same 58px label column as
+   FilterRow, then a muted summary of the current selection and a chevron. It
+   reuses the shared Base UI Collapsible primitive so the disclosure semantics
+   (real <button>, aria-expanded, non-tabbable hidden chips) come from the
+   primitive instead of hand-rolled markup. The panel is kept mounted with a
+   stable id so aria-controls always resolves, and it carries no animation —
+   the toggle is instant, which is inherently reduced-motion safe. */
+function CollapsibleFilterRow(props: {
+  label: string
+  summary: string
+  panelId: string
+  children: ReactNode
+}) {
+  return (
+    <Collapsible className='border-[var(--hairline)] mt-3 border-t pt-3'>
+      <CollapsibleTrigger
+        aria-controls={props.panelId}
+        className={cn(
+          'group focus-visible:ring-ring/50 flex w-full items-center gap-2.5 rounded-md text-left outline-none focus-visible:ring-2 sm:gap-3'
+        )}
+      >
+        <span className='text-muted-foreground shrink-0 text-[0.8125rem] font-semibold tracking-[0.06em] sm:w-[58px]'>
+          {props.label}
+        </span>
+        <span className='text-muted-foreground/75 group-hover:text-foreground group-data-[panel-open]:invisible min-w-0 flex-1 truncate text-[0.8125rem] transition-colors'>
+          {props.summary}
+        </span>
+        <ChevronDown
+          aria-hidden='true'
+          className='text-muted-foreground size-4 shrink-0 transition-transform duration-200 group-data-[panel-open]:rotate-180 motion-reduce:transition-none'
+        />
+      </CollapsibleTrigger>
+      <CollapsibleContent
+        id={props.panelId}
+        keepMounted
+        className='mt-2.5 sm:pl-[70px]'
+      >
+        <div className='flex min-w-0 flex-wrap gap-[7px]'>
+          {props.children}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   )
 }
 
@@ -264,7 +314,15 @@ export const PricingFilterBar = memo(function PricingFilterBar(
         </div>
       </div>
 
-      <FilterRow label={t('Groups')}>
+      <CollapsibleFilterRow
+        label={t('Groups')}
+        panelId='pricing-filter-groups'
+        summary={
+          props.groupFilter === FILTER_ALL
+            ? t('All Groups')
+            : props.groupFilter
+        }
+      >
         <Chip
           label={t('All Groups')}
           active={props.groupFilter === FILTER_ALL}
@@ -279,7 +337,7 @@ export const PricingFilterBar = memo(function PricingFilterBar(
             onClick={() => props.onGroupChange(group)}
           />
         ))}
-      </FilterRow>
+      </CollapsibleFilterRow>
 
       <FilterRow label={t('Provider')}>
         <Chip
@@ -304,7 +362,11 @@ export const PricingFilterBar = memo(function PricingFilterBar(
         })}
       </FilterRow>
 
-      <FilterRow label={t('Model Tags')}>
+      <CollapsibleFilterRow
+        label={t('Model Tags')}
+        panelId='pricing-filter-tags'
+        summary={props.tagFilter === FILTER_ALL ? t('All Tags') : props.tagFilter}
+      >
         <Chip
           label={t('All Tags')}
           count={props.models.length}
@@ -320,9 +382,13 @@ export const PricingFilterBar = memo(function PricingFilterBar(
             onClick={() => props.onTagChange(tag)}
           />
         ))}
-      </FilterRow>
+      </CollapsibleFilterRow>
 
-      <FilterRow label={t('Pricing Type')}>
+      <CollapsibleFilterRow
+        label={t('Pricing Type')}
+        panelId='pricing-filter-quota'
+        summary={labelFor(quotaTypeLabels, props.quotaTypeFilter)}
+      >
         {Object.entries(quotaTypeLabels).map(([value, label]) => (
           <Chip
             key={value}
@@ -331,9 +397,13 @@ export const PricingFilterBar = memo(function PricingFilterBar(
             onClick={() => props.onQuotaTypeChange(value)}
           />
         ))}
-      </FilterRow>
+      </CollapsibleFilterRow>
 
-      <FilterRow label={t('Endpoint Type')}>
+      <CollapsibleFilterRow
+        label={t('Endpoint Type')}
+        panelId='pricing-filter-endpoint'
+        summary={labelFor(endpointTypeLabels, props.endpointTypeFilter)}
+      >
         {endpointEntries.map(([value, label]) => (
           <Chip
             key={value}
@@ -343,7 +413,7 @@ export const PricingFilterBar = memo(function PricingFilterBar(
             onClick={() => props.onEndpointTypeChange(value)}
           />
         ))}
-      </FilterRow>
+      </CollapsibleFilterRow>
 
       {activeChips.length > 0 && (
         <div className='border-[var(--hairline)] mt-4 flex flex-wrap items-center gap-2.5 border-t pt-4'>

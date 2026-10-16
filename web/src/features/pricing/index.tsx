@@ -160,7 +160,7 @@ export function Pricing() {
   return (
     <PublicLayout showMainContainer={false}>
       <PageTransition className='relative mx-auto w-full max-w-[1800px] px-3 pt-16 pb-8 sm:px-6 sm:pt-20 sm:pb-10 xl:px-8'>
-        <header className='pt-5 sm:pt-8'>
+        <header className='pt-5 text-center sm:pt-8'>
           <h1 className='text-foreground text-[clamp(1.75rem,2.6vw,2.25rem)] leading-tight font-bold'>
             {t('Model Square')}
           </h1>
