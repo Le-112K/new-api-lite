@@ -26,7 +26,7 @@ import { useTheme } from '@/context/theme-provider'
 import { isLikelyHtml } from '@/lib/content-format'
 import { useAuthStore } from '@/stores/auth-store'
 
-import { CTA, Features, Hero, HowItWorks, Stats } from './components'
+import { CTA, Hero, ProvidersMarquee } from './components'
 import { useHomePageContent } from './hooks'
 
 export function Home() {
@@ -122,10 +122,13 @@ export function Home() {
 
   return (
     <PublicLayout showMainContainer={false}>
+      {/* The approved landing design is deliberately short: hero (with the
+          globe and the terminal), a provider strip, then a single closing CTA.
+          The stats / features / how-it-works sections that used to sit between
+          them were not part of that design and have been removed — they also
+          carried internal design rationale rendered as user-facing copy. */}
       <Hero isAuthenticated={isAuthenticated} />
-      <Stats />
-      <Features />
-      <HowItWorks />
+      <ProvidersMarquee />
       <CTA isAuthenticated={isAuthenticated} />
       <Footer />
     </PublicLayout>

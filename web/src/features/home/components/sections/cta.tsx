@@ -16,12 +16,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Link } from '@tanstack/react-router'
-import { ArrowRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { AnimateInView } from '@/components/animate-in-view'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 interface CTAProps {
   className?: string
@@ -36,47 +35,61 @@ export function CTA(props: CTAProps) {
   }
 
   return (
-    <section className='relative z-10 bg-[#F5F5F7] px-6 py-14 md:py-20 dark:bg-[#0a0a0a]'>
-      <AnimateInView
-        animation='scale-in'
-        className='mx-auto max-w-6xl rounded-[20px] border border-black/10 bg-white px-6 py-8 shadow-[0_1px_0_rgba(0,0,0,0.03)] md:px-10 md:py-10 dark:border-white/10 dark:bg-white/[0.06]'
-      >
-        <div className='flex flex-col items-start justify-between gap-6 md:flex-row md:items-center'>
-          <div className='max-w-xl'>
-            <h2 className='text-2xl leading-tight font-bold tracking-[-0.03em] md:text-3xl'>
-              {t('Ready to simplify')}
-              <br />
-              <span className='font-[520] text-[#1d1d1f] dark:text-white/80'>
-                {t('your AI integration?')}
-              </span>
-            </h2>
-            <p className='mt-3 max-w-md text-sm leading-relaxed text-[#6E6E73] dark:text-white/55'>
-              {t(
-                'Deploy your own gateway and start routing requests through your configured upstream services.'
-              )}
-            </p>
-            <p className='mt-2 text-xs text-[#86868B] dark:text-white/35'>
-              首页到此为止。更多能力与定价，去文档与定价页慢慢看。
-            </p>
+    <section
+      className={cn('relative z-10 bg-background py-[72px] md:py-28', props.className)}
+    >
+      <div className='mx-auto w-full max-w-[1200px] px-6 md:px-12'>
+        <AnimateInView animation='fade-up'>
+          <div className='relative overflow-hidden rounded-2xl bg-[#0A0A0A] px-8 py-[72px] shadow-[0_24px_64px_rgba(0,0,0,0.14),0_4px_12px_rgba(0,0,0,0.06)] md:rounded-3xl md:px-12 md:py-24 dark:bg-card dark:shadow-[inset_0_0_0_1px_var(--hairline)]'>
+            <div
+              aria-hidden='true'
+              className='pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_50%_0%,rgba(255,255,255,0.07),transparent_60%)]'
+            />
+            <div className='relative mx-auto max-w-[720px] text-center'>
+              <h2 className='mb-5 text-[clamp(2.5rem,5.2vw,4.5rem)] leading-[1.04] font-bold text-white'>
+                <span className='block'>{t('Deploy Aperture,')}</span>
+                <span className='block font-normal text-white/55'>
+                  {t('Connect your AI apps')}
+                </span>
+              </h2>
+              <p className='mx-auto mb-10 max-w-[30rem] text-[1.1875rem] leading-[1.5] text-white/[0.62]'>
+                {t(
+                  'Guides cover Docker, Docker Compose, 1Panel, BaoTa, and supported app integrations.'
+                )}
+              </p>
+              <div className='flex flex-wrap items-center justify-center gap-3.5'>
+                <Button
+                  className='h-12 rounded-full bg-white px-6 text-sm font-semibold text-[#0A0A0A] hover:bg-[#E8E8ED]'
+                  render={
+                    <a
+                      /* Docs paths all live under /docs/ — a bare /installation/
+                         resolves to a 404 on the live site. */
+                      href='https://docs.newapi.pro/docs/installation'
+                      target='_blank'
+                      rel='noopener noreferrer'
+                    />
+                  }
+                >
+                  {t('Deployment guide')}
+                </Button>
+                <Button
+                  variant='outline'
+                  className='h-12 rounded-full border-white/25 bg-transparent px-6 text-sm font-semibold text-[#F5F5F7] hover:border-white/40 hover:bg-white/10'
+                  render={
+                    <a
+                      href='https://docs.newapi.pro/docs/apps'
+                      target='_blank'
+                      rel='noopener noreferrer'
+                    />
+                  }
+                >
+                  {t('App integration guides')}
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className='flex shrink-0 flex-wrap items-center gap-3'>
-            <Button
-              className='group rounded-full bg-[#0a0a0a] px-6 text-white hover:bg-black dark:bg-white dark:text-black dark:hover:bg-white/90'
-              render={<Link to='/sign-up' />}
-            >
-              {t('Get Started')}
-              <ArrowRight className='ml-1 size-3.5 transition-transform duration-200 group-hover:translate-x-0.5' />
-            </Button>
-            <Button
-              variant='outline'
-              className='rounded-full border-black/10 bg-white hover:bg-[#F5F5F7] dark:border-white/15 dark:bg-transparent dark:text-white dark:hover:bg-white/5'
-              render={<Link to='/pricing' />}
-            >
-              {t('View Pricing')}
-            </Button>
-          </div>
-        </div>
-      </AnimateInView>
+        </AnimateInView>
+      </div>
     </section>
   )
 }

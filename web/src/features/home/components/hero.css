@@ -1,0 +1,122 @@
+/*
+Copyright (C) 2023-2026 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
+/* ==========================================================================
+ * hero.css — hero motion layer for the Aperture design language
+ * --------------------------------------------------------------------------
+ * Delays are driven by CSS custom properties (`--d`, `--ci`) so the JSX never
+ * carries an inline style beyond custom properties. Entrance reuses the global
+ * `landing-fade-up` keyframes (styles/index.css); everything is turned off
+ * under `prefers-reduced-motion: reduce`.
+ * ========================================================================== */
+
+.hero-anim {
+  animation: landing-fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+/* App chips stagger in behind the copy column's entrance cadence. */
+.hero-chip {
+  animation: hero-chip-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(260ms + var(--ci, 0) * 70ms);
+}
+@keyframes hero-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Live status dot: a pulse replaces a coloured indicator light. */
+.hero-live-dot {
+  animation: hero-live-pulse 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+@keyframes hero-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.82);
+  }
+}
+
+/* Aperture watermark — a barely-there six-blade mark. It rotates very slowly
+   and breathes in opacity; `transform-box: fill-box` keeps the rotation centred
+   on the SVG viewBox rather than the element box. */
+.hero-ap-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: transform;
+  animation:
+    hero-ap-rotate 160s linear infinite,
+    hero-ap-breathe 16s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+@keyframes hero-ap-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes hero-ap-breathe {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* theme-apple-bw.css declares `h1,h2,h3{letter-spacing:-0.02em}` as an
+   UNLAYERED rule, so it outranks anything Tailwind emits into
+   `@layer utilities` — a `tracking-*` class on the headline is silently
+   ignored. The optical tracking therefore has to be restated here (unlayered,
+   and at higher specificity), scoped by language: Latin copy is tracked tight,
+   CJK copy sits at zero. */
+.hero-title {
+  letter-spacing: 0.01em;
+}
+.hero-title[data-lang='en'] {
+  letter-spacing: -0.04em;
+}
+.hero-title-l2 {
+  letter-spacing: 0;
+}
+.hero-title[data-lang='en'] .hero-title-l2 {
+  letter-spacing: -0.04em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-anim,
+  .hero-chip,
+  .hero-live-dot,
+  .hero-ap-spin {
+    animation: none !important;
+  }
+  .hero-anim,
+  .hero-chip {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

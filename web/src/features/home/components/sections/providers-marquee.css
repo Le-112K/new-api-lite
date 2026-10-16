@@ -1,0 +1,120 @@
+/*
+Copyright (C) 2023-2026 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
+/* ==========================================================================
+ * providers-marquee.css — upstream logo marquee for the Aperture design
+ * --------------------------------------------------------------------------
+ * SEAMLESS LOOP: every `.pm-row` holds exactly TWO identical `.pm-group`
+ * children, so translating the row by exactly -50% lands copy 2 precisely
+ * where copy 1 started. A single `.pm-group` repeats the provider list
+ * GROUP_REPEATS times, which keeps one group wider than the viewport — the
+ * two-copy pattern only stays gap-free while a single copy outruns the
+ * viewport (prototype note, aperture-landing.html:628-631).
+ *
+ * DRIFT SPEED: the prototype advances one group per 58s (~14px/s). The
+ * durations below are `repeats x base cadence`, so each row still travels at
+ * ~14px/s while shifting a whole group (row 1: 5 x 58s ≈ 14.8px/s over a
+ * 4297px group; row 2: 3 x 132s ≈ 14.0px/s over a 5545px group — the merged
+ * 13-brand row is roughly twice the prototype's 7-brand group).
+ *
+ * Motion is fully disabled under `prefers-reduced-motion: reduce`; the strip
+ * then becomes a plain horizontally scrollable list.
+ * ========================================================================== */
+
+.pm-mask {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 12%,
+    #000 88%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 12%,
+    #000 88%,
+    transparent
+  );
+}
+
+.pm-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.pm-row {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+}
+
+.pm-row--forward {
+  animation: pm-marquee-forward var(--pm-duration, 290s) linear infinite;
+}
+
+.pm-row--reverse {
+  animation: pm-marquee-reverse var(--pm-duration, 396s) linear infinite;
+}
+
+.pm-mask:hover .pm-row {
+  animation-play-state: paused;
+}
+
+.pm-group {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 52px;
+  padding-right: 52px;
+}
+
+@keyframes pm-marquee-forward {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes pm-marquee-reverse {
+  from {
+    transform: translate3d(-50%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pm-row {
+    animation: none !important;
+    transform: none !important;
+  }
+  .pm-mask {
+    overflow-x: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .pm-group:last-child {
+    display: none;
+  }
+}

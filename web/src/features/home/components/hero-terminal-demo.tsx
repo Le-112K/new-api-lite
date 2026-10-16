@@ -11,504 +11,400 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU Affero General Public License for more details.
 
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useState, useEffect, useRef, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useTranslation } from 'react-i18next'
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useMediaQuery } from '@/hooks/use-media-query'
 import { cn } from '@/lib/utils'
 
-type AccentTone = 'bw'
+type SynClass = 'cmd' | 'key' | 'str' | 'num' | 'mut' | 'hl' | 'pun'
 
-interface ApiDemoConfig {
+/** [syntax tier, text] — one entry per coloured span in the approved prototype. */
+type CodeToken = readonly [SynClass, string]
+
+interface TerminalDemo {
   id: string
-  label: string
-  method: 'POST' | 'GET'
+  labelKey: string
+  method: string
   endpoint: string
-  headers: string[]
-  request: string[]
-  response: string[]
-  responseHighlights: string[]
-  tokens: number
-  latency: number
-  accent: AccentTone
+  request: readonly (readonly CodeToken[])[]
+  response: readonly (readonly CodeToken[])[]
 }
 
-// Apple BW: single monochrome accent — black active, gray idle
-const ACCENT_CLASSES: Record<
-  AccentTone,
+// Payloads transcribed span-for-span from the approved prototype
+// (deliverables/aperture-landing.html, 1405-1447) — do not paraphrase.
+// The language is grayscale only, so the tiers below are steps of grey.
+const TERMINAL_DEMOS: readonly TerminalDemo[] = [
   {
-    activeText: string
-    activeBorder: string
-    badge: string
-  }
-> = {
-  bw: {
-    activeText: 'text-[#0a0a0a] dark:text-white',
-    activeBorder: 'border-[#0a0a0a] dark:border-white',
-    badge: 'bg-[#0a0a0a] text-white dark:bg-white dark:text-black',
-  },
-}
-
-const API_DEMOS: ApiDemoConfig[] = [
-  {
-    id: 'gpt-chat',
-    label: 'Chat',
+    id: 'chat',
+    labelKey: 'Chat',
     method: 'POST',
     endpoint: '/v1/chat/completions',
-    headers: ['"Authorization: Bearer sk-••••"'],
     request: [
-      '"model": "your-model",',
-      '"messages": [',
-      '  { "role": "user", "content": "..." }',
-      ']',
+      [['cmd', 'curl'], ['pun', ' '], ['mut', '$APERTURE'], ['pun', '/v1/chat/completions \\']],
+      [['pun', '  '], ['mut', '-H'], ['pun', ' '], ['str', '"Authorization: Bearer sk-••••"'], ['pun', ' \\']],
+      [['pun', '  '], ['mut', '-H'], ['pun', ' '], ['str', '"Content-Type: application/json"'], ['pun', ' \\']],
+      [['pun', '  '], ['mut', '-d'], ['pun', ' '], ['str', '\'{']],
+      [['pun', '    '], ['key', '"model"'], ['pun', ': '], ['str', '"any-upstream-model"'], ['pun', ',']],
+      [['pun', '    '], ['key', '"messages"'], ['pun', ': [']],
+      [['pun', '      { '], ['key', '"role"'], ['pun', ': '], ['str', '"system"'], ['pun', ', '], ['key', '"content"'], ['pun', ': '], ['str', '"Be brief."'], ['pun', ' },']],
+      [['pun', '      { '], ['key', '"role"'], ['pun', ': '], ['str', '"user"'], ['pun', ', '], ['key', '"content"'], ['pun', ': '], ['str', '"Hi"'], ['pun', ' }']],
+      [['pun', '    ],']],
+      [['pun', '    '], ['key', '"temperature"'], ['pun', ': '], ['num', '0.7'], ['pun', ',']],
+      [['pun', '    '], ['key', '"top_p"'], ['pun', ': '], ['num', '1'], ['pun', ',']],
+      [['pun', '    '], ['key', '"max_tokens"'], ['pun', ': '], ['num', '512'], ['pun', ',']],
+      [['pun', '    '], ['key', '"frequency_penalty"'], ['pun', ': '], ['num', '0'], ['pun', ',']],
+      [['pun', '    '], ['key', '"presence_penalty"'], ['pun', ': '], ['num', '0'], ['pun', ',']],
+      [['pun', '    '], ['key', '"stream"'], ['pun', ': '], ['num', 'true']],
+      [['pun', '  }\'']],
     ],
     response: [
-      '{',
-      '  "choices": [{ "message": { "content": <text> } }],',
-      '  "usage": { "total_tokens": <tokens> }',
-      '}',
+      [['pun', '{']],
+      [['pun', '  '], ['key', '"id"'], ['pun', ': '], ['str', '"chatcmpl-9xK2"'], ['pun', ',']],
+      [['pun', '  '], ['key', '"object"'], ['pun', ': '], ['str', '"chat.completion"'], ['pun', ',']],
+      [['pun', '  '], ['key', '"created"'], ['pun', ': '], ['num', '1732000000'], ['pun', ',']],
+      [['pun', '  '], ['key', '"model"'], ['pun', ': '], ['str', '"any-upstream-model"'], ['pun', ',']],
+      [['pun', '  '], ['key', '"choices"'], ['pun', ': [{']],
+      [['pun', '    '], ['key', '"index"'], ['pun', ': '], ['num', '0'], ['pun', ',']],
+      [['pun', '    '], ['key', '"message"'], ['pun', ': {']],
+      [['pun', '      '], ['key', '"role"'], ['pun', ': '], ['str', '"assistant"'], ['pun', ',']],
+      [['pun', '      '], ['key', '"content"'], ['pun', ': '], ['hl', '"…"']],
+      [['pun', '    },']],
+      [['pun', '    '], ['key', '"finish_reason"'], ['pun', ': '], ['str', '"stop"']],
+      [['pun', '  }],']],
+      [['pun', '  '], ['key', '"usage"'], ['pun', ': {']],
+      [['pun', '    '], ['key', '"prompt_tokens"'], ['pun', ': '], ['num', '9'], ['pun', ',']],
+      [['pun', '    '], ['key', '"completion_tokens"'], ['pun', ': '], ['num', '18'], ['pun', ',']],
+      [['pun', '    '], ['key', '"total_tokens"'], ['pun', ': '], ['num', '27']],
+      [['pun', '  }']],
+      [['pun', '}']],
     ],
-    responseHighlights: ['<text>', '<tokens>'],
-    tokens: 27,
-    latency: 142,
-    accent: 'bw',
   },
   {
     id: 'responses',
-    label: 'Responses',
+    labelKey: 'Responses',
     method: 'POST',
     endpoint: '/v1/responses',
-    headers: ['"Authorization: Bearer sk-••••"'],
-    request: ['"model": "your-model",', '"input": "..."'],
-    response: [
-      '{',
-      '  "output": [{ "type": "output_text", "text": <text> }],',
-      '  "usage": { "total_tokens": <tokens> }',
-      '}',
+    request: [
+      [['cmd', 'curl'], ['pun', ' '], ['mut', '$APERTURE'], ['pun', '/v1/responses \\']],
+      [['pun', '  '], ['mut', '-H'], ['pun', ' '], ['str', '"Authorization: Bearer sk-••••"'], ['pun', ' \\']],
+      [['pun', '  '], ['mut', '-H'], ['pun', ' '], ['str', '"Content-Type: application/json"'], ['pun', ' \\']],
+      [['pun', '  '], ['mut', '-d'], ['pun', ' '], ['str', '\'{']],
+      [['pun', '    '], ['key', '"model"'], ['pun', ': '], ['str', '"any-upstream-model"'], ['pun', ',']],
+      [['pun', '    '], ['key', '"input"'], ['pun', ': [']],
+      [['pun', '      { '], ['key', '"role"'], ['pun', ': '], ['str', '"system"'], ['pun', ', '], ['key', '"content"'], ['pun', ': '], ['str', '"Be brief."'], ['pun', ' },']],
+      [['pun', '      { '], ['key', '"role"'], ['pun', ': '], ['str', '"user"'], ['pun', ', '], ['key', '"content"'], ['pun', ': '], ['str', '"Hi"'], ['pun', ' }']],
+      [['pun', '    ],']],
+      [['pun', '    '], ['key', '"max_output_tokens"'], ['pun', ': '], ['num', '512'], ['pun', ',']],
+      [['pun', '    '], ['key', '"temperature"'], ['pun', ': '], ['num', '0.7'], ['pun', ',']],
+      [['pun', '    '], ['key', '"top_p"'], ['pun', ': '], ['num', '1'], ['pun', ',']],
+      [['pun', '    '], ['key', '"metadata"'], ['pun', ': { '], ['key', '"trace"'], ['pun', ': '], ['str', '"demo"'], ['pun', ' },']],
+      [['pun', '    '], ['key', '"truncation"'], ['pun', ': '], ['str', '"auto"'], ['pun', ',']],
+      [['pun', '    '], ['key', '"stream"'], ['pun', ': '], ['num', 'true'], ['pun', ',']],
+      [['pun', '    '], ['key', '"store"'], ['pun', ': '], ['num', 'false']],
+      [['pun', '  }\'']],
     ],
-    responseHighlights: ['<text>', '<tokens>'],
-    tokens: 31,
-    latency: 168,
-    accent: 'bw',
+    response: [
+      [['pun', '{']],
+      [['pun', '  '], ['key', '"id"'], ['pun', ': '], ['str', '"resp_9xK2"'], ['pun', ',']],
+      [['pun', '  '], ['key', '"object"'], ['pun', ': '], ['str', '"response"'], ['pun', ',']],
+      [['pun', '  '], ['key', '"created_at"'], ['pun', ': '], ['num', '1732000000'], ['pun', ',']],
+      [['pun', '  '], ['key', '"model"'], ['pun', ': '], ['str', '"any-upstream-model"'], ['pun', ',']],
+      [['pun', '  '], ['key', '"status"'], ['pun', ': '], ['str', '"completed"'], ['pun', ',']],
+      [['pun', '  '], ['key', '"output"'], ['pun', ': [{']],
+      [['pun', '    '], ['key', '"type"'], ['pun', ': '], ['str', '"message"'], ['pun', ',']],
+      [['pun', '    '], ['key', '"role"'], ['pun', ': '], ['str', '"assistant"'], ['pun', ',']],
+      [['pun', '    '], ['key', '"content"'], ['pun', ': [{']],
+      [['pun', '      '], ['key', '"type"'], ['pun', ': '], ['str', '"output_text"'], ['pun', ',']],
+      [['pun', '      '], ['key', '"text"'], ['pun', ': '], ['hl', '"…"']],
+      [['pun', '    }]']],
+      [['pun', '  }],']],
+      [['pun', '  '], ['key', '"usage"'], ['pun', ': {']],
+      [['pun', '    '], ['key', '"input_tokens"'], ['pun', ': '], ['num', '9'], ['pun', ',']],
+      [['pun', '    '], ['key', '"output_tokens"'], ['pun', ': '], ['num', '18'], ['pun', ',']],
+      [['pun', '    '], ['key', '"total_tokens"'], ['pun', ': '], ['num', '27']],
+      [['pun', '  }']],
+      [['pun', '}']],
+    ],
   },
   {
-    id: 'claude',
-    label: 'Claude',
+    id: 'messages',
+    labelKey: 'Messages',
     method: 'POST',
     endpoint: '/v1/messages',
-    headers: ['"x-api-key: sk-••••"', '"anthropic-version: 2023-06-01"'],
     request: [
-      '"model": "your-model",',
-      '"max_tokens": 1024,',
-      '"messages": [',
-      '  { "role": "user", "content": "..." }',
-      ']',
+      [['cmd', 'curl'], ['pun', ' '], ['mut', '$APERTURE'], ['pun', '/v1/messages \\']],
+      [['pun', '  '], ['mut', '-H'], ['pun', ' '], ['str', '"x-api-key: sk-••••"'], ['pun', ' \\']],
+      [['pun', '  '], ['mut', '-H'], ['pun', ' '], ['str', '"anthropic-version: 2023-06-01"'], ['pun', ' \\']],
+      [['pun', '  '], ['mut', '-H'], ['pun', ' '], ['str', '"Content-Type: application/json"'], ['pun', ' \\']],
+      [['pun', '  '], ['mut', '-d'], ['pun', ' '], ['str', '\'{']],
+      [['pun', '    '], ['key', '"model"'], ['pun', ': '], ['str', '"any-upstream-model"'], ['pun', ',']],
+      [['pun', '    '], ['key', '"system"'], ['pun', ': '], ['str', '"Be brief."'], ['pun', ',']],
+      [['pun', '    '], ['key', '"messages"'], ['pun', ': [']],
+      [['pun', '      { '], ['key', '"role"'], ['pun', ': '], ['str', '"user"'], ['pun', ', '], ['key', '"content"'], ['pun', ': '], ['str', '"Hi"'], ['pun', ' }']],
+      [['pun', '    ],']],
+      [['pun', '    '], ['key', '"max_tokens"'], ['pun', ': '], ['num', '1024'], ['pun', ',']],
+      [['pun', '    '], ['key', '"temperature"'], ['pun', ': '], ['num', '0.7'], ['pun', ',']],
+      [['pun', '    '], ['key', '"stream"'], ['pun', ': '], ['num', 'true']],
+      [['pun', '  }\'']],
     ],
     response: [
-      '{',
-      '  "content": [{ "type": "text", "text": <text> }],',
-      '  "usage": { "input_tokens": <in>, "output_tokens": <out> }',
-      '}',
+      [['pun', '{']],
+      [['pun', '  '], ['key', '"id"'], ['pun', ': '], ['str', '"msg_9xK2"'], ['pun', ',']],
+      [['pun', '  '], ['key', '"type"'], ['pun', ': '], ['str', '"message"'], ['pun', ',']],
+      [['pun', '  '], ['key', '"role"'], ['pun', ': '], ['str', '"assistant"'], ['pun', ',']],
+      [['pun', '  '], ['key', '"model"'], ['pun', ': '], ['str', '"any-upstream-model"'], ['pun', ',']],
+      [['pun', '  '], ['key', '"content"'], ['pun', ': [{']],
+      [['pun', '    '], ['key', '"type"'], ['pun', ': '], ['str', '"text"'], ['pun', ',']],
+      [['pun', '    '], ['key', '"text"'], ['pun', ': '], ['hl', '"…"']],
+      [['pun', '  }],']],
+      [['pun', '  '], ['key', '"stop_reason"'], ['pun', ': '], ['str', '"end_turn"'], ['pun', ',']],
+      [['pun', '  '], ['key', '"stop_sequence"'], ['pun', ': '], ['num', 'null'], ['pun', ',']],
+      [['pun', '  '], ['key', '"usage"'], ['pun', ': {']],
+      [['pun', '    '], ['key', '"input_tokens"'], ['pun', ': '], ['num', '12'], ['pun', ',']],
+      [['pun', '    '], ['key', '"output_tokens"'], ['pun', ': '], ['num', '19']],
+      [['pun', '  }']],
+      [['pun', '}']],
     ],
-    responseHighlights: ['<text>', '<in>', '<out>'],
-    tokens: 29,
-    latency: 156,
-    accent: 'bw',
   },
   {
     id: 'gemini',
-    label: 'Gemini',
+    labelKey: 'Gemini',
     method: 'POST',
     endpoint: '/v1beta/models/{model}:generateContent',
-    headers: ['"x-goog-api-key: sk-••••"'],
     request: [
-      '"contents": [',
-      '  { "role": "user",',
-      '    "parts": [{ "text": "..." }] }',
-      ']',
+      [['cmd', 'curl'], ['pun', ' '], ['mut', '$APERTURE'], ['pun', '/v1beta/models/'], ['mut', '{model}'], ['pun', ':generateContent \\']],
+      [['pun', '  '], ['mut', '-H'], ['pun', ' '], ['str', '"x-goog-api-key: sk-••••"'], ['pun', ' \\']],
+      [['pun', '  '], ['mut', '-H'], ['pun', ' '], ['str', '"Content-Type: application/json"'], ['pun', ' \\']],
+      [['pun', '  '], ['mut', '-d'], ['pun', ' '], ['str', '\'{']],
+      [['pun', '    '], ['key', '"contents"'], ['pun', ': [']],
+      [['pun', '      { '], ['key', '"role"'], ['pun', ': '], ['str', '"user"'], ['pun', ',']],
+      [['pun', '        '], ['key', '"parts"'], ['pun', ': [{ '], ['key', '"text"'], ['pun', ': '], ['str', '"Hi"'], ['pun', ' }] }']],
+      [['pun', '    ],']],
+      [['pun', '    '], ['key', '"generationConfig"'], ['pun', ': {']],
+      [['pun', '      '], ['key', '"temperature"'], ['pun', ': '], ['num', '0.7'], ['pun', ',']],
+      [['pun', '      '], ['key', '"maxOutputTokens"'], ['pun', ': '], ['num', '512']],
+      [['pun', '    }']],
+      [['pun', '  }\'']],
     ],
     response: [
-      '{',
-      '  "candidates": [{ "content": { "parts": [{ "text": <text> }] } }],',
-      '  "usageMetadata": { "totalTokenCount": <tokens> }',
-      '}',
+      [['pun', '{']],
+      [['pun', '  '], ['key', '"candidates"'], ['pun', ': [{']],
+      [['pun', '    '], ['key', '"content"'], ['pun', ': {']],
+      [['pun', '      '], ['key', '"role"'], ['pun', ': '], ['str', '"model"'], ['pun', ',']],
+      [['pun', '      '], ['key', '"parts"'], ['pun', ': [{ '], ['key', '"text"'], ['pun', ': '], ['hl', '"…"'], ['pun', ' }]']],
+      [['pun', '    },']],
+      [['pun', '    '], ['key', '"finishReason"'], ['pun', ': '], ['str', '"STOP"'], ['pun', ',']],
+      [['pun', '    '], ['key', '"index"'], ['pun', ': '], ['num', '0']],
+      [['pun', '  }],']],
+      [['pun', '  '], ['key', '"usageMetadata"'], ['pun', ': {']],
+      [['pun', '    '], ['key', '"promptTokenCount"'], ['pun', ': '], ['num', '9'], ['pun', ',']],
+      [['pun', '    '], ['key', '"candidatesTokenCount"'], ['pun', ': '], ['num', '16'], ['pun', ',']],
+      [['pun', '    '], ['key', '"totalTokenCount"'], ['pun', ': '], ['num', '25']],
+      [['pun', '  },']],
+      [['pun', '  '], ['key', '"modelVersion"'], ['pun', ': '], ['str', '"gemini-2.0"']],
+      [['pun', '}']],
     ],
-    responseHighlights: ['<text>', '<tokens>'],
-    tokens: 25,
-    latency: 93,
-    accent: 'bw',
   },
 ]
 
+const SYN_CLASS: Record<SynClass, string> = {
+  cmd: 'font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]',
+  key: 'text-[#48484A] dark:text-[#C7C7CC]',
+  str: 'text-[#86868B]',
+  num: 'font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]',
+  mut: 'text-[#AEAEB2]',
+  hl: 'rounded-[4px] bg-[#F2F2F4] px-[5px] font-semibold text-[#1D1D1F] dark:bg-white/[0.08] dark:text-white',
+  pun: 'text-[#6E6E73] dark:text-[#A1A1A6]',
+}
+
+const LINE_REVEAL = cn(
+  'block whitespace-pre animate-in fade-in-0 slide-in-from-bottom-1 duration-300 fill-mode-both',
+  'delay-[calc(var(--i,0)*110ms)] motion-reduce:animate-none'
+)
+
 const CYCLE_INTERVAL = 4500
-const TRANSITION_MS = 220
 
 interface HeroTerminalDemoProps {
   className?: string
 }
 
 export function HeroTerminalDemo(props: HeroTerminalDemoProps) {
+  const { t } = useTranslation()
+  const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
   const [activeIndex, setActiveIndex] = useState(0)
-  const [transitioning, setTransitioning] = useState(false)
+  const [revealKey, setRevealKey] = useState(0)
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined)
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const rowRef = useRef<HTMLDivElement>(null)
+  const underlineRef = useRef<HTMLSpanElement>(null)
 
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    if (mq.matches) return
-
-    intervalRef.current = setInterval(() => {
-      setTransitioning(true)
-      timeoutRef.current = setTimeout(() => {
-        setActiveIndex((prev) => (prev + 1) % API_DEMOS.length)
-        setTransitioning(false)
-      }, TRANSITION_MS)
-    }, CYCLE_INTERVAL)
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
-    }
+  const syncUnderline = useCallback(() => {
+    const row = rowRef.current
+    const bar = underlineRef.current
+    if (!row || !bar) return
+    const active = row.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
+    if (!active) return
+    bar.style.setProperty('--u-x', `${active.offsetLeft}px`)
+    bar.style.setProperty('--u-w', `${active.offsetWidth}px`)
   }, [])
 
-  const handleSelect = (index: number) => {
-    if (index === activeIndex) return
+  useEffect(() => {
+    if (reduceMotion) return
+    const id = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % TERMINAL_DEMOS.length)
+      setRevealKey((key) => key + 1)
+    }, CYCLE_INTERVAL)
+    intervalRef.current = id
+    return () => clearInterval(id)
+  }, [reduceMotion])
+
+  useEffect(() => {
+    syncUnderline()
+  }, [activeIndex, syncUnderline])
+
+  // Re-seat the indicator on card resize, and when the monospace webfont swaps
+  // in — the swap changes each tab's width, not the row's, so watch the tabs too.
+  useEffect(() => {
+    const row = rowRef.current
+    if (!row || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => syncUnderline())
+    observer.observe(row)
+    row.querySelectorAll('[role="tab"]').forEach((tab) => observer.observe(tab))
+    return () => observer.disconnect()
+  }, [syncUnderline])
+
+  const handleValueChange = useCallback((next: string) => {
     if (intervalRef.current) clearInterval(intervalRef.current)
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
-    setTransitioning(true)
-    timeoutRef.current = setTimeout(() => {
-      setActiveIndex(index)
-      setTransitioning(false)
-    }, TRANSITION_MS)
-  }
+    const nextIndex = TERMINAL_DEMOS.findIndex((demo) => demo.id === next)
+    if (nextIndex < 0) return
+    setActiveIndex(nextIndex)
+    setRevealKey((key) => key + 1)
+  }, [])
 
-  const demo = API_DEMOS[activeIndex]
-  const accent = ACCENT_CLASSES[demo.accent]
+  const activeDemo = TERMINAL_DEMOS[activeIndex]
 
   return (
-    <div className={cn('mx-auto w-full max-w-2xl', props.className)}>
-      <div
-        className={cn(
-          'overflow-hidden rounded-[20px] border backdrop-blur-sm',
-          'border-black/10 bg-white shadow-[0_1px_0_rgba(0,0,0,0.04)]',
-          'dark:border-white/10 dark:bg-[#141414] dark:shadow-none'
-        )}
-      >
-        {/* Tab strip — BW */}
-        <div
-          className={cn(
-            'flex items-center gap-1 border-b px-2 sm:gap-1.5 sm:px-3',
-            'border-black/10 dark:border-white/10'
-          )}
-        >
-          {API_DEMOS.map((item, index) => {
-            const tone = ACCENT_CLASSES[item.accent]
-            const isActive = index === activeIndex
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleSelect(index)}
-                className={cn(
-                  'relative -mb-px flex items-center gap-1.5 border-b-2 px-2.5 py-2.5 text-[11px] font-medium tracking-wide transition-colors sm:px-3 sm:text-xs',
-                  isActive
-                    ? `${tone.activeBorder} ${tone.activeText}`
-                    : 'border-transparent text-[#86868B] hover:text-[#0a0a0a] dark:text-white/40 dark:hover:text-white/80'
-                )}
-              >
-                {item.label}
-              </button>
-            )
-          })}
-          <div className='ml-auto flex items-center gap-2 pr-2 sm:pr-3'>
-            <span className='inline-block size-1.5 rounded-full bg-[#0a0a0a] dark:bg-white' />
-            <span className='font-mono text-[10px] tracking-wider text-[#86868B] uppercase dark:text-white/40'>
-              200 ok
-            </span>
-          </div>
-        </div>
-
-        {/* Endpoint row */}
-        <div
-          className={cn(
-            'flex items-center gap-2.5 border-b bg-[#FBFBFB] px-5 py-3 dark:bg-white/[0.04]',
-            'border-black/10 dark:border-white/10'
-          )}
-        >
-          <span
-            className={cn(
-              'rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wider',
-              accent.badge
-            )}
-          >
-            {demo.method}
-          </span>
-          <code
-            className={cn(
-              'truncate font-mono text-[12.5px] text-[#1d1d1f] transition-opacity duration-200 dark:text-white/70',
-              transitioning ? 'opacity-0' : 'opacity-100'
-            )}
-          >
-            {demo.endpoint}
-          </code>
-        </div>
-
-        {/* Body — fixed rows so neither block shifts when switching demos */}
-        <div className='grid h-[400px] grid-rows-[235px_minmax(0,1fr)] font-mono text-[12.5px] leading-[1.55]'>
-          {/* Request */}
-          <RequestBlock demo={demo} transitioning={transitioning} />
-
-          {/* Response */}
-          <ResponseBlock demo={demo} transitioning={transitioning} />
-        </div>
-
-        {/* Footer metrics — muted */}
-        <div
-          className={cn(
-            'flex items-center justify-between border-t bg-[#FBFBFB] px-5 py-2.5 dark:bg-white/[0.03]',
-            'border-black/10 dark:border-white/10'
-          )}
-        >
-          <div className='flex items-center gap-3 text-[10px] tabular-nums text-[#86868B] dark:text-white/40'>
-            <span className='flex items-center gap-1'>
-              <span className='font-mono text-[#0a0a0a] dark:text-white'>{demo.latency}</span>
-              <span className='tracking-wider uppercase'>ms</span>
-            </span>
-            <span className='size-1 rounded-full bg-black/10 dark:bg-white/15' />
-            <span className='flex items-center gap-1'>
-              <span className='font-mono text-[#0a0a0a] dark:text-white'>{demo.tokens}</span>
-              <span className='tracking-wider uppercase'>tokens</span>
-            </span>
-            <span className='size-1 rounded-full bg-black/10 dark:bg-white/15' />
-            <span className='flex items-center gap-1'>
-              <span className='tracking-wider uppercase'>cost</span>
-              <span className='font-mono text-[#0a0a0a] dark:text-white'>
-                ${(demo.tokens * 0.00003).toFixed(5)}
-              </span>
-            </span>
-          </div>
-          <span className='font-mono text-[10px] tracking-wider text-[#86868B] uppercase dark:text-white/30'>
-            stream · sse
-          </span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function RequestBlock(props: { demo: ApiDemoConfig; transitioning: boolean }) {
-  const { demo, transitioning } = props
-
-  return (
-    <div className='relative bg-white px-5 py-4 dark:bg-[#141414]'>
-      <SectionLabel>Request</SectionLabel>
-      <div
-        className={cn(
-          'mt-2 transition-opacity duration-200',
-          transitioning ? 'opacity-0' : 'opacity-100'
-        )}
-      >
-        <CodeLine>
-          <Command>curl</Command> <Flag>-X</Flag> <Flag>POST</Flag>{' '}
-          <StringText>&quot;{demo.endpoint}&quot;</StringText>{' '}
-          <Muted>{'\\'}</Muted>
-        </CodeLine>
-        {demo.headers.map((header) => (
-          <CodeLine key={header} indent={2}>
-            <Flag>-H</Flag> <StringText>{header}</StringText>{' '}
-            <Muted>{'\\'}</Muted>
-          </CodeLine>
-        ))}
-        <CodeLine indent={2}>
-          <Flag>-d</Flag> <StringText>&apos;{'{'}</StringText>
-        </CodeLine>
-        {demo.request.map((line, i) => (
-          <CodeLine key={i} indent={4}>
-            {renderJsonLine(line)}
-          </CodeLine>
-        ))}
-        <CodeLine indent={2}>
-          <StringText>{'}'}&apos;</StringText>
-        </CodeLine>
-      </div>
-    </div>
-  )
-}
-
-function ResponseBlock(props: { demo: ApiDemoConfig; transitioning: boolean }) {
-  const { demo, transitioning } = props
-
-  return (
-    <div
+    <Tabs
+      value={activeDemo.id}
+      onValueChange={handleValueChange}
       className={cn(
-        'relative border-t bg-[#FBFBFB] px-5 py-4 dark:bg-white/[0.02]',
-        'border-black/10 dark:border-white/10'
+        'relative w-full gap-0 overflow-hidden rounded-2xl border border-black/10 bg-white',
+        'shadow-[0_1px_0_rgba(0,0,0,0.04)] dark:border-white/10 dark:bg-[#141414] dark:shadow-none',
+        props.className
       )}
     >
-      <SectionLabel>Response</SectionLabel>
+      {/* Tab bar — the sliding underline is positioned against this row. */}
       <div
-        className={cn(
-          'mt-2 transition-opacity duration-200',
-          transitioning ? 'opacity-0' : 'opacity-100'
-        )}
+        ref={rowRef}
+        className='relative flex items-center border-b border-black/10 px-2 pt-1.5 dark:border-white/10'
       >
-        {demo.response.map((line, i) => (
-          <CodeLine key={i}>{renderResponseLine(line, demo)}</CodeLine>
-        ))}
-      </div>
-    </div>
-  )
-}
+        <TabsList
+          aria-label={t('API surfaces')}
+          className={cn(
+            'group/tabs-list h-auto w-fit flex-none items-center justify-start gap-1 rounded-none bg-transparent p-0',
+            'text-[11px] sm:text-xs group-data-horizontal/tabs:h-auto'
+          )}
+        >
+          {TERMINAL_DEMOS.map((demo) => (
+            <TabsTrigger
+              key={demo.id}
+              value={demo.id}
+              className={cn(
+                'relative h-auto flex-none rounded-none border-0 border-b-0 bg-transparent px-2.5 py-2.5',
+                'text-[11px] font-medium tracking-wide shadow-none transition-colors sm:px-3 sm:text-xs',
+                'text-[#86868B] hover:text-[#0A0A0A]',
+                'data-active:bg-transparent data-active:text-[#0A0A0A] data-active:shadow-none',
+                'group-data-[variant=default]/tabs-list:data-active:shadow-none',
+                'dark:text-white/40 dark:hover:text-white/80 dark:data-active:border-transparent',
+                'dark:data-active:bg-transparent dark:data-active:text-white'
+              )}
+            >
+              {t(demo.labelKey)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-function SectionLabel(props: { children: ReactNode }) {
-  return (
-    <span className='font-sans text-[10px] font-semibold tracking-[0.14em] text-[#86868B] uppercase dark:text-white/35'>
-      {props.children}
-    </span>
-  )
-}
-
-const STRING_RE = /"[^"]*"/g
-const PLACEHOLDER_RE = /<[a-z]+>/gi
-
-function renderJsonLine(line: string): ReactNode {
-  if (!line.trim()) return <Muted> </Muted>
-  return tokenize(line)
-}
-
-function renderResponseLine(line: string, demo: ApiDemoConfig): ReactNode {
-  if (!line.trim()) return <Muted> </Muted>
-
-  const segments: ReactNode[] = []
-  let cursor = 0
-  const matches = [...line.matchAll(PLACEHOLDER_RE)]
-
-  if (matches.length === 0) return tokenize(line)
-
-  matches.forEach((match, idx) => {
-    const start = match.index ?? 0
-    if (start > cursor) {
-      segments.push(
-        <span key={`pre-${idx}`}>{tokenize(line.slice(cursor, start))}</span>
-      )
-    }
-    const placeholder = match[0]
-    if (placeholder === '<text>') {
-      segments.push(
-        <Accent key={`ph-${idx}`} accent={demo.accent}>
-          {`"${truncateResponse(demo)}"`}
-        </Accent>
-      )
-    } else if (placeholder === '<tokens>') {
-      segments.push(<NumberText key={`ph-${idx}`}>{demo.tokens}</NumberText>)
-    } else if (placeholder === '<in>') {
-      segments.push(
-        <NumberText key={`ph-${idx}`}>
-          {Math.floor(demo.tokens * 0.4)}
-        </NumberText>
-      )
-    } else if (placeholder === '<out>') {
-      segments.push(
-        <NumberText key={`ph-${idx}`}>
-          {Math.ceil(demo.tokens * 0.6)}
-        </NumberText>
-      )
-    } else {
-      segments.push(<Muted key={`ph-${idx}`}>{placeholder}</Muted>)
-    }
-    cursor = start + placeholder.length
-  })
-
-  if (cursor < line.length) {
-    segments.push(<span key='tail'>{tokenize(line.slice(cursor))}</span>)
-  }
-
-  return segments
-}
-
-function truncateResponse(demo: ApiDemoConfig): string {
-  const map: Record<string, string> = {
-    'gpt-chat': 'Chat request routed.',
-    responses: 'Response workflow ready.',
-    claude: 'Claude message routed.',
-    gemini: 'Gemini request served.',
-  }
-  return map[demo.id] ?? '...'
-}
-
-function tokenize(input: string): ReactNode {
-  const segments: ReactNode[] = []
-  let cursor = 0
-  const matches = [...input.matchAll(STRING_RE)]
-
-  matches.forEach((match, idx) => {
-    const start = match.index ?? 0
-    if (start > cursor) {
-      segments.push(
-        <Muted key={`m-${idx}`}>{input.slice(cursor, start)}</Muted>
-      )
-    }
-    const text = match[0]
-    const after = input.slice(start + text.length).trimStart()
-    const isKey = after.startsWith(':')
-    if (isKey) {
-      segments.push(<Key key={`k-${idx}`}>{text}</Key>)
-    } else {
-      segments.push(<StringText key={`s-${idx}`}>{text}</StringText>)
-    }
-    cursor = start + text.length
-  })
-
-  if (cursor < input.length) {
-    segments.push(<Muted key='tail'>{input.slice(cursor)}</Muted>)
-  }
-
-  return segments
-}
-
-function CodeLine(props: { children: ReactNode; indent?: number }) {
-  return (
-    <div className='break-words whitespace-pre-wrap'>
-      {props.indent ? (
         <span
-          aria-hidden
-          className='inline-block'
-          style={{ width: `${props.indent}ch` }}
+          ref={underlineRef}
+          aria-hidden='true'
+          className={cn(
+            'pointer-events-none absolute bottom-0 left-0 h-0.5 w-[var(--u-w,0px)]',
+            'translate-x-[var(--u-x,0px)] rounded-t-[2px] bg-[#0A0A0A]',
+            'transition-[translate,width] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]',
+            'motion-reduce:transition-none dark:bg-white'
+          )}
         />
-      ) : null}
-      {props.children}
-    </div>
+
+        <span className='ml-auto flex flex-none items-center gap-[7px] pr-1.5 font-mono text-[10px] tracking-[0.08em] text-[#6E6E73] uppercase dark:text-[#A1A1A6]'>
+          <span
+            aria-hidden='true'
+            className='terminal-demo-pulse size-1.5 rounded-full bg-[#0A0A0A] dark:bg-white'
+          />
+          200 OK
+        </span>
+      </div>
+
+      {TERMINAL_DEMOS.map((demo) => (
+        <TabsContent
+          key={demo.id}
+          value={demo.id}
+          keepMounted
+          className='min-h-[340px] p-6 outline-none'
+        >
+          <div
+            key={revealKey}
+            className='grid grid-cols-1 gap-y-[26px] lg:grid-cols-2 lg:gap-y-0'
+          >
+            {/* Request */}
+            <div className='min-w-0 lg:pr-[30px]'>
+              <p className='mb-3.5 font-sans text-[10px] font-semibold tracking-[0.14em] text-[#86868B] uppercase dark:text-white/35'>
+                {t('Request')}
+              </p>
+              <div className='mb-[15px] flex items-center gap-[10px] border-b border-black/10 pb-[13px] dark:border-white/10'>
+                <span className='flex-none rounded-[6px] border border-black/15 px-2 py-[3px] font-mono text-[10px] font-semibold tracking-[0.08em] text-[#1D1D1F] dark:border-white/20 dark:text-white'>
+                  {demo.method}
+                </span>
+                <code className='truncate font-mono text-[13px] text-[#6E6E73] dark:text-[#A1A1A6]'>
+                  {demo.endpoint}
+                </code>
+              </div>
+              <pre className='m-0 min-w-0 overflow-x-auto font-mono text-[13px] leading-[1.85] whitespace-normal text-[#6E6E73] dark:text-[#A1A1A6]'>
+                <CodeLines lines={demo.request} />
+              </pre>
+            </div>
+
+            {/* Response */}
+            <div className='min-w-0 border-t border-black/10 pt-[22px] lg:border-t-0 lg:border-l lg:pt-0 lg:pl-[30px] dark:border-white/10'>
+              <p className='mb-3.5 font-sans text-[10px] font-semibold tracking-[0.14em] text-[#86868B] uppercase dark:text-white/35'>
+                {t('Response')}
+              </p>
+              <pre className='m-0 min-w-0 overflow-x-auto font-mono text-[13px] leading-[1.85] whitespace-normal text-[#6E6E73] dark:text-[#A1A1A6]'>
+                <CodeLines lines={demo.response} />
+              </pre>
+            </div>
+          </div>
+        </TabsContent>
+      ))}
+    </Tabs>
   )
 }
 
-function Command(props: { children: ReactNode }) {
-  return (
-    <span className='font-medium text-[#0a0a0a] dark:text-white'>{props.children}</span>
-  )
-}
-
-function Flag(props: { children: ReactNode }) {
-  return <span className='text-[#6E6E73] dark:text-white/60'>{props.children}</span>
-}
-
-function Key(props: { children: ReactNode }) {
-  return <span className='text-[#0a0a0a] dark:text-white'>{props.children}</span>
-}
-
-function StringText(props: { children: ReactNode }) {
-  return <span className='text-[#6E6E73] dark:text-white/55'>{props.children}</span>
-}
-
-function NumberText(props: { children: ReactNode }) {
-  return <span className='font-medium text-[#0a0a0a] dark:text-white'>{props.children}</span>
-}
-
-function Muted(props: { children: ReactNode }) {
-  return <span className='text-[#86868B] dark:text-white/35'>{props.children}</span>
-}
-
-function Accent(props: { children: ReactNode; accent: AccentTone }) {
-  const tone = ACCENT_CLASSES[props.accent]
-  return (
-    <span className={cn('font-medium', tone.activeText)}>{props.children}</span>
-  )
+function CodeLines(props: { lines: readonly (readonly CodeToken[])[] }) {
+  return props.lines.map((line, index) => (
+    // eslint-disable-next-line react/no-array-index-key -- frozen literal, never reordered
+    <span key={index} className={LINE_REVEAL} style={{ '--i': index } as CSSProperties}>
+      {line.map((token, tokenIndex) => (
+        // eslint-disable-next-line react/no-array-index-key -- token order is the identity
+        <span key={tokenIndex} className={SYN_CLASS[token[0]]}>
+          {token[1]}
+        </span>
+      ))}
+    </span>
+  ))
 }
