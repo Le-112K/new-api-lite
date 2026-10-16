@@ -22,10 +22,12 @@ import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { getLobeIcon } from '@/lib/lobe-icon'
 import { cn } from '@/lib/utils'
 
@@ -135,48 +137,93 @@ function FilterRow(props: { label: string; children: ReactNode }) {
   )
 }
 
-/* A collapsed-by-default filter category: the same 58px label column as
-   FilterRow, then a muted summary of the current selection and a chevron. It
-   reuses the shared Base UI Collapsible primitive so the disclosure semantics
-   (real <button>, aria-expanded, non-tabbable hidden chips) come from the
-   primitive instead of hand-rolled markup. The panel is kept mounted with a
-   stable id so aria-controls always resolves, and it carries no animation —
-   the toggle is instant, which is inherently reduced-motion safe. */
-function CollapsibleFilterRow(props: {
+/* One option in a picker panel: the same value the chip used to carry, plus an
+   optional count (or ratio suffix) rendered as a trailing badge. */
+type FilterOption = {
+  value: string
   label: string
-  summary: string
-  panelId: string
-  children: ReactNode
+  count?: number
+  suffix?: string
+  icon?: ReactNode
+}
+
+/* A filter category as a picker: a bordered trigger that names the category and
+   its current value, opening a single-select option panel. It reuses the shared
+   Base UI Menu primitive (dropdown-menu) so roving arrow focus, Esc-to-close,
+   focus return to the trigger and outside-press dismissal come from the
+   primitive instead of hand-rolled markup. RadioGroup/RadioItem is the
+   single-select shape: it marks the applied option (aria-checked) and closes the
+   panel on choose. The panel is unmounted while closed, so its options are never
+   reachable by Tab. The trigger always renders the current value — a value that
+   is not in the option list (e.g. applied straight from the URL) still shows
+   instead of falling back to the "all" label, so an active filter is never
+   hidden. */
+function FilterPicker(props: {
+  label: string
+  value: string
+  options: FilterOption[]
+  onChange: (value: string) => void
 }) {
+  const selected =
+    props.options.find((option) => option.value === props.value) ?? null
   return (
-    <Collapsible className='border-[var(--hairline)] mt-3 border-t pt-3'>
-      <CollapsibleTrigger
-        aria-controls={props.panelId}
-        className={cn(
-          'group focus-visible:ring-ring/50 flex w-full items-center gap-2.5 rounded-md text-left outline-none focus-visible:ring-2 sm:gap-3'
-        )}
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type='button'
+            variant='outline'
+            className='border-border/60 bg-background hover:border-border h-9 max-w-[240px] min-w-0 gap-1.5 rounded-lg px-3 font-normal'
+          />
+        }
       >
-        <span className='text-muted-foreground shrink-0 text-[0.8125rem] font-semibold tracking-[0.06em] sm:w-[58px]'>
+        <span className='text-muted-foreground shrink-0 text-[0.8125rem] font-semibold tracking-[0.06em]'>
           {props.label}
         </span>
-        <span className='text-muted-foreground/75 group-hover:text-foreground group-data-[panel-open]:invisible min-w-0 flex-1 truncate text-[0.8125rem] transition-colors'>
-          {props.summary}
+        <span aria-hidden='true' className='text-muted-foreground/50 shrink-0'>
+          ·
+        </span>
+        <span className='text-foreground min-w-0 truncate text-[0.8125rem]'>
+          {selected ? selected.label : props.value}
         </span>
         <ChevronDown
           aria-hidden='true'
-          className='text-muted-foreground size-4 shrink-0 transition-transform duration-200 group-data-[panel-open]:rotate-180 motion-reduce:transition-none'
+          className='text-muted-foreground size-4 shrink-0'
         />
-      </CollapsibleTrigger>
-      <CollapsibleContent
-        id={props.panelId}
-        keepMounted
-        className='mt-2.5 sm:pl-[70px]'
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align='start'
+        sideOffset={6}
+        className='w-auto max-w-[20rem] min-w-(--anchor-width) motion-reduce:animate-none!'
       >
-        <div className='flex min-w-0 flex-wrap gap-[7px]'>
-          {props.children}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
+        <DropdownMenuRadioGroup
+          value={props.value}
+          onValueChange={(value) => props.onChange(value as string)}
+        >
+          {props.options.map((option) => {
+            const badge = option.suffix ?? option.count
+            return (
+              <DropdownMenuRadioItem
+                key={option.value}
+                value={option.value}
+                // RadioItem does not close on click by default; a chosen picker
+                // must apply and dismiss in one gesture.
+                closeOnClick
+                className='gap-2'
+              >
+                {option.icon && <span className='shrink-0'>{option.icon}</span>}
+                <span className='min-w-0 flex-1 truncate'>{option.label}</span>
+                {badge != null && (
+                  <span className='text-muted-foreground shrink-0 tabular-nums'>
+                    {badge}
+                  </span>
+                )}
+              </DropdownMenuRadioItem>
+            )
+          })}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
@@ -287,6 +334,62 @@ export const PricingFilterBar = memo(function PricingFilterBar(
         props.endpointTypeFilter === value)
   )
 
+  // The four picker option lists mirror the mobile sidebar's so the two
+  // surfaces offer the same choices and counts.
+  const groupOptions: FilterOption[] = [
+    { value: FILTER_ALL, label: t('All Groups') },
+    ...props.groups.map((group) => ({
+      value: group,
+      label: group,
+      suffix: formatGroupRatio(props.groupRatios?.[group]),
+    })),
+  ]
+
+  const tagOptions: FilterOption[] = [
+    { value: FILTER_ALL, label: t('All Tags'), count: props.models.length },
+    ...props.tags.map((tag) => ({
+      value: tag,
+      label: tag,
+      count: counts.tags.get(tag.toLowerCase()) ?? 0,
+    })),
+  ]
+
+  const quotaOptions: FilterOption[] = [
+    {
+      value: QUOTA_TYPES.ALL,
+      label: quotaTypeLabels[QUOTA_TYPES.ALL],
+      count: props.models.length,
+    },
+    {
+      value: QUOTA_TYPES.TOKEN,
+      label: quotaTypeLabels[QUOTA_TYPES.TOKEN],
+      count: counts.quotas.token,
+    },
+    {
+      value: QUOTA_TYPES.REQUEST,
+      label: quotaTypeLabels[QUOTA_TYPES.REQUEST],
+      count: counts.quotas.request,
+    },
+    {
+      value: QUOTA_TYPES.TASK,
+      label: quotaTypeLabels[QUOTA_TYPES.TASK],
+      count: counts.quotas.task,
+    },
+  ]
+
+  const endpointOptions: FilterOption[] = [
+    {
+      value: ENDPOINT_TYPES.ALL,
+      label: endpointTypeLabels[ENDPOINT_TYPES.ALL],
+      count: props.models.length,
+    },
+    ...endpointEntries.map(([value, label]) => ({
+      value,
+      label,
+      count: counts.endpoints.get(value) ?? 0,
+    })),
+  ]
+
   return (
     <aside
       aria-label={t('Filter')}
@@ -314,31 +417,6 @@ export const PricingFilterBar = memo(function PricingFilterBar(
         </div>
       </div>
 
-      <CollapsibleFilterRow
-        label={t('Groups')}
-        panelId='pricing-filter-groups'
-        summary={
-          props.groupFilter === FILTER_ALL
-            ? t('All Groups')
-            : props.groupFilter
-        }
-      >
-        <Chip
-          label={t('All Groups')}
-          active={props.groupFilter === FILTER_ALL}
-          onClick={() => props.onGroupChange(FILTER_ALL)}
-        />
-        {props.groups.map((group) => (
-          <Chip
-            key={group}
-            label={group}
-            suffix={formatGroupRatio(props.groupRatios?.[group])}
-            active={props.groupFilter === group}
-            onClick={() => props.onGroupChange(group)}
-          />
-        ))}
-      </CollapsibleFilterRow>
-
       <FilterRow label={t('Provider')}>
         <Chip
           label={t('All Vendors')}
@@ -362,58 +440,32 @@ export const PricingFilterBar = memo(function PricingFilterBar(
         })}
       </FilterRow>
 
-      <CollapsibleFilterRow
-        label={t('Model Tags')}
-        panelId='pricing-filter-tags'
-        summary={props.tagFilter === FILTER_ALL ? t('All Tags') : props.tagFilter}
-      >
-        <Chip
-          label={t('All Tags')}
-          count={props.models.length}
-          active={props.tagFilter === FILTER_ALL}
-          onClick={() => props.onTagChange(FILTER_ALL)}
+      <div className='border-[var(--hairline)] mt-3 flex flex-wrap items-center gap-2 border-t pt-3'>
+        <FilterPicker
+          label={t('Groups')}
+          value={props.groupFilter}
+          options={groupOptions}
+          onChange={props.onGroupChange}
         />
-        {props.tags.map((tag) => (
-          <Chip
-            key={tag}
-            label={tag}
-            count={counts.tags.get(tag.toLowerCase()) ?? 0}
-            active={props.tagFilter === tag}
-            onClick={() => props.onTagChange(tag)}
-          />
-        ))}
-      </CollapsibleFilterRow>
-
-      <CollapsibleFilterRow
-        label={t('Pricing Type')}
-        panelId='pricing-filter-quota'
-        summary={labelFor(quotaTypeLabels, props.quotaTypeFilter)}
-      >
-        {Object.entries(quotaTypeLabels).map(([value, label]) => (
-          <Chip
-            key={value}
-            label={label}
-            active={props.quotaTypeFilter === value}
-            onClick={() => props.onQuotaTypeChange(value)}
-          />
-        ))}
-      </CollapsibleFilterRow>
-
-      <CollapsibleFilterRow
-        label={t('Endpoint Type')}
-        panelId='pricing-filter-endpoint'
-        summary={labelFor(endpointTypeLabels, props.endpointTypeFilter)}
-      >
-        {endpointEntries.map(([value, label]) => (
-          <Chip
-            key={value}
-            label={label}
-            count={counts.endpoints.get(value) ?? 0}
-            active={props.endpointTypeFilter === value}
-            onClick={() => props.onEndpointTypeChange(value)}
-          />
-        ))}
-      </CollapsibleFilterRow>
+        <FilterPicker
+          label={t('Model Tags')}
+          value={props.tagFilter}
+          options={tagOptions}
+          onChange={props.onTagChange}
+        />
+        <FilterPicker
+          label={t('Pricing Type')}
+          value={props.quotaTypeFilter}
+          options={quotaOptions}
+          onChange={props.onQuotaTypeChange}
+        />
+        <FilterPicker
+          label={t('Endpoint Type')}
+          value={props.endpointTypeFilter}
+          options={endpointOptions}
+          onChange={props.onEndpointTypeChange}
+        />
+      </div>
 
       {activeChips.length > 0 && (
         <div className='border-[var(--hairline)] mt-4 flex flex-wrap items-center gap-2.5 border-t pt-4'>
