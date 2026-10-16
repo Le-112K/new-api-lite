@@ -340,12 +340,18 @@ function formatCurrencyValue(
     options.digitsSmall
   )
   const adjustedValue = adjustForMinimum(value, digits, options.minimumNonZero)
+  /* Intl.NumberFormat pads only up to minimumFractionDigits, so a money
+     value rendered as "42.8" stays that way. Callers that want the cents
+     always shown ask for the exact digit count instead. Compact notation
+     keeps 0 either way — it must not be padded. */
+  const minFractionDigits =
+    options.keepTrailingZeros && !options.compact ? digits : 0
 
   if (meta.kind === 'currency') {
     if (!options.showSymbol) {
       return new Intl.NumberFormat(options.locale, {
         notation: options.compact ? 'compact' : 'standard',
-        minimumFractionDigits: 0,
+        minimumFractionDigits: minFractionDigits,
         maximumFractionDigits: options.compact ? 1 : digits,
       }).format(adjustedValue)
     }
@@ -355,7 +361,7 @@ function formatCurrencyValue(
       currency: meta.currencyCode,
       currencyDisplay: 'narrowSymbol',
       notation: options.compact ? 'compact' : 'standard',
-      minimumFractionDigits: 0,
+      minimumFractionDigits: minFractionDigits,
       maximumFractionDigits: options.compact ? 1 : digits,
     }).format(adjustedValue)
     return formatted
@@ -363,7 +369,7 @@ function formatCurrencyValue(
 
   const decimal = new Intl.NumberFormat(options.locale, {
     notation: options.compact ? 'compact' : 'standard',
-    minimumFractionDigits: 0,
+    minimumFractionDigits: minFractionDigits,
     maximumFractionDigits: options.compact ? 1 : digits,
   }).format(adjustedValue)
 
