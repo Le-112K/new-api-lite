@@ -352,8 +352,10 @@ export function useOverviewData(): OverviewData {
     return {
       loading: quotaQuery.isLoading || logsQuery.isLoading,
       hasData: totalRequests > 0 || logs.length > 0,
-      balanceDisplay: formatQuota(balance),
-      spendDisplay: formatQuota(totalQuota),
+      // These two are monetary figures inside a data display, not glanceable
+      // quota readouts, so they keep their cents: $42.80, not $42.8.
+      balanceDisplay: formatQuota(balance, { keepTrailingZeros: true }),
+      spendDisplay: formatQuota(totalQuota, { keepTrailingZeros: true }),
       requestsDisplay: formatNumber(totalRequests),
       successRateDisplay: hasSuccessRate
         ? formatUptimePct(successRate as number)

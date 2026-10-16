@@ -70,11 +70,17 @@ export function formatCurrencyUSD(value: number | null | undefined): string {
  * Format quota into the configured display amount.
  * Quota is stored in units where `quotaPerUnit` equals 1 USD.
  */
-export function formatQuota(quota: number): string {
+export function formatQuota(
+  quota: number,
+  options?: { keepTrailingZeros?: boolean }
+): string {
   return formatQuotaWithCurrency(quota, {
     digitsLarge: 2,
     digitsSmall: 4,
     abbreviate: true,
+    // Opt-in: money presented inside a data display should read like money
+    // (`$42.80`, aligned in a column) rather than `$42.8`.
+    keepTrailingZeros: options?.keepTrailingZeros ?? false,
   })
 }
 

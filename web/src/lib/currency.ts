@@ -101,6 +101,15 @@ export interface CurrencyFormatOptions {
   compact?: boolean
   /** Whether to include the currency/custom symbol. Token displays are unchanged. */
   showSymbol?: boolean
+  /**
+   * Keep trailing zeros on money values, e.g. `$42.80` rather than `$42.8`.
+   *
+   * Off by default because most quota readouts are glanceable numbers where the
+   * shorter form reads better. Turn it on where the value is presented as a
+   * monetary amount in a data display — a price column, a dashboard total —
+   * because `$42.8` does not read like money and does not line up in a column.
+   */
+  keepTrailingZeros?: boolean
   /** Locale used for number formatting (defaults to the runtime locale) */
   locale?: Intl.LocalesArgument | undefined
 }
@@ -137,6 +146,8 @@ const DEFAULT_FORMAT_OPTIONS: ResolvedCurrencyFormatOptions = {
   minimumNonZero: 0,
   compact: false,
   showSymbol: true,
+  // Off by default: this preserves every existing quota readout exactly.
+  keepTrailingZeros: false,
   locale: undefined,
 }
 
@@ -240,6 +251,8 @@ function mergeOptions(
       options.minimumNonZero ?? DEFAULT_FORMAT_OPTIONS.minimumNonZero,
     compact: options.compact ?? DEFAULT_FORMAT_OPTIONS.compact,
     showSymbol: options.showSymbol ?? DEFAULT_FORMAT_OPTIONS.showSymbol,
+    keepTrailingZeros:
+      options.keepTrailingZeros ?? DEFAULT_FORMAT_OPTIONS.keepTrailingZeros,
     locale: options.locale ?? DEFAULT_FORMAT_OPTIONS.locale,
   }
 }
@@ -270,16 +283,19 @@ function formatNumberWithSuffix(
   value: number,
   digitsLarge: number,
   digitsSmall: number,
-  abbreviate: boolean
+  abbreviate: boolean,
+  keepTrailingZeros = false
 ): string {
   const abs = Math.abs(value)
   if (abbreviate && abs >= 1000) {
     const result = value / 1000
-    return `${removeTrailingZeros(result.toFixed(1))}k`
+    const s = `${result.toFixed(1)}k`
+    return keepTrailingZeros ? s : removeTrailingZeros(s)
   }
 
   const digits = getFractionDigits(value, digitsLarge, digitsSmall)
-  return removeTrailingZeros(value.toFixed(digits))
+  const fixed = value.toFixed(digits)
+  return keepTrailingZeros ? fixed : removeTrailingZeros(fixed)
 }
 
 function adjustForMinimum(
@@ -313,7 +329,8 @@ function formatCurrencyValue(
       value,
       options.digitsLarge,
       options.digitsSmall,
-      options.abbreviate
+      options.abbreviate,
+      options.keepTrailingZeros
     )
   }
 
