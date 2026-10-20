@@ -346,8 +346,5 @@ export interface UserInfo {
   used_quota: number
   request_count: number
   group?: string
-  aff_code?: string
-  aff_count?: number
-  aff_quota?: number
   remark?: string
 }

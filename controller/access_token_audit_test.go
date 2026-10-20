@@ -55,7 +55,7 @@ func setupAccessTokenAudit(t *testing.T) (*model.User, string) {
 		common.RedisEnabled = previousRedis
 	})
 	token := "legacy-opaque-token"
-	user := &model.User{Username: "audit-owner", Password: "placeholder", Role: common.RoleAdminUser, Status: common.UserStatusEnabled, Group: "default", AccessToken: &token, AuthVersion: 1, AffCode: "audit-owner"}
+	user := &model.User{Username: "audit-owner", Password: "placeholder", Role: common.RoleAdminUser, Status: common.UserStatusEnabled, Group: "default", AccessToken: &token, AuthVersion: 1}
 	require.NoError(t, db.Create(user).Error)
 	return user, token
 }
@@ -222,7 +222,7 @@ func TestAccessTokenLifecycleAndLateRequests(t *testing.T) {
 	assert.Equal(t, model.LegacyAccessTokenRetireAt(), listed.Data.Legacy.RetireAt)
 
 	// A token id only resolves among the caller's own tokens.
-	other := &model.User{Username: "audit-other", Password: "placeholder", Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1, AffCode: "audit-other"}
+	other := &model.User{Username: "audit-other", Password: "placeholder", Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1}
 	require.NoError(t, model.DB.Create(other).Error)
 	otherRaw, otherToken := createScopedAccessToken(t, other.Id, 0, "profile:read")
 	otherProof := issueAccessTokenRevokeProof(t, identity, service.AccessTokenRevokeContext{TokenID: otherToken.Id})
@@ -435,7 +435,7 @@ func TestAccessTokenUpdateRenamesFreelyAndChangesGrantOnlyWithProof(t *testing.T
 	identity, browser := createAccessTokenTestSession(t, user.Id, "update-session")
 	raw, token := createScopedAccessToken(t, user.Id, 0, "profile:read")
 	tokenPath := fmt.Sprintf("/api/user/access_tokens/%d", token.Id)
-	other := &model.User{Username: "audit-other", Password: "placeholder", Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1, AffCode: "audit-other"}
+	other := &model.User{Username: "audit-other", Password: "placeholder", Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1}
 	require.NoError(t, model.DB.Create(other).Error)
 	_, otherToken := createScopedAccessToken(t, other.Id, 0, "profile:read")
 
@@ -639,7 +639,7 @@ func TestAuditIsolationVisibilityAndFailureContracts(t *testing.T) {
 func TestAuditRoleVisibilityAndPermissions(t *testing.T) {
 	admin, pat := setupAccessTokenAudit(t)
 	rootToken := "root-audit-token"
-	root := &model.User{Username: "root-audit", Role: common.RoleRootUser, Status: common.UserStatusEnabled, AuthVersion: 1, AccessToken: &rootToken, AffCode: "root-audit"}
+	root := &model.User{Username: "root-audit", Role: common.RoleRootUser, Status: common.UserStatusEnabled, AuthVersion: 1, AccessToken: &rootToken}
 	require.NoError(t, model.DB.Create(root).Error)
 	metadata := model.AuditOther{
 		AdminInfo: &model.AuditAdminInfo{AdminID: 1},
@@ -1078,7 +1078,7 @@ func TestAuditDatabaseMatrix(t *testing.T) {
 					if upgrade {
 						require.NoError(t, db.AutoMigrate(&releasedAuditUser{}, &releasedAuditLog{}))
 						legacy := "released-token"
-						require.NoError(t, db.Create(&releasedAuditUser{Username: "released-owner", Password: "placeholder", AccessToken: &legacy, AffCode: "released-aff", Quota: 1234}).Error)
+						require.NoError(t, db.Create(&releasedAuditUser{Username: "released-owner", Password: "placeholder", AccessToken: &legacy, Quota: 1234}).Error)
 						require.NoError(t, db.Create(&releasedAuditLog{UserId: 1, Type: model.LogTypeLogin, Content: "historical login", CreatedAt: 100, RequestId: "legacy-request"}).Error)
 					}
 					for range 2 {
@@ -1086,7 +1086,7 @@ func TestAuditDatabaseMatrix(t *testing.T) {
 						require.NoError(t, model.InitLogDB())
 					}
 					if !upgrade {
-						require.NoError(t, db.Create(&model.User{Username: "fresh-owner", Password: "placeholder", AffCode: "fresh-aff"}).Error)
+						require.NoError(t, db.Create(&model.User{Username: "fresh-owner", Password: "placeholder"}).Error)
 					}
 					status, err := model.GetUserAccessTokenStatus(1)
 					require.NoError(t, err)
@@ -1105,7 +1105,7 @@ func TestAuditDatabaseMatrix(t *testing.T) {
 						assert.Equal(t, "historical login", old.Content)
 					}
 					require.NoError(t, db.Model(&model.User{}).Where("id = ?", 1).Update("access_token", "matrix-token").Error)
-					require.Error(t, db.Create(&model.User{Username: "duplicate", Password: "placeholder", AffCode: "duplicate-aff", AccessToken: common.GetPointer("matrix-token")}).Error, "PAT uniqueness must survive upgrade")
+					require.Error(t, db.Create(&model.User{Username: "duplicate", Password: "placeholder", AccessToken: common.GetPointer("matrix-token")}).Error, "PAT uniqueness must survive upgrade")
 					scoped, scopedToken := createScopedAccessToken(t, 1, 0, "profile:read")
 					found, err := model.FindUserAccessTokenByHash(model.AccessTokenFingerprint(scoped))
 					require.NoError(t, err)

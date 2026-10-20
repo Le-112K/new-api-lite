@@ -130,24 +130,6 @@ export function NotificationTab({ profile, onUpdate }: NotificationTabProps) {
         </ToggleGroup>
       </div>
 
-      {/* Warning Threshold */}
-      <div className='space-y-1.5'>
-        <Label htmlFor='threshold'>{t('Quota Warning Threshold')}</Label>
-        <Input
-          id='threshold'
-          type='number'
-          className='h-9'
-          value={settings.quota_warning_threshold}
-          onChange={(e) =>
-            updateField('quota_warning_threshold', Number(e.target.value))
-          }
-          placeholder={t('Enter threshold')}
-        />
-        <p className='text-muted-foreground text-xs'>
-          {t('Get notified when balance falls below this value')}
-        </p>
-      </div>
-
       {/* Email Settings */}
       {notifyType === 'email' && (
         <div className='space-y-1.5'>

@@ -72,7 +72,6 @@ func createUserSessionTestUser(t *testing.T, userID int, authVersion int64) {
 		Status:      common.UserStatusEnabled,
 		Role:        common.RoleCommonUser,
 		Group:       "default",
-		AffCode:     fmt.Sprintf("session-aff-%d", userID),
 		AuthVersion: authVersion,
 	}
 	require.NoError(t, DB.Create(&user).Error)

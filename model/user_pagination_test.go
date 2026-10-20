@@ -21,7 +21,6 @@ func insertUsersForPaginationTest(t *testing.T, total int) {
 			Role:        common.RoleCommonUser,
 			Status:      common.UserStatusEnabled,
 			Group:       "default",
-			AffCode:     fmt.Sprintf("aff%02d", id),
 		}
 		require.NoError(t, DB.Create(user).Error)
 	}

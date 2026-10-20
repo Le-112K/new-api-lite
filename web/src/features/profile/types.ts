@@ -59,16 +59,6 @@ export interface UserProfile {
   status: number
   /** Access token (system token) */
   access_token?: string
-  /** Affiliate code */
-  aff_code?: string
-  /** Number of successful affiliate invites */
-  aff_count: number
-  /** Affiliate quota (pending rewards) */
-  aff_quota: number
-  /** Total affiliate quota earned (historical) */
-  aff_history_quota: number
-  /** Invite user ID */
-  invite_user_id?: number
   /** Account creation timestamp */
   created_time: number
   /** User settings (JSON string) */
@@ -86,8 +76,6 @@ export type NotifyType = 'email' | 'webhook' | 'bark' | 'gotify'
 export interface UserSettings {
   /** Notification type */
   notify_type?: NotifyType
-  /** Quota warning threshold */
-  quota_warning_threshold?: number
   /** Webhook URL */
   webhook_url?: string
   /** Webhook secret */
@@ -137,7 +125,6 @@ export interface EmailBindingFlow extends AccountSecurityResult {
  */
 export interface UpdateUserSettingsRequest {
   notify_type?: string
-  quota_warning_threshold?: number
   webhook_url?: string
   webhook_secret?: string
   notification_email?: string

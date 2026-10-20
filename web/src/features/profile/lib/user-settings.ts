@@ -16,10 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import {
-  DEFAULT_QUOTA_WARNING_THRESHOLD,
-  NOTIFICATION_METHODS,
-} from '../constants'
+import { NOTIFICATION_METHODS } from '../constants'
 import type { NotifyType, UpdateUserSettingsRequest } from '../types'
 import { parseUserSettings } from './format'
 
@@ -32,8 +29,6 @@ export function normalizeUserSettings(
       ?.value ?? 'email'
   return {
     notify_type: notifyType,
-    quota_warning_threshold:
-      parsed.quota_warning_threshold ?? DEFAULT_QUOTA_WARNING_THRESHOLD,
     notification_email: parsed.notification_email ?? '',
     webhook_url: parsed.webhook_url ?? '',
     webhook_secret: parsed.webhook_secret ?? '',

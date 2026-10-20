@@ -26,8 +26,6 @@ import {
 
 const defaultBillingSettings: BillingSettings = {
   QuotaForNewUser: 0,
-  QuotaForInviter: 0,
-  QuotaForInvitee: 0,
   TopUpLink: '',
   'quota_setting.enable_free_model_pre_consume': true,
   'quota_setting.trust_quota_usd': 10,

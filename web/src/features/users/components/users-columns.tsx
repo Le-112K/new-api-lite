@@ -33,8 +33,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { getCurrencyDisplay } from '@/lib/currency'
-import { formatQuota } from '@/lib/format'
-import { useSystemConfigStore } from '@/stores/system-config-store'
 
 import {
   USER_STATUS,
@@ -48,7 +46,6 @@ import { UserQuotaCell } from './user-quota-cell'
 
 export function useUsersColumns(): ColumnDef<User>[] {
   const { t } = useTranslation()
-  const currencyConfig = useSystemConfigStore((state) => state.config.currency)
   const { meta: currency } = getCurrencyDisplay()
   const quotaUnit = currency.kind === 'tokens' ? t('Tokens') : currency.symbol
   return useMemo<ColumnDef<User>[]>(
@@ -236,45 +233,6 @@ export function useUsersColumns(): ColumnDef<User>[] {
         meta: { mobileOrder: 20 },
       },
       {
-        id: 'invite_info',
-        header: t('Invite Info'),
-        cell: ({ row }) => {
-          const user = row.original
-          const affCount = user.aff_count || 0
-          const affHistoryQuota = user.aff_history_quota || 0
-          const inviterId = user.inviter_id || 0
-
-          if (affCount === 0 && affHistoryQuota === 0 && inviterId === 0) {
-            return <span className='text-muted-foreground text-sm'>—</span>
-          }
-
-          return (
-            <div
-              data-table-text='secondary'
-              className='min-w-0 space-y-1 text-xs font-normal'
-            >
-              {(affCount > 0 || affHistoryQuota !== 0) && (
-                <LongText>
-                  {t('Invited {{count}} users', { count: affCount })} ·{' '}
-                  {t('Earnings')}:{' '}
-                  <span className='tabular-nums'>
-                    {formatQuota(affHistoryQuota)}
-                  </span>
-                </LongText>
-              )}
-              {inviterId > 0 && (
-                <LongText className='text-muted-foreground'>
-                  {t('Inviter ID: {{id}}', { id: inviterId })}
-                </LongText>
-              )}
-            </div>
-          )
-        },
-        size: 240,
-        enableSorting: false,
-        meta: { mobileHidden: true },
-      },
-      {
         accessorKey: 'created_at',
         header: t('Time'),
         cell: ({ row }) => (
@@ -296,8 +254,6 @@ export function useUsersColumns(): ColumnDef<User>[] {
         meta: { pinned: 'right' as const },
       },
     ],
-    // formatQuota reads the currency configuration from the store.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, quotaUnit, currencyConfig]
+    [t, quotaUnit]
   )
 }

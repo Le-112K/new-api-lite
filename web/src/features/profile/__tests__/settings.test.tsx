@@ -35,14 +35,10 @@ const profile: UserProfile = {
   used_quota: 0,
   request_count: 0,
   status: 1,
-  aff_count: 0,
-  aff_quota: 0,
-  aff_history_quota: 0,
   created_time: 0,
 }
 const settings = {
   notify_type: 'webhook',
-  quota_warning_threshold: 1200,
   notification_email: '',
   webhook_url: 'https://example.com/notify',
   webhook_secret: 'webhook-secret',
@@ -85,7 +81,6 @@ describe('user settings saves across profile and security', () => {
     await updateUserSettings({ record_ip_log: true })
     expect(put).toHaveBeenCalledWith('/api/user/setting', {
       notify_type: 'email',
-      quota_warning_threshold: 500000,
       notification_email: '',
       webhook_url: '',
       webhook_secret: '',
@@ -111,11 +106,11 @@ describe('user settings saves across profile and security', () => {
       return { data: { success: true } }
     })
     await updateUserSettings({ record_ip_log: false })
-    await updateUserSettings({ quota_warning_threshold: 2500 })
+    await updateUserSettings({ webhook_secret: 'rotated-secret' })
     await updateUserSettings({ record_ip_log: true })
     expect(saved).toEqual({
       ...settings,
-      quota_warning_threshold: 2500,
+      webhook_secret: 'rotated-secret',
       record_ip_log: true,
     })
   })
@@ -177,15 +172,14 @@ describe('user settings saves across profile and security', () => {
     expect(
       screen.queryByRole('switch', { name: 'Record IP Address' })
     ).not.toBeInTheDocument()
-    fireEvent.change(
-      screen.getByRole('spinbutton', { name: 'Quota Warning Threshold' }),
-      { target: { value: '2700' } }
-    )
+    fireEvent.change(screen.getByRole('textbox', { name: 'Webhook URL' }), {
+      target: { value: 'https://example.com/rotated' },
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Save Settings' }))
     await waitFor(() => expect(onUpdate).toHaveBeenCalled())
     expect(put).toHaveBeenCalledWith('/api/user/setting', {
       ...settings,
-      quota_warning_threshold: 2700,
+      webhook_url: 'https://example.com/rotated',
       record_ip_log: false,
     })
   })

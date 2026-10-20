@@ -84,7 +84,6 @@ func createMiddlewarePATUser(t *testing.T, username, token string) *model.User {
 	user := &model.User{
 		Username: username, Password: "password-placeholder", Role: common.RoleCommonUser,
 		Status: common.UserStatusEnabled, Group: "default", AccessToken: &token, AuthVersion: 1,
-		AffCode: "middleware-aff-" + username,
 	}
 	require.NoError(t, model.DB.Create(user).Error)
 	return user

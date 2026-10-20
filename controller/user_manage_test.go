@@ -204,7 +204,7 @@ func TestManageUserDeleteReturnsImmediatelyAndUnknownActionFails(t *testing.T) {
 	db := setupManageUserTestDB(t)
 	deleted := model.User{
 		Username: "managed-delete-user", Password: "password", Role: common.RoleCommonUser,
-		Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1, AffCode: "delete-aff",
+		Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1,
 	}
 	require.NoError(t, db.Create(&deleted).Error)
 
@@ -217,7 +217,7 @@ func TestManageUserDeleteReturnsImmediatelyAndUnknownActionFails(t *testing.T) {
 
 	unchanged := model.User{
 		Username: "managed-unknown-user", Password: "password", Role: common.RoleCommonUser,
-		Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1, AffCode: "unknown-aff",
+		Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1,
 	}
 	require.NoError(t, db.Create(&unchanged).Error)
 	recorder = performManageUserRequest(t, fmt.Sprintf(`{"id":%d,"action":"unknown"}`, unchanged.Id))
@@ -232,7 +232,7 @@ func createQuotaTestOperator(t *testing.T, db *gorm.DB, role int) model.User {
 	if role == 0 {
 		role = common.RoleRootUser
 	}
-	operator := model.User{Id: 9999, Username: "root-operator", Password: "root-operator-hash", Role: role, Status: common.UserStatusEnabled, AuthVersion: 1, AffCode: "root-operator-aff"}
+	operator := model.User{Id: 9999, Username: "root-operator", Password: "root-operator-hash", Role: role, Status: common.UserStatusEnabled, AuthVersion: 1}
 	require.NoError(t, db.Create(&operator).Error)
 	return operator
 }
@@ -252,7 +252,7 @@ func TestManageUserQuotaRecordsTopupAndAudit(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			db := setupManageUserTestDB(t)
-			user := model.User{Username: "quota-owner", Role: common.RoleCommonUser, Quota: 1000, AffCode: "quota-owner-aff"}
+			user := model.User{Username: "quota-owner", Role: common.RoleCommonUser, Quota: 1000}
 			require.NoError(t, db.Create(&user).Error)
 			createQuotaTestOperator(t, db, common.RoleRootUser)
 

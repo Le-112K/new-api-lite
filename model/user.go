@@ -10,7 +10,6 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/relaykit/dto"
-	"github.com/QuantumNous/new-api/setting/operation_setting"
 
 	"github.com/bytedance/gopkg/util/gopool"
 	"gorm.io/gorm"
@@ -93,11 +92,6 @@ type User struct {
 	UsedQuota            int                        `json:"used_quota" gorm:"type:int;default:0;column:used_quota"` // used quota
 	RequestCount         int                        `json:"request_count" gorm:"type:int;default:0;"`               // request number
 	Group                string                     `json:"group" gorm:"type:varchar(64);default:'default'"`
-	AffCode              string                     `json:"aff_code" gorm:"type:varchar(32);column:aff_code;uniqueIndex"`
-	AffCount             int                        `json:"aff_count" gorm:"type:int;default:0;column:aff_count"`
-	AffQuota             int                        `json:"aff_quota" gorm:"type:int;default:0;column:aff_quota"`           // 邀请剩余额度
-	AffHistoryQuota      int                        `json:"aff_history_quota" gorm:"type:int;default:0;column:aff_history"` // 邀请历史额度
-	InviterId            int                        `json:"inviter_id" gorm:"type:int;column:inviter_id;index"`
 	DeletedAt            gorm.DeletedAt             `gorm:"index"`
 	Setting              string                     `json:"setting" gorm:"type:text;column:setting"`
 	Remark               string                     `json:"remark,omitempty" gorm:"type:varchar(255)" validate:"max=255"`
@@ -492,22 +486,12 @@ func GetSelfUserById(id int) (*User, error) {
 	}
 	err := DB.Model(&User{}).Select([]string{
 		"id", "username", "display_name", "role", "status", "email",
-		"group", "quota", "used_quota", "request_count", "aff_code", "aff_count",
-		"aff_quota", "aff_history", "inviter_id", "setting",
+		"group", "quota", "used_quota", "request_count", "setting",
 		"stripe_customer", "auth_version",
 		"CASE WHEN password <> '' THEN 1 ELSE 0 END AS has_password",
 	}).First(&profile, "id = ?", id).Error
 	profile.User.HasPassword = profile.HasPassword
 	return &profile.User, err
-}
-
-func GetUserIdByAffCode(affCode string) (int, error) {
-	if affCode == "" {
-		return 0, errors.New("affCode 为空！")
-	}
-	var user User
-	err := DB.Select("id").First(&user, "aff_code = ?", affCode).Error
-	return user.Id, err
 }
 
 // DeleteUserById soft-deletes a user and returns how many scoped access tokens
@@ -528,58 +512,6 @@ func HardDeleteUserById(id int) (int64, error) {
 	}
 	user := User{Id: id}
 	return user.HardDelete()
-}
-
-func inviteUser(inviterId int) error {
-	result := DB.Model(&User{}).Where("id = ?", inviterId).Updates(map[string]any{
-		"aff_count":   gorm.Expr("aff_count + ?", 1),
-		"aff_quota":   gorm.Expr("aff_quota + ?", common.QuotaForInviter),
-		"aff_history": gorm.Expr("aff_history + ?", common.QuotaForInviter),
-	})
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
-	}
-	return nil
-}
-
-func (user *User) TransferAffQuotaToQuota(quota int) error {
-	// 检查quota是否小于最小额度
-	if float64(quota) < common.QuotaPerUnit {
-		return fmt.Errorf("转移额度最小为%s！", logger.LogQuota(common.QuotaFromFloat(common.QuotaPerUnit)))
-	}
-
-	// 开始数据库事务
-	tx := DB.Begin()
-	if tx.Error != nil {
-		return tx.Error
-	}
-	defer tx.Rollback() // 确保在函数退出时事务能回滚
-
-	// 加锁查询用户以确保数据一致性
-	err := lockForUpdate(tx).First(user, user.Id).Error
-	if err != nil {
-		return err
-	}
-
-	// 再次检查用户的AffQuota是否足够
-	if user.AffQuota < quota {
-		return errors.New("邀请额度不足！")
-	}
-
-	// 更新用户额度
-	user.AffQuota -= quota
-	user.Quota += quota
-
-	// 保存用户状态
-	if err := tx.Save(user).Error; err != nil {
-		return err
-	}
-
-	// 提交事务
-	return tx.Commit().Error
 }
 
 func (user *User) prepareForInsert(tx *gorm.DB) error {
@@ -633,14 +565,13 @@ func ensureEmailAvailableWithTx(tx *gorm.DB, email string, excludeUserID int) er
 	return nil
 }
 
-func (user *User) Insert(inviterId int) error {
+func (user *User) Insert() error {
 	if err := DB.Transaction(func(tx *gorm.DB) error {
 		return withNormalizedEmailLock(tx, user.Email, func(tx *gorm.DB) error {
 			if err := user.prepareForInsert(tx); err != nil {
 				return err
 			}
 			user.Quota = common.QuotaForNewUser
-			user.AffCode = common.GetRandomString(4)
 
 			// 初始化用户设置，包括默认的边栏配置
 			if user.Setting == "" {
@@ -655,11 +586,11 @@ func (user *User) Insert(inviterId int) error {
 		return err
 	}
 
-	user.finishInsert(inviterId)
+	user.finishInsert()
 	return nil
 }
 
-func (user *User) finishInsert(inviterId int) {
+func (user *User) finishInsert() {
 	// 用户创建成功后，根据角色初始化边栏配置
 	// 需要重新获取用户以确保有正确的ID和Role
 	var createdUser User
@@ -678,32 +609,20 @@ func (user *User) finishInsert(inviterId int) {
 	if common.QuotaForNewUser > 0 {
 		RecordLog(user.Id, LogTypeSystem, fmt.Sprintf("新用户注册赠送 %s", logger.LogQuota(common.QuotaForNewUser)))
 	}
-	if inviterId != 0 && operation_setting.IsPaymentComplianceConfirmed() {
-		if common.QuotaForInvitee > 0 {
-			_ = IncreaseUserQuota(user.Id, common.QuotaForInvitee, true)
-			RecordLog(user.Id, LogTypeSystem, fmt.Sprintf("使用邀请码赠送 %s", logger.LogQuota(common.QuotaForInvitee)))
-		}
-		if common.QuotaForInviter > 0 {
-			//_ = IncreaseUserQuota(inviterId, common.QuotaForInviter)
-			RecordLog(inviterId, LogTypeSystem, fmt.Sprintf("邀请用户赠送 %s", logger.LogQuota(common.QuotaForInviter)))
-			_ = inviteUser(inviterId)
-		}
-	}
 }
 
-func (user *User) FinishInsert(inviterId int) {
-	user.finishInsert(inviterId)
+func (user *User) FinishInsert() {
+	user.finishInsert()
 }
 
 // InsertWithTx inserts a new user within an existing transaction.
-// Post-creation tasks (sidebar config, logs, inviter rewards) are handled after the transaction commits.
-func (user *User) InsertWithTx(tx *gorm.DB, inviterId int) error {
+// Post-creation tasks (sidebar config, logs) are handled after the transaction commits.
+func (user *User) InsertWithTx(tx *gorm.DB) error {
 	return withNormalizedEmailLock(tx, user.Email, func(tx *gorm.DB) error {
 		if err := user.prepareForInsert(tx); err != nil {
 			return err
 		}
 		user.Quota = common.QuotaForNewUser
-		user.AffCode = common.GetRandomString(4)
 
 		// 初始化用户设置
 		if user.Setting == "" {
@@ -766,9 +685,6 @@ func (user *User) UpdateWithTx(tx *gorm.DB, updatePassword bool) error {
 		"quota",
 		"used_quota",
 		"request_count",
-		"aff_count",
-		"aff_quota",
-		"aff_history",
 		"auth_version",
 	).Updates(newUser).Error; err != nil {
 		return err

@@ -51,13 +51,9 @@ const profile: UserProfile = {
   used_quota: 0,
   request_count: 0,
   status: 1,
-  aff_count: 0,
-  aff_quota: 0,
-  aff_history_quota: 0,
   created_time: 0,
   setting: JSON.stringify({
     notify_type: 'email',
-    quota_warning_threshold: 500000,
   }),
 }
 

@@ -21,7 +21,6 @@ func createReserveTestUser(t *testing.T, quota int) User {
 		Group:       "default",
 		AuthVersion: 1,
 		Quota:       quota,
-		AffCode:     "reserve-aff-" + common.GetRandomString(8),
 	}
 	require.NoError(t, DB.Create(&user).Error)
 	return user

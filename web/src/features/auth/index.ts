@@ -68,7 +68,6 @@ export {
 // Utilities
 // ============================================================================
 
-export { getAffiliateCode, saveAffiliateCode } from './lib/storage'
 
 export {
   isValidOTP,

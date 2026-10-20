@@ -119,7 +119,7 @@ func setupAdminUserTest(t *testing.T) (*model.User, service.AuthIdentity, *model
 	require.NoError(t, model.PublishUserAuthCache(operator.Id))
 	password, err := common.Password2Hash("managed-password")
 	require.NoError(t, err)
-	target := &model.User{Username: "managed-user", Password: password, Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1, AffCode: "managed-aff"}
+	target := &model.User{Username: "managed-user", Password: password, Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1}
 	require.NoError(t, model.DB.Create(target).Error)
 	return operator, identity, target
 }
@@ -292,7 +292,7 @@ func TestCreateUserRejectsNonStandardRole(t *testing.T) {
 
 func TestAdminUserProofIsBoundToTargetAndActionAndConsumedOnce(t *testing.T) {
 	_, identity, target := setupAdminUserTest(t)
-	other := &model.User{Username: "other-user", Password: target.Password, Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1, AffCode: "other-aff"}
+	other := &model.User{Username: "other-user", Password: target.Password, Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1}
 	require.NoError(t, model.DB.Create(other).Error)
 	disableTarget := service.VerificationOperation{Scope: service.VerificationScopeAdminUserManage, Context: []byte(fmt.Sprintf(`{"user_id":%d,"action":"disable"}`, target.Id))}
 	proof := issueSecurityEnrollmentProof(t, identity, disableTarget, service.VerificationMethodPassword)
