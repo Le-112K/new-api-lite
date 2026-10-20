@@ -48,13 +48,9 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	"GET /api/perf-metrics/summary":       accessTokenAnyRule,
 	"GET /api/perf-metrics":               accessTokenAnyRule,
 	"GET /api/rankings":                   accessTokenAnyRule,
-	"POST /api/oauth/state":               accessTokenSessionRule,
-	"POST /api/oauth/email/bind/start":    accessTokenScopeRule("account_security:write"),
-	"POST /api/oauth/email/bind/resend":   accessTokenScopeRule("account_security:write"),
-	"POST /api/oauth/email/bind":          accessTokenScopeRule("account_security:write"),
-	"POST /api/oauth/wechat/bind":         accessTokenScopeRule("account_security:write"),
-	"POST /api/oauth/telegram/bind/start": accessTokenSessionRule,
-	"GET /api/oauth/:provider":            accessTokenSessionRule,
+	"POST /api/user/email/bind/start":     accessTokenScopeRule("account_security:write"),
+	"POST /api/user/email/bind/resend":    accessTokenScopeRule("account_security:write"),
+	"POST /api/user/email/bind":           accessTokenScopeRule("account_security:write"),
 	"GET /api/verify/methods":             accessTokenAnyRule,
 	"POST /api/verify":                    accessTokenAnyRule,
 
@@ -91,17 +87,12 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	"PUT /api/user/setting":                        accessTokenScopeRule("profile:write"),
 	"GET /api/user/checkin":                        accessTokenScopeRule("wallet:read"),
 	"POST /api/user/checkin":                       accessTokenScopeRule("wallet:write"),
-	"GET /api/user/oauth/bindings":                 accessTokenScopeRule("account_security:read"),
-	"DELETE /api/user/oauth/bindings/:provider_id": accessTokenScopeRule("account_security:write"),
 
 	// router/api-router.go: /api/user (admin)
 	"GET /api/user/":                                   accessTokenScopeRule("user:read"),
 	"GET /api/user/topup":                              accessTokenScopeRule("billing:read"),
 	"POST /api/user/topup/complete":                    accessTokenScopeRule("billing:write"),
 	"GET /api/user/search":                             accessTokenScopeRule("user:read"),
-	"GET /api/user/:id/oauth/bindings":                 accessTokenScopeRule("user:read"),
-	"DELETE /api/user/:id/oauth/bindings/:provider_id": accessTokenScopeRule("user:write"),
-	"DELETE /api/user/:id/bindings/:binding_type":      accessTokenScopeRule("user:write"),
 	"GET /api/user/:id":                                accessTokenScopeRule("user:read"),
 	"POST /api/user/":                                  accessTokenScopeRule("user:write"),
 	"POST /api/user/manage":                            accessTokenScopeRule("user:write"),
@@ -148,13 +139,7 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	"POST /api/option/waffo-pancake/subscription-product":        accessTokenScopeRule("option:write"),
 	"GET /api/option/waffo-pancake/subscription-product-options": accessTokenScopeRule("option:read"),
 
-	// router/api-router.go: /api/custom-oauth-provider, /api/ratio_sync
-	"POST /api/custom-oauth-provider/discovery": accessTokenScopeRule("option:write"),
-	"GET /api/custom-oauth-provider/":           accessTokenScopeRule("option:read"),
-	"GET /api/custom-oauth-provider/:id":        accessTokenScopeRule("option:read"),
-	"POST /api/custom-oauth-provider/":          accessTokenScopeRule("option:write"),
-	"PUT /api/custom-oauth-provider/:id":        accessTokenScopeRule("option:write"),
-	"DELETE /api/custom-oauth-provider/:id":     accessTokenScopeRule("option:write"),
+	// router/api-router.go: /api/ratio_sync
 	"GET /api/ratio_sync/channels":              accessTokenScopeRule("option:read"),
 	"POST /api/ratio_sync/fetch":                accessTokenScopeRule("option:write"),
 

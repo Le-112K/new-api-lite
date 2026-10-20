@@ -70,8 +70,13 @@ export const RATIO_TYPE_OPTIONS = [
   { label: 'Expression billing', value: 'billing_expr' },
 ] as const
 
-export const CHANNEL_STATUS_CONFIG = {
-  1: { label: 'Enabled', variant: 'success' as const },
-  2: { label: 'Disabled', variant: 'danger' as const },
-  3: { label: 'Auto Disabled', variant: 'warning' as const },
-} as const
+// Single source of truth: `features/channels/constants` owns the channel status
+// enum, its labels and its badge variants. This file used to keep its own copy,
+// which drifted — status 2 was `danger` here and `neutral` on the channels page,
+// so the same channel showed two different colours on two screens.
+//
+// The re-exported map also carries the `0: Unknown` entry that the local copy
+// lacked. Consumers here index it defensively and fall back on a falsy config,
+// so status 0 still renders the same neutral "Unknown" badge as before — the
+// fallback branch simply stops being reached.
+export { CHANNEL_STATUS_CONFIG } from '@/features/channels/constants'

@@ -13,9 +13,6 @@
       "name": "用户登陆注册"
     },
     {
-      "name": "OAuth"
-    },
-    {
       "name": "用户管理"
     },
     {
@@ -919,401 +916,6 @@
             "Combination1243": []
           }
         ]
-      }
-    },
-    "/api/oauth/github": {
-      "get": {
-        "summary": "GitHub OAuth登录",
-        "deprecated": false,
-        "description": "🔓 无需鉴权（OAuth 回调）。创建本地登录 Session 时同样受 AUTH_SESSION_LIMIT 和 AUTH_SESSION_ISSUANCE_LIMIT 约束。",
-        "tags": [
-          "OAuth"
-        ],
-        "parameters": [
-          {
-            "name": "code",
-            "in": "query",
-            "description": "",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "成功",
-            "headers": {}
-          },
-          "409": {
-            "$ref": "#/components/responses/AuthSessionLimit"
-          },
-          "429": {
-            "$ref": "#/components/responses/AuthSessionIssuanceLimit"
-          }
-        },
-        "security": [
-          {
-            "Combination343": []
-          },
-          {
-            "Combination1243": []
-          }
-        ]
-      }
-    },
-    "/api/oauth/discord": {
-      "get": {
-        "summary": "Discord OAuth登录",
-        "deprecated": false,
-        "description": "🔓 无需鉴权（OAuth 回调）。创建本地登录 Session 时同样受 AUTH_SESSION_LIMIT 和 AUTH_SESSION_ISSUANCE_LIMIT 约束。",
-        "tags": [
-          "OAuth"
-        ],
-        "parameters": [
-          {
-            "name": "code",
-            "in": "query",
-            "description": "",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "成功",
-            "headers": {}
-          },
-          "409": {
-            "$ref": "#/components/responses/AuthSessionLimit"
-          },
-          "429": {
-            "$ref": "#/components/responses/AuthSessionIssuanceLimit"
-          }
-        },
-        "security": [
-          {
-            "Combination343": []
-          },
-          {
-            "Combination1243": []
-          }
-        ]
-      }
-    },
-    "/api/oauth/oidc": {
-      "get": {
-        "summary": "OIDC登录",
-        "deprecated": false,
-        "description": "🔓 无需鉴权（OAuth 回调）。创建本地登录 Session 时同样受 AUTH_SESSION_LIMIT 和 AUTH_SESSION_ISSUANCE_LIMIT 约束。",
-        "tags": [
-          "OAuth"
-        ],
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "成功",
-            "headers": {}
-          },
-          "409": {
-            "$ref": "#/components/responses/AuthSessionLimit"
-          },
-          "429": {
-            "$ref": "#/components/responses/AuthSessionIssuanceLimit"
-          }
-        },
-        "security": [
-          {
-            "Combination343": []
-          },
-          {
-            "Combination1243": []
-          }
-        ]
-      }
-    },
-    "/api/oauth/linuxdo": {
-      "get": {
-        "summary": "LinuxDO OAuth登录",
-        "deprecated": false,
-        "description": "🔓 无需鉴权（OAuth 回调）。创建本地登录 Session 时同样受 AUTH_SESSION_LIMIT 和 AUTH_SESSION_ISSUANCE_LIMIT 约束。",
-        "tags": [
-          "OAuth"
-        ],
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "成功",
-            "headers": {}
-          },
-          "409": {
-            "$ref": "#/components/responses/AuthSessionLimit"
-          },
-          "429": {
-            "$ref": "#/components/responses/AuthSessionIssuanceLimit"
-          }
-        },
-        "security": [
-          {
-            "Combination343": []
-          },
-          {
-            "Combination1243": []
-          }
-        ]
-      }
-    },
-    "/api/oauth/state": {
-      "post": {
-        "summary": "生成OAuth State",
-        "deprecated": false,
-        "description": "创建一次性 OAuth AuthFlow。login 无需鉴权；bind 需要面板 Access Token 并绑定当前登录会话",
-        "tags": [
-          "OAuth"
-        ],
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "provider",
-                  "intent"
-                ],
-                "properties": {
-                  "provider": {
-                    "type": "string"
-                  },
-                  "intent": {
-                    "type": "string",
-                    "enum": [
-                      "login",
-                      "bind"
-                    ]
-                  },
-                  "aff": {
-                    "type": "string",
-                    "description": "仅 login intent 可用的 affiliate code"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "成功",
-            "headers": {}
-          }
-        },
-        "security": [
-          {
-            "Combination343": []
-          },
-          {
-            "Combination1243": []
-          }
-        ]
-      }
-    },
-    "/api/oauth/wechat": {
-      "get": {
-        "summary": "微信OAuth登录",
-        "deprecated": false,
-        "description": "🔓 无需鉴权（OAuth 回调）。创建本地登录 Session 时同样受 AUTH_SESSION_LIMIT 和 AUTH_SESSION_ISSUANCE_LIMIT 约束。",
-        "tags": [
-          "OAuth"
-        ],
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "成功",
-            "headers": {}
-          },
-          "409": {
-            "$ref": "#/components/responses/AuthSessionLimit"
-          },
-          "429": {
-            "$ref": "#/components/responses/AuthSessionIssuanceLimit"
-          }
-        },
-        "security": [
-          {
-            "Combination343": []
-          },
-          {
-            "Combination1243": []
-          }
-        ]
-      }
-    },
-    "/api/oauth/wechat/bind": {
-      "post": {
-        "summary": "绑定微信",
-        "deprecated": false,
-        "description": "🔐 需要面板 Access Token",
-        "tags": [
-          "OAuth"
-        ],
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "code"
-                ],
-                "properties": {
-                  "code": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "成功",
-            "headers": {}
-          }
-        },
-        "security": [
-          {
-            "AccessToken1": []
-          }
-        ]
-      }
-    },
-    "/api/oauth/email/bind": {
-      "post": {
-        "summary": "绑定邮箱",
-        "deprecated": false,
-        "description": "🔐 需要面板 Access Token",
-        "tags": [
-          "OAuth"
-        ],
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "email",
-                  "code"
-                ],
-                "properties": {
-                  "email": {
-                    "type": "string",
-                    "format": "email"
-                  },
-                  "code": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "成功",
-            "headers": {}
-          }
-        },
-        "security": [
-          {
-            "AccessToken1": []
-          }
-        ]
-      }
-    },
-    "/api/oauth/telegram/login": {
-      "get": {
-        "summary": "Telegram登录",
-        "deprecated": false,
-        "description": "🔓 无需鉴权（OAuth 回调）。创建本地登录 Session 时同样受 AUTH_SESSION_LIMIT 和 AUTH_SESSION_ISSUANCE_LIMIT 约束。",
-        "tags": [
-          "OAuth"
-        ],
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "成功",
-            "headers": {}
-          },
-          "409": {
-            "$ref": "#/components/responses/AuthSessionLimit"
-          },
-          "429": {
-            "$ref": "#/components/responses/AuthSessionIssuanceLimit"
-          }
-        },
-        "security": [
-          {
-            "Combination343": []
-          },
-          {
-            "Combination1243": []
-          }
-        ]
-      }
-    },
-    "/api/oauth/telegram/bind/start": {
-      "post": {
-        "summary": "创建 Telegram 绑定流程",
-        "deprecated": false,
-        "description": "🔐 需要面板 Access Token；返回绑定 widget 使用的一次性 flow_token 与 callback_url",
-        "tags": [
-          "OAuth"
-        ],
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "成功",
-            "headers": {}
-          }
-        },
-        "security": [
-          {
-            "AccessToken1": []
-          }
-        ]
-      }
-    },
-    "/api/oauth/telegram/bind/{flow_token}": {
-      "get": {
-        "summary": "完成 Telegram 绑定",
-        "deprecated": false,
-        "description": "Telegram widget 回调；通过一次性 flow_token 关联并重新校验创建该流程的登录会话。始终以 302 回到 /oauth/telegram：成功携带 telegram_bind=success，失败携带 telegram_bind=error、flow_token 和稳定 error_code（TELEGRAM_BIND_DISABLED、TELEGRAM_BIND_INVALID_REQUEST、TELEGRAM_BIND_FLOW_INVALID、TELEGRAM_BIND_SESSION_INVALID、TELEGRAM_BIND_ALREADY_BOUND、TELEGRAM_BIND_USER_DELETED、TELEGRAM_BIND_USER_DISABLED 或 TELEGRAM_BIND_INTERNAL_ERROR），不会透传底层错误文案。",
-        "tags": [
-          "OAuth"
-        ],
-        "parameters": [
-          {
-            "name": "flow_token",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "302": {
-            "description": "重定向到 /oauth/telegram 的绑定结果回调",
-            "headers": {}
-          }
-        },
-        "security": []
       }
     },
     "/api/user/self/groups": {
@@ -5226,6 +4828,51 @@
           },
           {
             "Combination1243": []
+          }
+        ]
+      }
+    },
+    "/api/user/email/bind": {
+      "post": {
+        "summary": "绑定邮箱",
+        "deprecated": false,
+        "description": "🔐 需要面板 Access Token",
+        "tags": [
+          "用户管理"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "code"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "code": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "AccessToken1": []
           }
         ]
       }

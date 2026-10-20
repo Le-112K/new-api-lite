@@ -227,6 +227,20 @@ export type DataTablePageProps<TData> = {
   className?: string
 
   /**
+   * How the page is framed. Defaults to `'default'`.
+   *
+   * - `'default'` — toolbar and table are siblings separated by vertical gap,
+   *   pagination is portalled into the page footer. Unchanged behaviour.
+   * - `'panel'` — toolbar, table, selection bar and pagination become internal
+   *   rows of one bordered `rounded-[20px]` container (`data-card-hover="false"`
+   *   so the global card lift never applies). The table body is the single
+   *   scroll container, both axes scroll on the same element, and the pager is
+   *   the panel's last row instead of going through `PageFooterPortal`.
+   *   The panel goes full-bleed (square corners) below `sm`.
+   */
+  presentation?: 'default' | 'panel'
+
+  /**
    * Make the desktop table consume the available page height and scroll inside
    * the table body while keeping the header fixed. Defaults to `true`.
    */
@@ -317,6 +331,9 @@ export type DataTablePageProps<TData> = {
 export function DataTablePage<TData>(props: DataTablePageProps<TData>) {
   const isMobile = useMediaQuery('(max-width: 640px)')
   const showMobile = isMobile && !props.hideMobile
+  const panel = props.presentation === 'panel'
+  // A panel is by definition height-constrained: its body is the scroll area.
+  const fixedHeight = panel || props.fixedHeight !== false
 
   const [internalViewMode, setInternalViewMode] = useDataTableViewMode({
     storageKey: props.viewModeStorageKey,
@@ -335,16 +352,52 @@ export function DataTablePage<TData>(props: DataTablePageProps<TData>) {
     <DataTableViewModeToggle value={viewMode} onChange={setViewMode} />
   ) : undefined
 
-  const toolbarNode = renderToolbar(props, viewToggle)
-  const mobileNode = renderMobile(props, showMobile, cardViewActive, viewMode)
-  const desktopNode = renderDesktop(props, showMobile, cardViewActive, viewMode)
-  const paginationNode = renderPagination(props)
+  const toolbarNode = renderToolbar(props, viewToggle, panel)
+  const mobileNode = renderMobile(
+    props,
+    showMobile,
+    cardViewActive,
+    viewMode,
+    panel
+  )
+  const desktopNode = renderDesktop(
+    props,
+    showMobile,
+    cardViewActive,
+    viewMode,
+    panel,
+    fixedHeight
+  )
+  const paginationNode = renderPagination(props, panel)
+  const bulkActionsNode =
+    (!showMobile || props.showMobileBulkActions) && props.bulkActions
+
+  if (panel) {
+    return (
+      <div
+        data-card-hover='false'
+        className={cn(
+          'bg-card flex h-full min-h-0 flex-col overflow-hidden rounded-[20px] border',
+          // Console spec §3.2: below `sm` the panel is full-bleed, square corners.
+          'max-sm:rounded-none',
+          props.className
+        )}
+      >
+        {toolbarNode}
+        {mobileNode}
+        {desktopNode}
+        {props.afterTable}
+        {bulkActionsNode}
+        {paginationNode}
+      </div>
+    )
+  }
 
   return (
     <>
       <div
         className={cn(
-          props.fixedHeight !== false
+          fixedHeight
             ? 'flex h-full min-h-0 flex-col gap-2.5 sm:gap-3'
             : 'space-y-2.5 sm:space-y-3',
           props.className
@@ -358,7 +411,7 @@ export function DataTablePage<TData>(props: DataTablePageProps<TData>) {
 
       {/* Bulk actions are typically a fixed-position toolbar; let the consumer
           handle its own visibility, we just gate it to non-mobile. */}
-      {(!showMobile || props.showMobileBulkActions) && props.bulkActions}
+      {bulkActionsNode}
 
       {paginationNode}
     </>
@@ -367,7 +420,8 @@ export function DataTablePage<TData>(props: DataTablePageProps<TData>) {
 
 function renderToolbar<TData>(
   props: DataTablePageProps<TData>,
-  viewToggle: React.ReactNode
+  viewToggle: React.ReactNode,
+  panel: boolean
 ): React.ReactNode {
   if (props.toolbar !== undefined) {
     // Fully custom toolbar: the consumer owns layout, including any toggle.
@@ -381,6 +435,12 @@ function renderToolbar<TData>(
       <DataTableToolbar
         table={props.table}
         {...props.toolbarProps}
+        // Panel mode: the toolbar is the panel's first row, so it owns the
+        // panel's horizontal padding and must not shrink.
+        className={cn(
+          panel && 'shrink-0 px-4 py-2.5 max-sm:px-3 max-sm:py-2',
+          props.toolbarProps.className
+        )}
         viewToggle={props.toolbarProps.viewToggle ?? viewToggle}
       />
     )
@@ -389,7 +449,8 @@ function renderToolbar<TData>(
 }
 
 function renderPagination<TData>(
-  props: DataTablePageProps<TData>
+  props: DataTablePageProps<TData>,
+  panel: boolean
 ): React.ReactNode {
   if (props.showPagination === false) {
     return null
@@ -402,6 +463,16 @@ function renderPagination<TData>(
     />
   )
 
+  // Panel mode: the pager is the panel's last row (44px, top hairline, no fill),
+  // never a portal — it would otherwise escape the panel into the page footer.
+  if (panel) {
+    return (
+      <div className='flex h-11 shrink-0 items-center border-t px-4 max-sm:px-3'>
+        <div className='min-w-0 flex-1'>{pagination}</div>
+      </div>
+    )
+  }
+
   return props.paginationInFooter !== false ? (
     <PageFooterPortal>{pagination}</PageFooterPortal>
   ) : (
@@ -413,7 +484,8 @@ function renderMobile<TData>(
   props: DataTablePageProps<TData>,
   showMobile: boolean,
   cardViewActive: boolean,
-  viewMode: DataTableViewMode
+  viewMode: DataTableViewMode,
+  panel: boolean
 ): React.ReactNode {
   if (!showMobile) {
     return null
@@ -480,6 +552,8 @@ function renderMobile<TData>(
           isLoading={props.isLoading}
           emptyTitle={props.emptyTitle}
           emptyDescription={props.emptyDescription}
+          // Inside a panel the container already owns the hairline frame.
+          framed={!panel}
           getRowKey={props.mobileProps?.getRowKey}
           getRowClassName={mobileGetRowClassName}
         />
@@ -494,20 +568,22 @@ function renderDesktop<TData>(
   props: DataTablePageProps<TData>,
   showMobile: boolean,
   cardViewActive: boolean,
-  viewMode: DataTableViewMode
+  viewMode: DataTableViewMode,
+  panel: boolean,
+  fixedHeight: boolean
 ): React.ReactNode {
   if (showMobile) {
     return null
   }
 
   const isFetchingOnly = props.isFetching && !props.isLoading
-  const fixedHeight = props.fixedHeight !== false
 
   if (cardViewActive && viewMode === DATA_TABLE_VIEW_MODES.CARD) {
     return (
       <div
         className={cn(
           fixedHeight && 'min-h-0 flex-1 overflow-y-auto',
+          panel && 'px-4 py-3 max-sm:px-3',
           'transition-opacity duration-150',
           isFetchingOnly && 'pointer-events-none opacity-60'
         )}
@@ -529,6 +605,17 @@ function renderDesktop<TData>(
     )
   }
 
+  // Panel mode renders through `UnifiedTableView`: the table container itself is
+  // the scroll element, so both axes scroll on one node. That view does not put
+  // `sticky` on the header (only `SplitHeaderTableView` does), so panel mode has
+  // to opt in explicitly or the header scrolls away.
+  let tableContainerClassName: string | undefined
+  if (panel) {
+    tableContainerClassName = 'h-full min-h-0 overflow-auto'
+  } else if (fixedHeight) {
+    tableContainerClassName = 'h-full min-h-0'
+  }
+
   return (
     <DataTableView
       table={props.table}
@@ -540,16 +627,20 @@ function renderDesktop<TData>(
       skeletonKeyPrefix={props.skeletonKeyPrefix}
       renderRow={props.renderRow}
       applyHeaderSize={props.applyHeaderSize}
-      splitHeader={fixedHeight}
-      tableContainerClassName={fixedHeight ? 'h-full min-h-0' : undefined}
+      splitHeader={fixedHeight && !panel}
+      tableContainerClassName={tableContainerClassName}
       tableHeaderClassName={cn(
         fixedHeight && '[background-color:var(--table-header)]',
+        panel && 'sticky top-0 z-20',
         props.tableHeaderClassName
       )}
       getColumnClassName={props.getColumnClassName}
       pinnedColumns={props.pinnedColumns}
       containerClassName={cn(
         fixedHeight && 'min-h-0 flex-1',
+        // Panel mode: the panel itself owns the border and radius, and its body
+        // must be the only scroll container so the sticky header never drifts.
+        panel && 'min-h-0 flex-1 rounded-none border-0',
         'transition-opacity duration-150',
         isFetchingOnly && 'pointer-events-none opacity-60',
         props.tableClassName

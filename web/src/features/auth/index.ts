@@ -27,10 +27,6 @@ export {
   sendPasswordResetEmail,
   sendEmailVerification,
   bindEmail,
-  createOAuthFlow,
-  githubOAuthStart,
-  wechatLoginByCode,
-  telegramLogin,
 } from './api'
 
 // ============================================================================
@@ -46,7 +42,6 @@ export type {
   BindEmailPayload,
   ApiResponse,
   SystemStatus,
-  OAuthProvider,
   AuthFormProps,
 } from './types'
 
@@ -73,15 +68,6 @@ export {
 // Utilities
 // ============================================================================
 
-export {
-  buildGitHubOAuthUrl,
-  buildDiscordOAuthUrl,
-  buildOIDCOAuthUrl,
-  buildLinuxDOOAuthUrl,
-  getAvailableOAuthProviders,
-  hasOAuthProviders,
-} from './lib/oauth'
-
 export { getAffiliateCode, saveAffiliateCode } from './lib/storage'
 
 export {
@@ -97,7 +83,6 @@ export {
 // ============================================================================
 
 export { useTurnstile } from './hooks/use-turnstile'
-export { useOAuthLogin } from './hooks/use-oauth-login'
 export { useAuthRedirect } from './hooks/use-auth-redirect'
 export { useEmailVerification } from './hooks/use-email-verification'
 
@@ -106,7 +91,6 @@ export { useEmailVerification } from './hooks/use-email-verification'
 // ============================================================================
 
 export { AuthLayout } from './auth-layout'
-export { OAuthProviders } from './components/oauth-providers'
 export { TermsFooter } from './components/terms-footer'
 export { LegalConsent } from './components/legal-consent'
 export { SignIn } from './sign-in'

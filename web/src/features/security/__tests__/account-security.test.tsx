@@ -63,7 +63,6 @@ it('requires verification after username confirmation and cancels without deleti
       data: {
         scope: 'account.delete',
         methods: [{ method: 'password', available: true }],
-        oauth_providers: [],
         password_encryption_enabled: false,
       },
     },
@@ -95,7 +94,6 @@ it('allows a common new password after verifying the current password once', asy
       data: {
         scope: 'account.password.change',
         methods: [{ method: 'password', available: true }],
-        oauth_providers: [],
         password_encryption_enabled: false,
       },
     },
@@ -163,7 +161,6 @@ it.each(['unmount', 'account change'])(
         data: {
           scope: 'account.password.change',
           methods: [{ method: 'password', available: true }],
-          oauth_providers: [],
           password_encryption_enabled: false,
         },
       },
@@ -235,7 +232,6 @@ it('sets a first password after verifying an existing factor without asking for 
       data: {
         scope: 'account.password.set',
         methods: [{ method: 'password', available: true }],
-        oauth_providers: [],
         password_encryption_enabled: false,
       },
     },
@@ -294,7 +290,6 @@ it('confirms both email addresses after identity verification and freezes the su
       data: {
         scope: 'account.binding.bind',
         methods: [{ method: 'password', available: true }],
-        oauth_providers: [],
         password_encryption_enabled: false,
       },
     },
@@ -313,7 +308,7 @@ it('confirms both email addresses after identity verification and freezes the su
         },
       }
     }
-    if (url === '/api/oauth/email/bind/start') {
+    if (url === '/api/user/email/bind/start') {
       return {
         data: {
           success: true,
@@ -359,7 +354,7 @@ it('confirms both email addresses after identity verification and freezes the su
   await user.click(screen.getByRole('button', { name: 'Confirm email' }))
   await waitFor(() => expect(onSuccess).toHaveBeenCalledOnce())
   expect(post).toHaveBeenCalledWith(
-    '/api/oauth/email/bind',
+    '/api/user/email/bind',
     { flow_token: 'email-flow', new_code: '123456', old_code: '654321' },
     expect.objectContaining({ singleUseAuthorization: true })
   )

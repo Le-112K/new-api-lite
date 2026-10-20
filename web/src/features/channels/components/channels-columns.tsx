@@ -32,8 +32,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { BadgeListCell } from '@/components/data-table'
-import { GroupBadge } from '@/components/group-badge'
+import { getGroupLabel } from '@/components/group-badge'
 import { ProviderBadge } from '@/components/provider-badge'
 import { StatusBadge, type StatusBadgeProps } from '@/components/status-badge'
 import { TableId } from '@/components/table-id'
@@ -930,7 +929,9 @@ export function useChannelsColumns(
         enableSorting: false,
       },
 
-      // Models column
+      // Models column — count only. Console spec §4.6 allows one pill per row
+      // (the status badge); a badge per model turned the row into a pill wall.
+      // The names stay reachable through the native `title` tooltip.
       {
         accessorKey: 'models',
         header: t('Models'),
@@ -938,25 +939,25 @@ export function useChannelsColumns(
         cell: ({ row }) => {
           const models = row.getValue('models') as string
           const modelArray = parseModelsList(models)
+
+          if (modelArray.length === 0) {
+            return <span className='text-muted-foreground text-xs'>-</span>
+          }
+
           return (
-            <BadgeListCell
-              items={modelArray.map((model) => (
-                <StatusBadge
-                  key={model}
-                  label={model}
-                  autoColor={model}
-                  size='sm'
-                  className='font-mono'
-                />
-              ))}
-            />
+            <span
+              className='block text-right text-sm tabular-nums'
+              title={modelArray.join(', ')}
+            >
+              {modelArray.length}
+            </span>
           )
         },
         size: 200,
         enableSorting: false,
       },
 
-      // Group column
+      // Group column — grey text joined by `·` (spec §4.6: only status stays a pill)
       {
         accessorKey: 'group',
         header: t('Groups'),
@@ -964,17 +965,35 @@ export function useChannelsColumns(
         cell: ({ row }) => {
           const group = row.getValue('group') as string
           const groupArray = parseGroupsList(group)
+
+          if (groupArray.length === 0) {
+            return <span className='text-muted-foreground text-xs'>-</span>
+          }
+
+          if (!sensitiveVisible) {
+            return (
+              <span className='text-muted-foreground block truncate text-[13px]'>
+                {SENSITIVE_MASK}
+              </span>
+            )
+          }
+
+          const labels = groupArray.map((g) =>
+            getGroupLabel({
+              groupName: g,
+              isAutoGroup: g === 'auto',
+              isEmptyGroup: false,
+              t,
+            })
+          )
+
           return (
-            <BadgeListCell
-              items={groupArray.map((g) => (
-                <GroupBadge
-                  key={g}
-                  group={g}
-                  label={sensitiveVisible ? undefined : SENSITIVE_MASK}
-                  size='sm'
-                />
-              ))}
-            />
+            <span
+              className='text-muted-foreground block truncate text-[13px]'
+              title={labels.join(' · ')}
+            >
+              {labels.join(' · ')}
+            </span>
           )
         },
         filterFn: (row, id, value) => {

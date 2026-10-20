@@ -43,12 +43,6 @@ export interface AuthUser {
   aff_quota?: number
   aff_history_quota?: number
   inviter_id?: number
-  github_id?: string
-  discord_id?: string
-  oidc_id?: string
-  wechat_id?: string
-  telegram_id?: string
-  linux_do_id?: string
   language?: string
   setting?: Record<string, unknown> | string
   stripe_customer?: string

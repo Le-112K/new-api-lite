@@ -117,13 +117,6 @@ const (
 	MsgUserDefaultTokenFailed        = "user.default_token_failed"
 	MsgUserAffCodeEmpty              = "user.aff_code_empty"
 	MsgUserEmailEmpty                = "user.email_empty"
-	MsgUserGitHubIdEmpty             = "user.github_id_empty"
-	MsgUserDiscordIdEmpty            = "user.discord_id_empty"
-	MsgUserOidcIdEmpty               = "user.oidc_id_empty"
-	MsgUserWeChatIdEmpty             = "user.wechat_id_empty"
-	MsgUserTelegramIdEmpty           = "user.telegram_id_empty"
-	MsgUserTelegramNotBound          = "user.telegram_not_bound"
-	MsgUserLinuxDOIdEmpty            = "user.linux_do_id_empty"
 	MsgUserQuotaChangeZero           = "user.quota_change_zero"
 )
 
@@ -256,25 +249,6 @@ const (
 	MsgAbilityRepairRunning = "ability.repair_running"
 )
 
-// OAuth related messages
-const (
-	MsgOAuthInvalidCode     = "oauth.invalid_code"
-	MsgOAuthGetUserErr      = "oauth.get_user_error"
-	MsgOAuthAccountUsed     = "oauth.account_used"
-	MsgOAuthUnknownProvider = "oauth.unknown_provider"
-	MsgOAuthStateInvalid    = "oauth.state_invalid"
-	MsgOAuthNotEnabled      = "oauth.not_enabled"
-	MsgOAuthUserDeleted     = "oauth.user_deleted"
-	MsgOAuthUserBanned      = "oauth.user_banned"
-	MsgOAuthBindSuccess     = "oauth.bind_success"
-	MsgOAuthAlreadyBound    = "oauth.already_bound"
-	MsgOAuthNotAutoLinked   = "oauth.not_auto_linked"
-	MsgOAuthConnectFailed   = "oauth.connect_failed"
-	MsgOAuthTokenFailed     = "oauth.token_failed"
-	MsgOAuthUserInfoEmpty   = "oauth.user_info_empty"
-	MsgOAuthTrustLevelLow   = "oauth.trust_level_low"
-)
-
 // Model layer error messages (for translation in controller)
 const (
 	MsgRedeemFailed          = "redeem.failed"
@@ -298,13 +272,3 @@ const (
 	MsgDistributorInvalidParseModel            = "distributor.invalid_request_parse_model"
 )
 
-// Custom OAuth provider related messages
-const (
-	MsgCustomOAuthNotFound          = "custom_oauth.not_found"
-	MsgCustomOAuthSlugEmpty         = "custom_oauth.slug_empty"
-	MsgCustomOAuthSlugExists        = "custom_oauth.slug_exists"
-	MsgCustomOAuthNameEmpty         = "custom_oauth.name_empty"
-	MsgCustomOAuthHasBindings       = "custom_oauth.has_bindings"
-	MsgCustomOAuthBindingNotFound   = "custom_oauth.binding_not_found"
-	MsgCustomOAuthProviderIdInvalid = "custom_oauth.provider_id_field_invalid"
-)

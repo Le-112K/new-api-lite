@@ -76,7 +76,7 @@ export function ApiKeysConsole(props: ApiKeysConsoleProps) {
   const dimmed = props.isFetching && !props.isLoading
 
   return (
-    <div className='bg-card flex min-h-0 flex-col overflow-hidden rounded-2xl border shadow-xs'>
+    <div className='bg-card flex min-h-0 flex-col overflow-hidden rounded-[20px] border shadow-xs'>
       {props.toolbar}
 
       <div className='min-h-0 flex-1 overflow-x-auto'>

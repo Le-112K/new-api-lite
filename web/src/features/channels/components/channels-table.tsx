@@ -68,8 +68,15 @@ import { useChannels } from './channels-provider'
 import { DataTableBulkActions } from './data-table-bulk-actions'
 
 const route = getRouteApi('/_authenticated/channels/')
-const CHANNELS_COLUMN_VISIBILITY_STORAGE_KEY = 'channels:column-visibility'
-const CHANNELS_COLUMN_SIZING_STORAGE_KEY = 'channels:column-sizing'
+// `:v2` is deliberate. The default column set changed from ten columns to six
+// (console spec §7.2), and `initialColumnVisibility` only supplies an *initial*
+// value — a stored `channels:column-visibility` from before the redesign would
+// silently keep the old ten-column set and the new default would never appear.
+// Bumping the key costs returning users their column preference exactly once;
+// that is the only safe way to change a persisted default. Same for sizing:
+// stale widths were measured for columns that are now hidden.
+const CHANNELS_COLUMN_VISIBILITY_STORAGE_KEY = 'channels:column-visibility:v2'
+const CHANNELS_COLUMN_SIZING_STORAGE_KEY = 'channels:column-sizing:v2'
 const CHANNELS_VIEW_MODE_STORAGE_KEY = 'channels:view-mode'
 const CHANNELS_STATUS_FILTER_STORAGE_KEY = 'channel-status-filter'
 
@@ -319,7 +326,18 @@ export function ChannelsTable() {
     totalCount,
     sorting,
     initialColumnVisibility: {
-      models: false,
+      // Console spec §7.2 — default 6 columns: name / type / group / models /
+      // status / actions. Everything else lives in "column settings" and stays
+      // re-openable from the settings popover. A value stored under the current
+      // `columnVisibilityStorageKey` still wins over these defaults; the key was
+      // bumped to `:v2` so a pre-redesign ten-column preference does not pin the
+      // old default forever.
+      id: false,
+      priority: false,
+      weight: false,
+      balance: false,
+      response_time: false,
+      test_time: false,
       tag: false,
     },
     columnVisibilityStorageKey: CHANNELS_COLUMN_VISIBILITY_STORAGE_KEY,
@@ -415,6 +433,7 @@ export function ChannelsTable() {
     <DataTablePage
       table={table}
       columns={columns}
+      presentation='panel'
       isLoading={isLoading}
       isFetching={isFetching}
       emptyTitle={t('No Channels Found')}
@@ -423,6 +442,12 @@ export function ChannelsTable() {
       )}
       skeletonKeyPrefix='channel-skeleton'
       enableCardView
+      // `useDataTableViewMode` falls back to CARD whenever card view is enabled,
+      // so without this the redesign would open on the card grid and the new
+      // six-column default would only appear after the user switched modes by
+      // hand. The table is the scanning surface; cards stay one click away and
+      // a stored choice (`viewModeStorageKey`) still wins over this default.
+      defaultViewMode='table'
       viewModeStorageKey={CHANNELS_VIEW_MODE_STORAGE_KEY}
       renderCard={(row, { isSelected }) => (
         <ChannelCard row={row} isSelected={isSelected} />

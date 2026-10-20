@@ -24,6 +24,8 @@ import {
   type ReactNode,
 } from 'react'
 
+import { cn } from '@/lib/utils'
+
 import { Main } from './main'
 import { PageFooterProvider } from './page-footer'
 
@@ -49,21 +51,41 @@ function SectionPageLayoutBreadcrumb(_props: SlotProps) {
 }
 SectionPageLayoutBreadcrumb.displayName = 'SectionPageLayout.Breadcrumb'
 
+/**
+ * One-line page description. Rendered only in the `console` variant; ignored
+ * in `default` (the marketing/pricing shells never had a description slot, so
+ * adding one must stay opt-in).
+ */
+function SectionPageLayoutDescription(_props: SlotProps) {
+  return null
+}
+SectionPageLayoutDescription.displayName = 'SectionPageLayout.Description'
+
+/**
+ * `default` — the existing header, byte-for-byte unchanged.
+ * `console` — denser operational shell: 32/24/16 side padding, 20px title,
+ * 13px description, and 20/16/12 gap above the panel (console spec §3.2).
+ */
+export type SectionPageLayoutVariant = 'default' | 'console'
+
 export type SectionPageLayoutProps = {
   children: ReactNode
   fixedContent?: boolean
   stackActionsOnMobile?: boolean
+  variant?: SectionPageLayoutVariant
 }
 
 export function SectionPageLayout(props: SectionPageLayoutProps) {
   const [footerContainer, setFooterContainer] = useState<HTMLDivElement | null>(
     null
   )
+  const isConsole = props.variant === 'console'
 
   let title: ReactNode = null
   let actions: ReactNode = null
   let content: ReactNode = null
   let breadcrumb: ReactNode = null
+  let description: ReactNode = null
 
   Children.forEach(props.children, (node) => {
     if (!isValidElement(node)) return
@@ -75,15 +97,28 @@ export function SectionPageLayout(props: SectionPageLayoutProps) {
       content = child.props.children
     } else if (child.type === SectionPageLayoutBreadcrumb) {
       breadcrumb = child.props.children
+    } else if (child.type === SectionPageLayoutDescription) {
+      description = child.props.children
     }
   })
 
   return (
     <PageFooterProvider container={footerContainer}>
       <Main>
-        <div className='shrink-0 px-3 pt-3 pb-2.5 sm:px-4 sm:pt-5 sm:pb-3'>
+        <div
+          data-console={isConsole ? true : undefined}
+          className={
+            isConsole
+              ? 'shrink-0 px-4 pt-3 pb-3 sm:px-6 sm:pt-3.5 sm:pb-4 lg:px-8 lg:pt-4 lg:pb-5'
+              : 'shrink-0 px-3 pt-3 pb-2.5 sm:px-4 sm:pt-5 sm:pb-3'
+          }
+        >
           {breadcrumb != null && (
-            <div className='mb-2 sm:mb-3'>{breadcrumb}</div>
+            <div
+              className={isConsole ? 'mb-1.5 hidden sm:block' : 'mb-2 sm:mb-3'}
+            >
+              {breadcrumb}
+            </div>
           )}
           <div className='flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:gap-x-4'>
             <div
@@ -93,9 +128,20 @@ export function SectionPageLayout(props: SectionPageLayoutProps) {
                   : 'min-w-0 flex-1'
               }
             >
-              <h2 className='truncate text-base font-bold tracking-tight sm:text-lg'>
+              <h2
+                className={
+                  isConsole
+                    ? 'truncate text-[18px] leading-[26px] font-semibold tracking-tight sm:text-[20px] sm:leading-7'
+                    : 'truncate text-base font-bold tracking-tight sm:text-lg'
+                }
+              >
                 {title}
               </h2>
+              {isConsole && description != null && (
+                <p className='mt-1 hidden max-w-[68ch] text-[13px] leading-5 text-[var(--cx-text-3)] sm:block'>
+                  {description}
+                </p>
+              )}
             </div>
             {actions != null && (
               <div className='flex shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-x-4'>
@@ -106,11 +152,15 @@ export function SectionPageLayout(props: SectionPageLayoutProps) {
         </div>
 
         <div
-          className={
+          data-console={isConsole ? true : undefined}
+          className={cn(
             props.fixedContent
-              ? 'min-h-0 flex-1 overflow-hidden px-3 pt-1 pb-3 sm:px-4 sm:pt-1.5 sm:pb-4'
-              : 'min-h-0 flex-1 overflow-auto px-3 pt-1 pb-3 sm:px-4 sm:pt-1.5 sm:pb-4'
-          }
+              ? 'min-h-0 flex-1 overflow-hidden'
+              : 'min-h-0 flex-1 overflow-auto',
+            isConsole
+              ? 'px-4 pt-0 pb-3 sm:px-6 sm:pb-4 lg:px-8 lg:pb-5'
+              : 'px-3 pt-1 pb-3 sm:px-4 sm:pt-1.5 sm:pb-4'
+          )}
         >
           {content}
         </div>
@@ -128,3 +178,4 @@ SectionPageLayout.Title = SectionPageLayoutTitle
 SectionPageLayout.Actions = SectionPageLayoutActions
 SectionPageLayout.Content = SectionPageLayoutContent
 SectionPageLayout.Breadcrumb = SectionPageLayoutBreadcrumb
+SectionPageLayout.Description = SectionPageLayoutDescription

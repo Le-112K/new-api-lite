@@ -16,6 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+/* eslint-disable react-refresh/only-export-components */
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -65,7 +66,7 @@ type GroupBadgeProps = Omit<
   containerClassName?: string
 }
 
-function getGroupLabel(params: {
+export function getGroupLabel(params: {
   labelOverride?: string
   groupName?: string
   isAutoGroup: boolean

@@ -24,7 +24,6 @@ var auditContentTemplates = map[string]string{
 	"user.quota_add":            "Increased user quota by ${quota}",
 	"user.quota_subtract":       "Decreased user quota by ${quota}",
 	"user.quota_override":       "Overrode user quota from ${from} to ${to}",
-	"user.binding_clear":        "Cleared ${bindingType} binding for user ${username}",
 	"access_token.generate":     "Generated an access token",
 	"access_token.revoke":       "Revoked an access token",
 	"access_token.rename":       "Renamed an access token",
@@ -33,7 +32,6 @@ var auditContentTemplates = map[string]string{
 	"user.password_change":      "Account password change",
 	"user.binding_start":        "Account binding request",
 	"user.binding_bind":         "Account binding",
-	"user.binding_unbind":       "Account unlinking",
 	"user.email_binding_resend": "Email confirmation code resend",
 	"option.update":             "Updated system setting ${key}",
 

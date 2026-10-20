@@ -284,8 +284,15 @@ For commercial licensing, please contact support@quantumnous.com
   --cx-table-border: var(--border);
   --cx-table-head-bg: var(--table-header);
   --cx-table-head-fg: var(--cx-text-3);
-  --cx-table-row-hover: var(--accent);
+  /* `--accent` is `#FFFFFF` in light mode — identical to `--card`, so the row
+   * hover was literally invisible. `--cx-fill-1` is `--muted` (`#F5F5F7`) in
+   * light and `#1C1C1E` in dark, so both themes get a real hover. */
+  --cx-table-row-hover: var(--cx-fill-1);
   --cx-table-row-selected: var(--emphasis-soft);
+  /* Selected rows sit ~2% away from hover, which the eye cannot resolve on its
+   * own. The 2px bar on the first column carries the difference. `--emphasis`
+   * flips with the theme on its own, so no `.dark` override is needed. */
+  --cx-table-row-selected-bar: var(--emphasis);
   --cx-table-empty-fg: var(--muted-foreground);
 
   --cx-focus-ring: var(--ring);
@@ -320,6 +327,15 @@ For commercial licensing, please contact support@quantumnous.com
 :lang(ja) {
   line-break: strict;
 }
+/* `theme-apple-bw.css:167` forces `thead th { letter-spacing: 0.08em }` (plus
+ * `!important`) as a Latin eyebrow treatment. Two CJK chars under 0.08em read
+ * as two separate words, so neutralise the tracking for zh/ja only. Needs
+ * `!important` to outrank the source rule; `:lang(zh)` also raises specificity
+ * to (0,1,2), above the plain `thead th` (0,0,2). */
+:lang(zh) thead th,
+:lang(ja) thead th {
+  letter-spacing: 0 !important;
+}
 
 /* ==========================================================================
  * 9. Console semantic text / line / fill (spec §11, rule R-G1)
@@ -351,4 +367,30 @@ For commercial licensing, please contact support@quantumnous.com
   --cx-fill-1: var(--muted);
   --cx-fill-2: var(--accent);
   --cx-fill-3: var(--gray-800);
+}
+
+/* ==========================================================================
+ * 10. Console tab triggers — underline, not solid pill (spec §8, F4)
+ * --------------------------------------------------------------------------
+ * `theme-apple-bw.css:176-182` paints active tab triggers as a solid
+ * `--foreground` block with `--background` text. That reads as a button, and
+ * in the console a solid black tab competes with the one real primary action
+ * on the page. Inside a `[data-console]` container the active state becomes an
+ * underline instead: transparent fill, normal text colour, 2px inset bar.
+ *
+ * Scoped override, hence the extra `[data-console]` ancestor and the
+ * `!important` — the source rule is `!important` on a `[data-slot][data-state]`
+ * pair, so matching it requires both.
+ *
+ * NOTE: this rule is inert until panel-level containers carry the
+ * `data-console` attribute; that attribute lands in the next pass. Inert CSS is
+ * intentional here — the declaration is the agreed contract, and adding the
+ * attribute later must not require touching this file again.
+ * ========================================================================== */
+[data-console] [data-slot='tabs-trigger'][data-state='active'] {
+  background: transparent !important;
+  color: var(--cx-text) !important;
+  font-weight: 600 !important;
+  border-color: transparent !important;
+  box-shadow: inset 0 -2px 0 var(--foreground) !important;
 }

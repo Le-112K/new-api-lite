@@ -29,12 +29,6 @@ interface CompleteStepProps {
   values: SetupFormValues
 }
 
-const USAGE_MODE_LABEL_KEYS: Record<SetupFormValues['usageMode'], string> = {
-  external: 'External operations mode',
-  self: 'Personal use mode',
-  demo: 'Demo site mode',
-}
-
 const DATABASE_VARIANT: Record<
   string,
   'info' | 'success' | 'warning' | 'neutral'
@@ -46,7 +40,6 @@ const DATABASE_VARIANT: Record<
 
 export function CompleteStep({ status, values }: CompleteStepProps) {
   const { t } = useTranslation()
-  const usageLabelKey = USAGE_MODE_LABEL_KEYS[values.usageMode]
   const dbType = status?.database_type ?? 'Unknown'
   const databaseVariant = DATABASE_VARIANT[dbType.toLowerCase()] ?? 'neutral'
 
@@ -93,15 +86,6 @@ export function CompleteStep({ status, values }: CompleteStepProps) {
                 ? t('Existing account will be reused')
                 : values.username || t('Not set yet')}
             </dd>
-          </div>
-
-          <Separator />
-
-          <div className='space-y-1.5'>
-            <dt className='text-muted-foreground text-xs font-medium tracking-wide uppercase'>
-              {t('Usage mode')}
-            </dt>
-            <dd className='text-sm font-semibold'>{t(usageLabelKey)}</dd>
           </div>
         </dl>
       </div>

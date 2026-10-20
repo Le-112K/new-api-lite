@@ -17,7 +17,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { api } from '@/lib/api'
-import type { CustomOAuthBinding } from '@/lib/oauth'
 import { authRequestOptions, authResult } from '@/lib/secure-verification'
 import type { LoginSession } from '@/stores/auth-store'
 
@@ -145,7 +144,7 @@ export function startEmailBinding(
 ): Promise<EmailBindingFlow> {
   return authResult(
     api.post(
-      '/api/oauth/email/bind/start',
+      '/api/user/email/bind/start',
       { email },
       {
         ...authRequestOptions,
@@ -163,7 +162,7 @@ export function resendEmailBinding(
 ): Promise<EmailBindingFlow> {
   return authResult(
     api.post(
-      '/api/oauth/email/bind/resend',
+      '/api/user/email/bind/resend',
       { flow_token: flowToken },
       {
         ...authRequestOptions,
@@ -182,7 +181,7 @@ export function bindEmail(
 ): Promise<AccountSecurityResult> {
   return authResult(
     api.post(
-      '/api/oauth/email/bind',
+      '/api/user/email/bind',
       { flow_token: flowToken, new_code: newCode, old_code: oldCode },
       {
         ...authRequestOptions,
@@ -191,41 +190,6 @@ export function bindEmail(
       }
     )
   )
-}
-
-/**
- * Bind WeChat account
- */
-export function bindWeChat(
-  code: string,
-  proofToken: string,
-  signal: AbortSignal
-): Promise<AccountSecurityResult> {
-  return authResult(
-    api.post(
-      '/api/oauth/wechat/bind',
-      { code },
-      {
-        ...authRequestOptions,
-        headers: { 'X-Security-Proof': proofToken },
-        singleUseAuthorization: true,
-        signal,
-      }
-    )
-  )
-}
-
-export interface TelegramBindFlow {
-  flow_token: string
-  callback_url: string
-  expires_at: number
-}
-
-export async function startTelegramBind(): Promise<
-  ApiResponse<TelegramBindFlow>
-> {
-  const res = await api.post('/api/oauth/telegram/bind/start')
-  return res.data
 }
 
 // ============================================================================
@@ -245,38 +209,6 @@ export async function revokeLoginSession(sid: string): Promise<ApiResponse> {
 export async function revokeOtherLoginSessions(): Promise<ApiResponse> {
   const res = await api.post('/api/user/sessions/revoke-others')
   return res.data
-}
-
-// ============================================================================
-// Custom OAuth Binding APIs
-// ============================================================================
-
-/**
- * Get current user's custom OAuth bindings
- */
-export async function getSelfOAuthBindings(): Promise<
-  ApiResponse<CustomOAuthBinding[]>
-> {
-  const res = await api.get('/api/user/oauth/bindings')
-  return res.data
-}
-
-/**
- * Unbind a custom OAuth provider for current user
- */
-export function unbindCustomOAuth(
-  providerId: number,
-  proofToken: string,
-  signal: AbortSignal
-): Promise<AccountSecurityResult> {
-  return authResult(
-    api.delete(`/api/user/oauth/bindings/${providerId}`, {
-      ...authRequestOptions,
-      headers: { 'X-Security-Proof': proofToken },
-      singleUseAuthorization: true,
-      signal,
-    })
-  )
 }
 
 // ============================================================================

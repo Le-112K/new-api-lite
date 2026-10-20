@@ -34,7 +34,7 @@ import { useProfile } from '@/features/profile/hooks/use-profile'
 
 import { AccessTokensCard } from './components/access-tokens-card'
 import { AccountActionCard } from './components/account-action-card'
-import { AccountBindings } from './components/account-bindings'
+import { AccountEmailBinding } from './components/account-email-binding'
 import { LoginSessionsCard } from './components/login-sessions-card'
 import { PrivacyCard } from './components/privacy-card'
 
@@ -95,7 +95,7 @@ export function Security() {
               iconClassName='size-7 sm:size-7'
               disableHoverEffect
             >
-              <AccountBindings profile={profile} onUpdate={refreshProfile} />
+              <AccountEmailBinding profile={profile} onUpdate={refreshProfile} />
             </TitledCard>
           </section>
           <section aria-labelledby='security-access' className='space-y-4'>

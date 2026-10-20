@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>new-api-lite 功能取舍清单</title>
+<style>
+  :root{
+    --bg:#fbfbfa; --card:#fff; --fg:#1a1a19; --muted:#6b6b68; --muted2:#8f8f8a;
+    --line:#e8e7e3; --line2:#f0efeb; --accent:#1a1a19; --soft:#f4f3f0;
+    --ok:#0e6b3c; --ok-bg:#e4f3ea; --warn:#8a4700; --warn-bg:#fbedd9;
+    --bad:#a81a1a; --bad-bg:#fbe7e7; --info:#0b5aa8; --info-bg:#e4eefa;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--fg);
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}
+  header.top{
+    position:sticky;top:0;z-index:20;background:rgba(251,251,250,.92);
+    backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid var(--line);
+  }
+  .top-inner{max-width:1180px;margin:0 auto;padding:14px 20px 12px}
+  .top-row{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  h1{font-size:17px;font-weight:650;margin:0;letter-spacing:-.01em}
+  .sub{font-size:12.5px;color:var(--muted)}
+  .counters{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .pill{
+    display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;
+    border:1px solid var(--line);border-radius:999px;background:var(--card);
+    font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;
+  }
+  .pill b{color:var(--fg);font-weight:600}
+  .pill.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .pill.on b{color:#fff}
+  .bar{height:3px;background:var(--line2);border-radius:99px;margin-top:10px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--accent);transition:width .18s ease}
+
+  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:18px 0 6px}
+  .chip{
+    height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line);
+    background:var(--card);color:var(--muted);font-size:12.5px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .chip:hover{color:var(--fg)}
+  .chip[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .sp{flex:1}
+  .btn{
+    height:30px;padding:0 12px;border-radius:9px;border:1px solid var(--line);
+    background:var(--card);color:var(--fg);font-size:12.5px;cursor:pointer;
+  }
+  .btn:hover{background:var(--soft)}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .search{
+    height:30px;min-width:210px;padding:0 11px;border:1px solid var(--line);
+    border-radius:9px;background:var(--card);font:12.5px/1 inherit;color:var(--fg);
+  }
+  .search:focus{outline:none;border-color:#c9c8c2;background:#fff}
+
+  /* ---- 分块浏览 ---- */
+  .layout{display:grid;grid-template-columns:206px minmax(0,1fr);gap:26px;margin-top:20px}
+  .rail{position:sticky;top:118px;align-self:start;display:flex;flex-direction:column;gap:2px}
+  .rail a{
+    display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;
+    color:var(--muted);font-size:12.5px;text-decoration:none;cursor:pointer;
+  }
+  .rail a:hover{background:var(--soft);color:var(--fg)}
+  .rail a.on{background:var(--accent);color:#fff}
+  .rail a .num{width:16px;text-align:center;opacity:.55;font-size:11px}
+  .rail a .n{margin-left:auto;font-size:11px;font-variant-numeric:tabular-nums;opacity:.65}
+  .rail a.on .n{opacity:.85}
+  .pane-head{padding:0 2px 12px;border-bottom:1px solid var(--line)}
+  .ph-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .pane-head h2{margin:0;font-size:15px;font-weight:650;letter-spacing:-.01em}
+  .pane-head .note{font-size:12px;color:var(--muted2)}
+  .pane-head .stat{margin-left:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .pane-head .stat b{color:var(--fg)}
+  .codeof{
+    margin-top:8px;font-size:11.5px;color:var(--muted2);
+    display:flex;gap:8px;align-items:flex-start;
+  }
+  .codeof em{
+    font-style:normal;background:var(--soft);border-radius:5px;padding:3px 7px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    color:#5c5c58;word-break:break-all;
+  }
+  .item{cursor:default}
+  .item .body{cursor:pointer}
+  .item .lines{display:none}
+  .item.expanded .lines{display:grid}
+  .item .more{font-size:11px;color:var(--muted2);margin-left:2px}
+  .pane-foot{
+    display:flex;align-items:center;gap:10px;margin-top:20px;padding-top:14px;
+    border-top:1px solid var(--line);
+  }
+  .pane-foot .hint{font-size:12px;color:var(--muted2)}
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr;gap:14px}
+    .rail{position:static;flex-direction:row;overflow-x:auto;padding-bottom:4px}
+    .rail a{white-space:nowrap}
+    .rail a .n{display:none}
+  }
+
+  section.grp{margin-top:26px}
+  .grp-head{display:flex;align-items:baseline;gap:10px;padding:0 2px 8px;border-bottom:1px solid var(--line)}
+  .grp-head h2{font-size:14px;font-weight:650;margin:0;letter-spacing:-.005em}
+  .grp-head .note{font-size:12px;color:var(--muted2)}
+  .grp-head .stat{margin-left:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .grp-head .stat b{color:var(--fg)}
+
+  .item{
+    display:grid;grid-template-columns:26px minmax(0,1fr) 88px 76px;
+    gap:12px;align-items:start;padding:13px 6px;border-bottom:1px solid var(--line2);
+  }
+  .item:last-child{border-bottom:0}
+  .item:hover{background:#fdfcfa}
+  .item.dropped{opacity:.55}
+  input[type=checkbox]{
+    appearance:none;width:17px;height:17px;margin:2px 0 0;border:1.5px solid #c9c8c2;
+    border-radius:5px;background:#fff;cursor:pointer;position:relative;flex-shrink:0;
+  }
+  input[type=checkbox]:checked{background:var(--accent);border-color:var(--accent)}
+  input[type=checkbox]:checked::after{
+    content:"";position:absolute;left:5px;top:1.5px;width:4px;height:9px;
+    border:2px solid #fff;border-top:0;border-left:0;transform:rotate(42deg);
+  }
+  input[type=checkbox]:disabled{cursor:not-allowed;opacity:.75}
+  .name{font-weight:560;font-size:13.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .code{font:11px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    color:var(--muted2);background:var(--soft);padding:3px 5px;border-radius:4px}
+  .desc{color:var(--muted);font-size:12.5px;margin-top:4px}
+  .lines{margin-top:6px;display:grid;gap:2px}
+  .ln{font-size:12px;color:var(--muted);display:flex;gap:6px}
+  .ln .k{color:var(--muted2);flex-shrink:0;width:28px}
+  .ln.eg .v{color:#3c3c39}
+  .ln.im .v{color:var(--bad)}
+  .lv{font-size:11px;padding:3px 7px;border-radius:999px;text-align:center;white-space:nowrap;margin-top:2px}
+  .lv.P0{background:var(--bad-bg);color:var(--bad)}
+  .lv.P1{background:var(--ok-bg);color:var(--ok)}
+  .lv.P2{background:var(--info-bg);color:var(--info)}
+  .lv.P3{background:var(--soft);color:var(--muted)}
+  .adv{font-size:11.5px;color:var(--muted);text-align:right;margin-top:3px;white-space:nowrap}
+
+  .summary{margin-top:34px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);overflow:hidden}
+  .summary h3{margin:0;padding:14px 16px;font-size:13.5px;border-bottom:1px solid var(--line)}
+  .sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1px;background:var(--line2)}
+  .sum-cell{background:var(--card);padding:12px 16px}
+  .sum-cell .k{font-size:11.5px;color:var(--muted2)}
+  .sum-cell .v{font-size:19px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums}
+  .out{padding:14px 16px;border-top:1px solid var(--line)}
+  textarea{
+    width:100%;min-height:120px;resize:vertical;border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px;font:12px/1.6 ui-monospace,Menlo,Consolas,monospace;color:var(--fg);background:#fdfcfa;
+  }
+  .toast{
+    position:fixed;left:50%;bottom:28px;transform:translate(-50%,12px);opacity:0;pointer-events:none;
+    background:var(--accent);color:#fff;padding:9px 16px;border-radius:999px;font-size:12.5px;
+    transition:all .2s ease;z-index:50;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  @media (max-width:720px){
+    .item{grid-template-columns:24px minmax(0,1fr);gap:10px}
+    .lv,.adv{grid-column:2;text-align:left}
+    .adv{margin-top:-4px}
+  }
+  @media print{
+    header.top{position:static;backdrop:none}
+    .toolbar,.out,.toast{display:none}
+    body{background:#fff}
+    .item{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="top-row">
+      <h1>new-api-lite 功能取舍清单</h1>
+      <span class="sub">勾选你需要的；带 🔒 的是主链路，关掉产品不成立</span>
+    </div>
+    <div class="counters" id="counters"></div>
+    <div class="bar"><i id="prog" style="width:0%"></i></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="toolbar">
+    <button class="chip" id="btnOnlyUnchecked" aria-pressed="false">只看未选</button>
+    <input id="q" class="search" placeholder="在当前的版块里搜索功能名 / 键名" />
+    <span class="sp"></span>
+    <button class="btn" id="btnDefault">恢复默认</button>
+    <button class="btn" id="btnPage">导出本页</button>
+    <button class="btn primary" id="btnExport">导出结果</button>
+  </div>
+
+  <div class="layout">
+    <aside class="rail" id="rail"></aside>
+    <main style="min-width:0">
+      <div class="pane-head" id="paneHead"></div>
+      <div id="groups"></div>
+      <div class="pane-foot" id="paneFoot"></div>
+    </main>
+  </div>
+
+  <div class="summary" id="summary">
+    <h3>统计与导出</h3>
+    <div class="sum-grid" id="sumGrid"></div>
+    <div class="out">
+      <textarea id="out" readonly placeholder="点「导出结果」生成勾选摘要"></textarea>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 数据：每一项都可勾选 ============ */
+const GROUPS = [
+  { id:'today',    title:'① 今日', note:'每天打开后台的第一屏', code:'features/dashboard/ · controller/usedata.go · controller/perf_metrics.go' },
+  { id:'upstream', title:'② 上游', note:'接谁、谁还活着、能用哪些模型', code:'features/channels/ · controller/channel*.go · model/channel.go · router/channel-router.go' },
+  { id:'model',    title:'③ 模型与价格', note:'开放什么、给谁用、多少钱', code:'features/models/ · features/model-pricing/ · setting/ratio_setting/ · controller/model*.go' },
+  { id:'mine',     title:'④ 我的', note:'用户自己看得到的三页', code:'features/keys/ · features/usage-logs/ · features/wallet/ · features/security/ · controller/token.go · log.go' },
+  { id:'users',    title:'⑤ 用户管理', note:'发额度、封禁、分组', code:'features/users/ · controller/user.go · model/user.go' },
+  { id:'settings', title:'⑥ 设置', note:'站点 / 注册 / 计费 / 请求 / 安全 / 运维', code:'features/system-settings/ · controller/option.go · setting/', tip:'后台「设置」实际有 7 个板块：站点与品牌、认证、计费与支付、请求策略、安全与限制、控制台内容、运维。其中站点与品牌并入 ⑦公开站、计费与支付并入 ③模型与价格、请求策略并入 ②上游，本页只评审剩下的认证 / 安全与限制 / 运维，避免同一功能评两次。' },
+  { id:'site',     title:'⑦ 公开站', note:'对外长什么样', code:'features/home/ · pricing/ · about/ · legal/ · controller/misc.go' },
+  { id:'proto',    title:'⑧ 协议与端点', note:'不占页面，但决定哪些客户端能接', code:'relay/channel/ · router/relay-router.go · relaykit/' }
+]
+
+const ITEMS = [
+  /* ---------- 一、接入与转发 ---------- */
+  { g:'relay', n:'渠道管理', k:'channels', lv:'P0', lock:true, d:'增删改上游：地址、密钥、模型、分组', e:'新建「火山方舟」：base_url + key + 8 个模型', i:'关掉则无法接入任何上游' },
+  { g:'relay', n:'渠道连通性测试', k:'channel-test', lv:'P0', lock:true, d:'保存前先验证能不能通、延迟多少', e:'点「测试」返回 200 / 820ms', i:'不测就上线，故障要等用户报' },
+  { g:'relay', n:'从上游拉模型清单', k:'upstream_update', lv:'P1', d:'读上游 /v1/models 并与本地比对，找出新增与下线', e:'点「获取模型」列出 21 个，其中 3 个是新的', i:'不选则模型名靠手抄，写错一个就是 404' },
+  { g:'relay', n:'多渠道调度', k:'priority / weight', lv:'P0', lock:true, d:'同一模型挂多个上游时按顺位与权重挑一个', e:'deepseek 挂 2 家：主用 A，A 挂了走 B', i:'关掉则只能一个模型对一家，没有容错' },
+  { g:'relay', n:'失败自动下线 + 自动恢复', k:'auto_ban', lv:'P1', d:'连续失败达阈值先摘掉，过一会自动探测恢复', e:'5 次失败下线，60 秒后探测成功自动回', i:'不选则坏渠道持续吃请求，用户看到大量 5xx' },
+  { g:'relay', n:'单渠道多 Key', k:'multi-key', lv:'P2', d:'一个上游挂多个 key，轮询或失败切换', e:'同一厂商 5 个免费账号轮流用', i:'不选则每个账号要单独建一条渠道，管理翻倍' },
+  { g:'relay', n:'渠道亲和', k:'affinity', lv:'P2', d:'同一会话固定走同一上游，保住上下文缓存', e:'连续 10 轮对话都在 A 家，缓存命中', i:'不选则多上游同模型时可能上下文错乱' },
+  { g:'relay', n:'模型映射', k:'model_mapping', lv:'P1', d:'客户端模型名 → 上游真实模型名', e:'gpt-4o → 上游的 openai/gpt-4o-2024', i:'不选则上游命名不同就没法用' },
+  { g:'relay', n:'参数覆盖', k:'param_override', lv:'P2', d:'强制改写请求参数，兼容不听话的上游', e:'统一加 temperature=0.7 或去掉不支持的字段', i:'不选则个别上游会因参数报错' },
+  { g:'relay', n:'请求头覆盖', k:'header_override', lv:'P2', d:'改写发往上游的请求头', e:'伪装 UA 或加厂商要求的自定义头', i:'不选则少数上游拒绝请求' },
+  { g:'relay', n:'状态码映射', k:'status_code_mapping', lv:'P2', d:'把上游错误码翻译成标准码', e:'上游返回 400+quota → 统一成 429', i:'不选则客户端无法区分「配额用完」和「参数错」' },
+  { g:'relay', n:'上游账户余额查询', k:'channel-billing', lv:'P2', d:'读各家余额接口，看还剩多少钱', e:'DeepSeek 余额 $12.40，低于阈值提醒', i:'不选则要逐个登录官网查余额' },
+  { g:'relay', n:'批量接上游 + 一键验收', k:'建议新增', lv:'P1', d:'粘地址和 key，自动拉模型、建价格、跑三关测试', e:'非流式 / 流式 / 列模型 一次跑完', i:'不选则接一个厂商要 11 次点击、跨 2 个入口' },
+
+  /* ---------- 二、协议能力 ---------- */
+  { g:'proto', n:'对话补全', k:'/v1/chat/completions', lv:'P0', lock:true, d:'主力端点，几乎所有客户端都用它', e:'Cursor / Cherry Studio 默认打这里', i:'关掉等于产品不存在' },
+  { g:'proto', n:'模型列表', k:'/v1/models', lv:'P0', lock:true, d:'客户端拉可用模型清单', e:'客户端下拉框里出现 12 个模型', i:'关掉则多数客户端无法选模型' },
+  { g:'proto', n:'传统补全', k:'/v1/completions', lv:'P2', d:'老式文本补全，非对话', e:'少数脚本和旧工具还在用', i:'不选则这类客户端报 404' },
+  { g:'proto', n:'嵌入', k:'/v1/embeddings', lv:'P1', d:'文本转向量，RAG / 知识库必用', e:'向量化 10 万条文档', i:'不选则知识库类应用无法接入' },
+  { g:'proto', n:'重排', k:'/v1/rerank', lv:'P2', d:'检索结果重排序', e:'RAG 召回 50 条，重排取前 5', i:'不选则高质量 RAG 场景效果变差' },
+  { g:'proto', n:'Anthropic 原生', k:'/v1/messages', lv:'P1', d:'Claude 原生协议，不走 OpenAI 兼容层', e:'Claude Code / Cursor 直连', i:'不选则这类客户端只能退化成兼容模式' },
+  { g:'proto', n:'Gemini 原生', k:'/v1beta', lv:'P2', d:'Google 原生协议与路径', e:'Gemini SDK 直接调用', i:'不选则只能用 OpenAI 兼容端点访问 Gemini' },
+  { g:'proto', n:'Responses 协议', k:'/v1/responses', lv:'P1', d:'OpenAI 新一代响应式接口', e:'Codex 类客户端使用', i:'不选则新客户端接不进来' },
+  { g:'proto', n:'语音（TTS/ASR）', k:'/v1/audio/*', lv:'P2', d:'语音合成与转写', e:'会议录音转文字', i:'不选则无语音能力' },
+  { g:'proto', n:'绘图', k:'/v1/images/*', lv:'P2', d:'文生图与图生图', e:'生成海报草图', i:'不选则无绘图能力' },
+  { g:'proto', n:'实时语音', k:'/v1/realtime', lv:'P2', d:'双向音频流', e:'语音助手实时对话', i:'不选则无实时语音' },
+  { g:'proto', n:'内容审核', k:'/v1/moderations', lv:'P3', d:'内容安全审核接口', e:'过滤违规提示词', i:'不选则需自行做内容治理' },
+
+  /* ---------- 三、计费与价格 ---------- */
+  { g:'bill', n:'倍率制计价', k:'ModelRatio', lv:'P0', lock:true, d:'按 token 数 × 倍率算钱，最主流的计价方式', e:'输入 1000 token × 0.001 = 1 额度', i:'关掉则无法按量计费' },
+  { g:'bill', n:'预扣与结算', k:'PreConsumedQuota', lv:'P0', lock:true, d:'先扣一笔，实际用完多退少补', e:'先扣 500，实际 320，退回 180', i:'关掉则可能超额透支部' },
+  { g:'bill', n:'固定价（按次）', k:'ModelPrice', lv:'P1', d:'每次调用一口价，优先于倍率', e:'每次 $0.04，不看 token', i:'不选则图片类模型只能按倍率估，不准' },
+  { g:'bill', n:'阶梯表达式计费', k:'tiered_expr', lv:'P2', d:'按 token 区间或字段写表达式定价', e:'前 32k 一个价，超出部分加倍', i:'不选则长上下文模型只能一刀切' },
+  { g:'bill', n:'缓存计价', k:'CacheRatio', lv:'P1', d:'缓存命中的读/写单独定价', e:'缓存读 0.1 倍，写 1.25 倍', i:'不选则缓存命中仍按全价扣，用户觉得贵' },
+  { g:'bill', n:'图片/音频计价', k:'ImageRatio', lv:'P2', d:'多模态输入的单独倍率', e:'一张图按 85 token 折算', i:'不选则多模态调用计费失真' },
+  { g:'bill', n:'分组倍率', k:'GroupRatio', lv:'P1', d:'在模型单价上再乘一次，做会员折扣', e:'default 1.0，vip 0.9', i:'不选则所有用户一个价' },
+  { g:'bill', n:'额度单位与货币显示', k:'QuotaPerUnit', lv:'P1', d:'额度换算成钱的口径，以及按钱还是按 token 展示', e:'1 单位 = $0.002', i:'改错则历史金额显示全变' },
+  { g:'bill', n:'价格同步', k:'ratio_sync', lv:'P1', d:'从公共价目表拉价格并与本地比对', e:'一键发现 12 个模型涨价', i:'不选则上游调价你只能人工发现' },
+  { g:'bill', n:'价格入口归一到「模型」页', k:'/models §pricing', lv:'P1', d:'模型与价格同一页，行内改价，不再藏在设置三级', e:'列表里点价格单元格直接改', i:'不选则改价要跨 2 个一级入口、3 层导航' },
+  { g:'bill', n:'额度告警', k:'QuotaRemindThreshold', lv:'P2', d:'余额低于阈值时提醒', e:'剩 $5 时发邮件', i:'不选则用户突然 402，体验差' },
+  { g:'bill', n:'记录消耗', k:'LogConsumeEnabled', lv:'P1', d:'每次调用是否把消耗写进日志', e:'日志里能看到每笔 $0.0023', i:'关掉就没有对账和排障数据' },
+  { g:'bill', n:'工具调用计价', k:'task_pricing', lv:'P3', d:'按工具/异步任务单独计价', e:'一次视频生成收固定额度', i:'不选则这类任务按 token 算会亏' },
+  { g:'bill', n:'倍率对外公开', k:'ExposeRatioEnabled', lv:'P3', d:'是否把内部倍率暴露给普通用户', e:'用户能看到 0.5 倍率', i:'公开等于把定价策略摊开' },
+
+  /* ---------- 四、账户与登录 ---------- */
+  { g:'acct', n:'密码登录', k:'PasswordLoginEnabled', lv:'P0', lock:true, d:'邮箱 + 密码登录', e:'注册后直接登录', i:'关掉且无 OAuth 则没人能进' },
+  { g:'acct', n:'用户分组', k:'group', lv:'P0', lock:true, d:'用户与渠道都要带分组，交集才可路由', e:'default / vip 两组，各自可用不同模型', i:'关掉则无法做差异化供给' },
+  { g:'acct', n:'三级角色', k:'root/admin/user', lv:'P0', lock:true, d:'超管、管理员、普通用户', e:'管理员不能改系统设置', i:'关掉则权限无法收敛' },
+  { g:'acct', n:'邮箱注册', k:'RegisterEnabled', lv:'P1', d:'允许外部自助注册', e:'用户填邮箱即注册', i:'关掉则只能管理员手动建号' },
+  { g:'acct', n:'邮箱验证', k:'EmailVerificationEnabled', lv:'P1', d:'注册需点邮件里的链接', e:'防止乱填邮箱', i:'不选则垃圾账号会变多（需 SMTP）' },
+  { g:'acct', n:'人机验证', k:'TurnstileCheckEnabled', lv:'P1', d:'Cloudflare Turnstile，拦脚本注册', e:'注册页出现一个勾选框', i:'不选 + 开放注册 = 被刷额度' },
+  { g:'acct', n:'新用户初始额度', k:'QuotaForNewUser', lv:'P1', d:'注册即送一笔额度', e:'送 $1.00 试用', i:'不选则新用户要先充值才能试' },
+  { g:'acct', n:'邮箱域名白名单', k:'EmailDomainWhitelist', lv:'P3', pick:true, d:'只允许指定域名邮箱注册', e:'只允许 @company.com', i:'不选则任何邮箱都能注册' },
+  { g:'acct', n:'GitHub 登录', k:'GitHubOAuthEnabled', lv:'P2', d:'GitHub OAuth 一键登录', e:'开发者群体转化更好', i:'不选则少一个入口' },
+  { g:'acct', n:'OIDC / LinuxDO 登录', k:'oidc', lv:'P3', d:'通用 OIDC 与社区登录', e:'接公司 SSO', i:'不选则企业用户不便' },
+  { g:'acct', n:'Telegram 登录', k:'TelegramOAuthEnabled', lv:'P3', d:'Telegram 账号登录', e:'海外用户常用', i:'不选则少一个入口' },
+  { g:'acct', n:'微信登录', k:'WeChatAuthEnabled', lv:'P3', d:'微信扫码登录', e:'国内 C 端用户', i:'不选则少一个入口' },
+  { g:'acct', n:'自定义 OAuth', k:'custom_oauth', lv:'P3', d:'管理员自定义任意 OAuth 提供商', e:'接自建 GitLab', i:'不选则只能用手写死的几家' },
+  { g:'acct', n:'访问令牌（脚本用）', k:'access_tokens', lv:'P3', d:'用 token 调管理 API，给自动化脚本', e:'CI 里调 /api/channel', i:'不选则脚本只能模拟登录' },
+
+  /* ---------- 五、用户侧 ---------- */
+  { g:'user', n:'API 密钥管理', k:'/keys', lv:'P0', lock:true, d:'创建、吊销、改额度与过期', e:'sk-xxx 复制即用', i:'关掉则用户无法调 API' },
+  { g:'user', n:'调用记录', k:'/usage-logs', lv:'P0', lock:true, d:'用户看自己每笔请求的模型、token、耗时', e:'某笔 504，一眼看到原因', i:'关掉则用户无法自查' },
+  { g:'user', n:'消费明细', k:'spend', lv:'P2', d:'按模型汇总花了多少', e:'本周 deepseek 花了 $12.84', i:'不选则只能逐条翻日志' },
+  { g:'user', n:'余额展示', k:'quota display', lv:'P1', d:'看剩多少，以及什么时候重置', e:'剩 $48.20 / 每日 200 万 token', i:'不选则用户不知道还能不能用' },
+  { g:'user', n:'密钥级额度与过期', k:'token quota', lv:'P1', d:'给单个密钥设上限和有效期', e:'CI 密钥限 $50、30 天过期', i:'不选则一把钥匙能刷穿账户' },
+  { g:'user', n:'兑换码', k:'redemption', lv:'P1', d:'零在线支付时唯一的自助充值方式', e:'napi-XXXX 面额 $10', i:'不选且无支付 = 用户无法自己充值' },
+  { g:'user', n:'在线支付', k:'epay/stripe/creem/waffo', lv:'P3', d:'接支付通道直接充值（4 家各一套配置）', e:'支付宝扫码充值', i:'不选则只能靠兑换码；要选建议只留 1 家' },
+  { g:'user', n:'签到奖励', k:'checkin', lv:'P2', d:'每日签到送少量额度', e:'签到 +$0.02，连签加成', i:'不选则少一个免费站的留存钩子' },
+  { g:'user', n:'邀请返利', k:'QuotaForInviter', lv:'P3', d:'邀请人与被邀请人各得额度', e:'邀请 1 人得 $0.5', i:'不选则缺一个增长手段' },
+  { g:'user', n:'订阅套餐', k:'subscription', lv:'P3', d:'包月/包年套餐，与按量计费并行', e:'$9.9/月 500 万 token', i:'选了等于维护两套定价体系' },
+  { g:'user', n:'数据导出', k:'DataExportEnabled', lv:'P3', d:'定时把用量导出成文件', e:'每周一导出 CSV 到网盘', i:'不选则对账需手工导' },
+
+  /* ---------- 六、运营与观测 ---------- */
+  { g:'ops', n:'用量日志', k:'logs', lv:'P0', lock:true, d:'每笔请求一行：模型/token/耗时/渠道/结果', e:'按渠道筛出所有 401', i:'关掉则计费与排障都失去依据' },
+  { g:'ops', n:'今日待办队列', k:'/today（建议新增）', lv:'P1', d:'把「谁挂了、谁没定价、谁在猛刷」排成队', e:'4 条待办，点一下直达处理', i:'不选则要自己挨个页面巡检' },
+  { g:'ops', n:'统计看板', k:'dashboard', lv:'P1', d:'按日/模型/用户看趋势', e:'今日 28 万请求，失败率 0.42%', i:'不选则只能看明细推断全局' },
+  { g:'ops', n:'审计日志', k:'audit', lv:'P2', d:'管理员操作留痕', e:'谁在什么时候删了渠道', i:'不选则出事查不到人' },
+  { g:'ops', n:'性能指标', k:'perf_metrics', lv:'P2', d:'模型延迟与成功率，可对公展示', e:'gpt-4o 平均 820ms', i:'不选则公开页没有真实数据' },
+  { g:'ops', n:'公开状态页', k:'status（建议新增）', lv:'P2', d:'对外展示各模型当前是否可用', e:'用户自己看「某模型维护中」', i:'不选则每次故障都要逐个回答' },
+  { g:'ops', n:'异常用户识别', k:'建议新增', lv:'P1', d:'按消耗/频率找出可疑账号', e:'某密钥今日消耗是均值 40 倍', i:'不选则免费额度被刷要等账单' },
+  { g:'ops', n:'系统任务', k:'system_task', lv:'P1', d:'模型同步、渠道批量测试、日志清理', e:'每天 3 点清 30 天前日志', i:'不选则这些事只能手工做' },
+  { g:'ops', n:'邮件告警', k:'SMTP + monitor', lv:'P2', d:'上游下线、额度不足时发邮件', e:'渠道连续失败 5 次发一封', i:'不选则故障只能靠用户告知' },
+  { g:'ops', n:'日志清理策略', k:'LogMaintenance', lv:'P1', d:'保留多少天、什么时候清', e:'保留 30 天，每天 3 点清', i:'不选则数据库会被日志撑爆' },
+
+  /* ---------- 七、展示与门面 ---------- */
+  { g:'site', n:'首页', k:'/', lv:'P1', d:'对外第一屏', e:'介绍 + 快速开始 + 模型数', i:'不选则没有对外落地页' },
+  { g:'site', n:'模型广场', k:'/pricing', lv:'P1', d:'公开的模型与价格表，供选型比价', e:'按能力筛选、看单价', i:'不选则用户不知道你卖什么' },
+  { g:'site', n:'公开模型延迟区块', k:'mock-stats', lv:'P3', d:'当前是**假数据**，自述后端未实现', e:'延迟 820ms（其实是随机数）', i:'留着等于对外展示假指标，伤信任' },
+  { g:'site', n:'排行榜', k:'/rankings', lv:'P3', d:'公开模型/供应商份额榜', e:'「本月最热模型」', i:'会公开你的上游份额与成本结构' },
+  { g:'site', n:'关于页', k:'/about', lv:'P3', d:'站点介绍与联系方式', e:'团队介绍、客服邮箱', i:'不选则用户找不到你' },
+  { g:'site', n:'法务页', k:'隐私 / 用户协议', lv:'P2', d:'合规必需的两份文本', e:'隐私政策、服务条款', i:'不选则对外提供服务有合规风险' },
+  { g:'site', n:'站点公告', k:'Notice', lv:'P2', d:'维护通知、模型下线通知', e:'「本周六 02:00 维护」', i:'不选则变更只能逐个通知' },
+
+  /* ---------- 八、运维与安全 ---------- */
+  { g:'infra', n:'SMTP 邮件', k:'SMTP*', lv:'P1', d:'验证码、找回密码、告警都靠它', e:'smtp.example.com:587', i:'不选则邮箱验证与告警全部失效' },
+  { g:'infra', n:'用户级限流', k:'ModelRequestRateLimit*', lv:'P1', d:'按分组限制每分钟请求与每日 token', e:'每密钥 60 次/分', i:'不选则一个人能打空上游免费额度' },
+  { g:'infra', n:'自用模式', k:'SelfUseModeEnabled', lv:'P1', pick:false, d:'未配倍率的模型也算可用（默认 37.5 倍率兜底）', e:'只想内部用，不想逐个定价', i:'开了容易「没定价怎么扣这么多」' },
+  { g:'infra', n:'SSRF 防护', k:'ssrf', lv:'P0', lock:true, d:'禁止网关访问内网地址', e:'拦截 http://127.0.0.1', i:'关掉等于给内网开后门' },
+  { g:'infra', n:'Worker 图片代理', k:'WorkerUrl', lv:'P3', d:'用外部 Worker 代理下载图片', e:'绕过上游防盗链', i:'不选则部分图片拉不到' },
+  { g:'infra', n:'实例监控（多节点）', k:'system_instances', lv:'P3', pick:false, d:'集群部署时看节点心跳与资源 —— 代码里已删干净，仅清单残留', e:'3 个节点，1 个掉线', i:'无需改动：后端只剩测试文件一处引用，前端零引用' },
+  { g:'infra', n:'自更新检查', k:'update-checker', lv:'P3', d:'检查 GitHub 是否有新版本', e:'「发现 v0.9.8」', i:'指向官方仓库，fork 上永久误报' },
+  { g:'infra', n:'Uptime Kuma 集成', k:'uptime-kuma', lv:'P3', d:'嵌第三方监控面板', e:'iframe 展示可用率', i:'不选则少一个外部依赖' },
+  { g:'infra', n:'演示站模式', k:'DemoSiteEnabled', lv:'P3', d:'限制功能的演示模式', e:'禁止改密码', i:'自用/对外服务都用不到' }
+]
+
+/* 把技术分组映射成「页面」：清单的每一块 = 一个页面 = 一组要改的代码 */
+const PAGE_EXCEPTIONS = {
+  '额度告警': 'mine', '记录消耗': 'mine', '访问令牌（脚本用）': 'mine',
+  '用户分组': 'users', '三级角色': 'users', '用户级限流': 'users',
+  '用量日志': 'mine', '审计日志': 'mine',
+  '系统任务': 'settings', '日志清理策略': 'settings',
+  '性能指标': 'today'
+}
+const PAGE_BY_OLD = {
+  relay: 'upstream', proto: 'proto', bill: 'model', acct: 'settings',
+  user: 'mine', ops: 'today', site: 'site', infra: 'settings'
+}
+ITEMS.forEach((it) => { it.g = PAGE_EXCEPTIONS[it.n] || PAGE_BY_OLD[it.g] })
+
+/* 设置页内部再按后台真实板块分组（features/system-settings/{auth,security,operations}） */
+const SECTION = {
+  '密码登录': '认证 · 登录方式',
+  '邮箱注册': '认证 · 注册',
+  '邮箱验证': '认证 · 注册',
+  '人机验证': '认证 · 注册',
+  '新用户初始额度': '认证 · 注册',
+  '邮箱域名白名单': '认证 · 注册',
+  'GitHub 登录': '认证 · 第三方登录',
+  'OIDC / LinuxDO 登录': '认证 · 第三方登录',
+  'Telegram 登录': '认证 · 第三方登录',
+  '微信登录': '认证 · 第三方登录',
+  '自定义 OAuth': '认证 · 第三方登录',
+  'SSRF 防护': '安全与限制',
+  '自用模式': '安全与限制',
+  'Worker 图片代理': '安全与限制',
+  'SMTP 邮件': '运维 · 通知',
+  '系统任务': '运维 · 任务',
+  '日志清理策略': '运维 · 任务',
+  '实例监控（多节点）': '运维 · 其他',
+  '自更新检查': '运维 · 其他',
+  'Uptime Kuma 集成': '运维 · 其他',
+  '演示站模式': '运维 · 其他'
+}
+ITEMS.forEach((it) => { if (SECTION[it.n]) it.sec = SECTION[it.n] })
+
+/* 设置页板块的固定顺序：认证 → 安全与限制 → 运维 */
+const SEC_ORDER = [
+  '认证 · 登录方式', '认证 · 注册', '认证 · 第三方登录',
+  '安全与限制',
+  '运维 · 任务', '运维 · 通知', '运维 · 其他'
+]
+
+const ADVICE = { P0:'必选', P1:'建议保留', P2:'看需求', P3:'建议移除' }
+const KEY = 'newapi-lite-checklist-v1'
+
+/* ============ 状态 ============ */
+let state = {}
+try { state = JSON.parse(localStorage.getItem(KEY) || '{}') } catch (e) { state = {} }
+let filter = 'all'
+let query = ''
+let step = 0
+
+const idOf = (it) => it.g + ':' + it.n
+const isChecked = (it) => {
+  const v = state[idOf(it)]
+  if (v !== undefined) return v
+  if (typeof it.pick === 'boolean') return it.pick
+  return it.lv !== 'P2' && it.lv !== 'P3'
+}
+
+/* ============ 渲染 ============ */
+function render () {
+  const hit = (it) => {
+    if (filter === 'unselected' && isChecked(it)) return false
+    if (!query) return true
+    const hay = (it.n + ' ' + it.k + ' ' + it.d + ' ' + it.e).toLowerCase()
+    return hay.includes(query)
+  }
+
+  // 左侧页面导航
+  renderRail()
+
+  const g = GROUPS[step]
+  const all = ITEMS.filter((it) => it.g === g.id)
+  const list = all.filter(hit)
+
+  document.getElementById('paneHead').innerHTML =
+    `<div class="ph-row">
+       <h2>${g.title}</h2><span class="note">${g.note}</span>
+       <span class="stat">本页已选 <b>${all.filter(isChecked).length}</b> / ${all.length}</span>
+     </div>
+     <div class="codeof"><span>要改的代码</span><em>${g.code}</em></div>`
+
+  document.getElementById('groups').innerHTML = list.length
+    ? list.map(row).join('')
+    : '<p style="color:var(--muted2);padding:24px 2px">这一页里没有匹配项</p>'
+
+  document.getElementById('paneFoot').innerHTML =
+    `<button class="btn" data-nav="-1" ${step === 0 ? 'disabled' : ''}>← 上一页</button>
+     <button class="btn primary" data-nav="1" ${step === GROUPS.length - 1 ? 'disabled' : ''}>下一页 →</button>
+     <span class="hint">第 ${step + 1} / ${GROUPS.length} 页 · 点条目展开示例与影响</span>`
+
+  bind()
+  stats()
+}
+
+function row (it) {
+  const on = isChecked(it)
+  return `<div class="item ${on ? '' : 'dropped'}" data-row="${idOf(it)}">
+    <input type="checkbox" data-id="${idOf(it)}" ${on ? 'checked' : ''} ${it.lock ? 'disabled' : ''}>
+    <div class="body">
+      <div class="name">${it.n}<span class="code">${it.k}</span><span class="more">展开 ▾</span></div>
+      <div class="desc">${it.d}</div>
+      <div class="lines">
+        <div class="ln eg"><span class="k">示例</span><span class="v">${it.e}</span></div>
+        <div class="ln im"><span class="k">影响</span><span class="v">${it.i}</span></div>
+      </div>
+    </div>
+    <div class="lv ${it.lv}">${it.lv}</div>
+    <div class="adv">${it.lock ? '🔒 主链路' : ADVICE[it.lv]}</div>
+  </div>`
+}
+
+function bind () {
+  document.querySelectorAll('input[data-id]').forEach((el) => {
+    el.addEventListener('change', () => {
+      state[el.getAttribute('data-id')] = el.checked
+      localStorage.setItem(KEY, JSON.stringify(state))
+      el.closest('.item').classList.toggle('dropped', !el.checked)
+      const g = GROUPS[step]
+      const all = ITEMS.filter((it) => it.g === g.id)
+      document.querySelector('#paneHead .stat').innerHTML =
+        `本页已选 <b>${all.filter(isChecked).length}</b> / ${all.length}`
+      renderRail()
+      stats()
+    })
+  })
+  document.querySelectorAll('.item .body').forEach((b) => {
+    b.addEventListener('click', () => {
+      const item = b.closest('.item')
+      item.classList.toggle('expanded')
+      b.querySelector('.more').textContent = item.classList.contains('expanded') ? '收起 ▴' : '展开 ▾'
+    })
+  })
+}
+
+function renderRail () {
+  document.getElementById('rail').innerHTML = GROUPS.map((g, i) => {
+    const all = ITEMS.filter((it) => it.g === g.id)
+    const p = all.filter(isChecked).length
+    return `<a class="${i === step ? 'on' : ''}" data-step="${i}">
+      <span class="num">${i + 1}</span>
+      <span>${g.title.replace(/^[①②③④⑤⑥⑦⑧]\s*/, '')}</span>
+      <span class="n">${p === all.length ? '✓' : p + '/' + all.length}</span>
+    </a>`
+  }).join('')
+}
+
+/* ============ 统计 ============ */
+function stats () {
+  const total = ITEMS.length
+  const picked = ITEMS.filter(isChecked).length
+  const p3 = ITEMS.filter((it) => it.lv === 'P3' && isChecked(it)).length
+  const doneGroups = GROUPS.filter((g) => {
+    const all = ITEMS.filter((it) => it.g === g.id)
+    return all.every(isChecked)
+  }).length
+  document.getElementById('counters').innerHTML = `
+    <span class="pill on">已选 <b>${picked}</b> / ${total}</span>
+    <span class="pill">整页选齐 <b>${doneGroups}</b> / ${GROUPS.length} 组</span>
+    <span class="pill">建议移除但被勾选 <b>${p3}</b></span>`
+  document.getElementById('prog').style.width = (picked / total * 100).toFixed(1) + '%'
+
+  document.getElementById('sumGrid').innerHTML = GROUPS.map((g) => {
+    const all = ITEMS.filter((it) => it.g === g.id)
+    return `<div class="sum-cell"><div class="k">${g.title.replace(/^[①②③④⑤⑥⑦⑧]\s*/, '')}</div>
+      <div class="v">${all.filter(isChecked).length} <span style="font-size:12px;color:var(--muted2)">/ ${all.length}</span></div></div>`
+  }).join('')
+}
+
+/* ============ 导出 ============ */
+function exportText () {
+  const lines = ['new-api-lite 功能取舍结果 · ' + new Date().toLocaleDateString('zh-CN'), '']
+  GROUPS.forEach((g) => {
+    const all = ITEMS.filter((it) => it.g === g.id)
+    lines.push(`【${g.title}】 选 ${all.filter(isChecked).length}/${all.length}`)
+    all.forEach((it) => {
+      lines.push(`  ${isChecked(it) ? '[x]' : '[ ]'} ${it.n} (${it.k}) · ${it.lv} ${ADVICE[it.lv]}`)
+    })
+    lines.push('')
+  })
+  const drop = ITEMS.filter((it) => !isChecked(it))
+  lines.push(`合计：选 ${ITEMS.length - drop.length} 项 / 共 ${ITEMS.length} 项`)
+  lines.push(`不选：${drop.map((it) => it.n).join('、') || '无'}`)
+  return lines.join('\n')
+}
+
+function toast (msg) {
+  const t = document.getElementById('toast')
+  t.textContent = msg
+  t.classList.add('show')
+  clearTimeout(t._h)
+  t._h = setTimeout(() => t.classList.remove('show'), 1800)
+}
+
+/* ============ 导出单页：生成一份独立文件 ============ */
+function esc (s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+function buildPageDoc (g, list) {
+  const item = (it) => {
+    const id = idOf(it)
+    return '<div class="item">' +
+      '<input type="checkbox" data-id="' + esc(id) + '"' +
+        (isChecked(it) ? ' checked' : '') + (it.lock ? ' disabled' : '') + '>' +
+      '<div class="bd">' +
+        '<div class="nm">' + esc(it.n) + '<code>' + esc(it.k) + '</code>' +
+          '<span class="lv ' + it.lv + '">' + it.lv + ' · ' +
+          (it.lock ? '主链路' : ADVICE[it.lv]) + '</span></div>' +
+        '<div class="ds">' + esc(it.d) + '</div>' +
+        '<div class="eg"><b>示例</b>' + esc(it.e) + '</div>' +
+        '<div class="im"><b>影响</b>' + esc(it.i) + '</div>' +
+        '<input class="note" data-id="' + esc(id) + '" placeholder="备注：为什么留 / 为什么删">' +
+      '</div></div>'
+  }
+
+  // 有 sec 的页（设置）按后台真实板块分块，其余页平铺
+  let rows = ''
+  if (list.some((it) => it.sec)) {
+    const order = []
+    const bucket = {}
+    list.forEach((it) => {
+      const s = it.sec || '其他'
+      if (!bucket[s]) { bucket[s] = []; order.push(s) }
+      bucket[s].push(it)
+    })
+    rows = order
+      .sort((a, b) => {
+        const ia = SEC_ORDER.indexOf(a), ib = SEC_ORDER.indexOf(b)
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
+      })
+      .map((s) =>
+        '<div class="secrow"><span>' + esc(s) + '</span><i>' + bucket[s].length + ' 项</i></div>' +
+        bucket[s].map(item).join('\n')
+      ).join('\n')
+  } else {
+    rows = list.map(item).join('\n')
+  }
+
+  return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<title>' + esc(g.title) + ' · 功能取舍</title><style>' +
+    ':root{--fg:#1a1a19;--muted:#6b6b68;--muted2:#8f8f8a;--line:#e5e4e0;--soft:#f5f4f1}' +
+    '*{box-sizing:border-box}body{margin:0;background:#fbfbfa;color:var(--fg);' +
+    'font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}' +
+    '.wrap{max-width:860px;margin:0 auto;padding:28px 20px 60px}' +
+    'h1{font-size:19px;margin:0 0 4px;letter-spacing:-.01em}' +
+    '.sub{color:var(--muted);font-size:12.5px}' +
+    '.code{margin:12px 0 6px;font:11.5px ui-monospace,Menlo,Consolas,monospace;color:#5c5c58;' +
+    'background:var(--soft);padding:8px 10px;border-radius:8px;word-break:break-all}' +
+    '.hint{margin:8px 0 2px;font-size:12.5px;color:#8f8f8a}' +
+    '.tip{margin:10px 0 0;padding:10px 12px;border-radius:10px;background:#f2f1ec;color:#5c5c58;' +
+    'font-size:12.5px;line-height:1.65}' +
+    '.secrow{display:flex;justify-content:space-between;align-items:baseline;margin:26px 0 0;' +
+    'padding-bottom:7px;border-bottom:1.5px solid #d9d8d2;font-size:12px;font-weight:600;' +
+    'letter-spacing:.02em;color:#1a1a19}' +
+    '.secrow i{font-style:normal;font-weight:400;color:#8f8f8a}' +
+    '.item{display:grid;grid-template-columns:22px 1fr;gap:12px;padding:15px 2px;border-bottom:1px solid var(--line)}' +
+    '.item:last-child{border-bottom:0}' +
+    '.item.off .nm{color:#a9a9a4}' +
+    '.item.off .ds,.item.off .eg,.item.off .im{opacity:.55}' +
+    'input[type=checkbox]{width:17px;height:17px;margin:3px 0 0;accent-color:#1a1a19;cursor:pointer}' +
+    'input[type=checkbox]:disabled{opacity:.7;cursor:not-allowed}' +
+    '.nm{font-weight:600;font-size:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}' +
+    'code{font:11px ui-monospace,Menlo,monospace;color:var(--muted2);background:var(--soft);padding:2px 5px;border-radius:4px}' +
+    '.lv{font-size:11px;padding:2px 7px;border-radius:99px;background:var(--soft);color:var(--muted2);font-weight:500}' +
+    '.lv.P0{background:#fbe7e7;color:#a81a1a}.lv.P1{background:#e4f3ea;color:#0e6b3c}.lv.P2{background:#e4eefa;color:#0b5aa8}' +
+    '.ds{color:var(--muted);font-size:13px;margin-top:5px}' +
+    '.eg,.im{font-size:12.5px;margin-top:4px;color:#3c3c39}' +
+    '.eg b,.im b{color:var(--muted2);font-weight:500;margin-right:6px}' +
+    '.im{color:#a81a1a}' +
+    '.note{width:100%;margin-top:9px;border:1px solid var(--line);border-radius:8px;padding:6px 9px;' +
+    'font:12.5px inherit;background:#fff;color:var(--fg)}' +
+    '.note:focus{outline:none;border-color:#c9c8c2}' +
+    'footer{margin-top:22px;display:flex;gap:10px;align-items:center}' +
+    'button{height:32px;padding:0 14px;border-radius:9px;border:1px solid #1a1a19;background:#1a1a19;' +
+    'color:#fff;font:13px inherit;cursor:pointer}' +
+    'textarea{width:100%;min-height:130px;margin-top:12px;border:1px solid var(--line);border-radius:10px;' +
+    'padding:10px;font:12px ui-monospace,Menlo,monospace;color:var(--fg);background:#fff}' +
+    '@media print{footer{display:none}body{background:#fff}}' +
+    '</style></head><body><div class="wrap">' +
+    '<h1>' + esc(g.title) + '</h1>' +
+    '<div class="sub">' + esc(g.note) + ' · 共 ' + list.length + ' 项 · 已选 <b id="cnt">' +
+      list.filter(isChecked).length + '</b></div>' +
+    '<div class="code">要改的代码：' + esc(g.code) + '</div>' +
+    '<div class="hint">勾选 = 保留，取消勾选 = 计划移除。带锁的是主链路，动不了。备注会自动保存。</div>' +
+    (g.tip ? '<div class="tip">' + esc(g.tip) + '</div>' : '') +
+    rows +
+    '<footer><button id="copy">生成结果文本</button>' +
+    '<span class="sub">勾选与备注存在本机浏览器，与总清单共用一份记录</span></footer>' +
+    '<textarea id="out" readonly placeholder="点左侧按钮生成"></textarea>' +
+    '</div>' +
+    '<script>' +
+    'var PAGE=' + JSON.stringify(g.id) + ',KEY="newapi-page-"+PAGE,GS="newapi-lite-checklist-v1";' +
+    'function rd(k){try{return localStorage.getItem(k)}catch(e){return null}}' +
+    'function wr(k,v){try{localStorage.setItem(k,v)}catch(e){}}' +
+    'var gs={};try{gs=JSON.parse(rd(GS)||"{}")||{}}catch(e){gs={}}' +
+    'var boxes=[].slice.call(document.querySelectorAll("input[type=checkbox]"));' +
+    'function cnt(){document.getElementById("cnt").textContent=' +
+      'boxes.filter(function(b){return b.checked}).length}' +
+    'boxes.forEach(function(b){var id=b.getAttribute("data-id");' +
+    'var v=rd(KEY+":"+id);' +
+    'if(v!==null)b.checked=(v==="1");else if(typeof gs[id]==="boolean")b.checked=gs[id];' +
+    'b.closest(".item").classList.toggle("off",!b.checked);' +
+    'b.addEventListener("change",function(){' +
+    'wr(KEY+":"+id,b.checked?"1":"0");gs[id]=b.checked;wr(GS,JSON.stringify(gs));' +
+    'b.closest(".item").classList.toggle("off",!b.checked);cnt()})});' +
+    'var notes=[].slice.call(document.querySelectorAll(".note"));' +
+    'notes.forEach(function(t){var id=t.getAttribute("data-id");' +
+    'var v=rd(KEY+":note:"+id);if(v)t.value=v;' +
+    't.addEventListener("input",function(){wr(KEY+":note:"+id,t.value)})});' +
+    'cnt();' +
+    'document.getElementById("copy").addEventListener("click",function(){' +
+    'var out=[];' +
+    '[].forEach.call(document.querySelector(".wrap").children,function(el){' +
+    'if(el.className==="secrow"){out.push("");out.push("## "+el.querySelector("span").textContent);return}' +
+    'if(el.className.indexOf("item")<0)return;' +
+    'var b=el.querySelector("input[type=checkbox]");' +
+    'var id=b.getAttribute("data-id");' +
+    'var n=el.querySelector(".nm").firstChild.textContent.trim();' +
+    'var lv=el.querySelector(".lv").textContent.split(" ")[0];' +
+    'var nt=el.querySelector(".note").value.trim();' +
+    'out.push((b.checked?"[x] ":"[ ] ")+n+" · "+lv+(nt?"  // "+nt:""))});' +
+    'var t=document.getElementById("out");' +
+    't.value="' + esc(g.title) + ' 取舍结果\\n\\n"+out.join("\\n");t.select()});' +
+    '<\/script></body></html>'
+}
+
+/* ============ 事件 ============ */
+document.getElementById('btnOnlyUnchecked').addEventListener('click', (e) => {
+  const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'
+  e.currentTarget.setAttribute('aria-pressed', String(on))
+  filter = on ? 'unselected' : 'all'
+  render()
+})
+
+document.addEventListener('click', (e) => {
+  const nav = e.target.closest('[data-nav]')
+  if (nav) {
+    step = Math.min(GROUPS.length - 1, Math.max(0, step + Number(nav.getAttribute('data-nav'))))
+    document.getElementById('q').value = ''
+    query = ''
+    render()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    return
+  }
+  const rail = e.target.closest('[data-step]')
+  if (rail) {
+    step = Number(rail.getAttribute('data-step'))
+    document.getElementById('q').value = ''
+    query = ''
+    render()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+})
+
+document.getElementById('q').addEventListener('input', (e) => {
+  query = e.target.value.trim().toLowerCase()
+  render()
+})
+
+document.getElementById('btnDefault').addEventListener('click', () => {
+  state = {}
+  localStorage.removeItem(KEY)
+  render()
+  toast('已恢复默认勾选')
+})
+
+document.getElementById('btnPage').addEventListener('click', () => {
+  const g = GROUPS[step]
+  const list = ITEMS.filter((it) => it.g === g.id)
+  const html = buildPageDoc(g, list)
+  const name = g.title.replace(/^[①②③④⑤⑥⑦⑧]\s*/, '') + '.html'
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = '取舍-' + name
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+  toast('已导出「' + g.title.replace(/^[①②③④⑤⑥⑦⑧]\s*/, '') + '」单页')
+})
+
+document.getElementById('btnExport').addEventListener('click', () => {
+  const text = exportText()
+  document.getElementById('out').value = text
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(
+    () => toast('已复制到剪贴板'),
+    () => toast('已生成，请手动复制')
+  ).catch(() => toast('已生成，请手动复制'))
+  document.getElementById('summary').scrollIntoView({ behavior: 'smooth' })
+})
+
+render()
+</script>
+</body>
+</html>

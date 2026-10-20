@@ -58,12 +58,6 @@ function verificationReducer(
         case 'password':
           input = { method: 'password', password: '' }
           break
-        case 'oauth':
-          input = {
-            method: 'oauth',
-            provider: action.requirements.oauth_providers[0]?.slug ?? '',
-          }
-          break
       }
       return {
         phase: 'ready',

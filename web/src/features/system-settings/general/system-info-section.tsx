@@ -184,7 +184,7 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
                     </FormControl>
                     <FormDescription>
                       {t(
-                        'The public URL of your server, used for OAuth callbacks, webhooks, and other external integrations'
+                        'The public URL of your server, used for webhooks and other external integrations'
                       )}
                     </FormDescription>
                     <FormMessage />

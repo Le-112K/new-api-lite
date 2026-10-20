@@ -145,33 +145,6 @@ export type AuthSettings = {
   EmailAliasRestrictionEnabled: boolean
   EmailDomainWhitelist: string
   ServerAddress: string
-  GitHubOAuthEnabled: boolean
-  GitHubClientId: string
-  GitHubClientSecret: string
-  'discord.enabled': boolean
-  'discord.client_id': string
-  'discord.client_secret': string
-  'oidc.enabled': boolean
-  'oidc.display_name': string
-  'oidc.client_id': string
-  'oidc.client_secret': string
-  'oidc.well_known': string
-  'oidc.authorization_endpoint': string
-  'oidc.token_endpoint': string
-  'oidc.user_info_endpoint': string
-  TelegramOAuthEnabled: boolean
-  'telegram.client_id': string
-  'telegram.client_secret': string
-  TelegramBotToken: string
-  TelegramBotName: string
-  LinuxDOOAuthEnabled: boolean
-  LinuxDOClientId: string
-  LinuxDOClientSecret: string
-  LinuxDOMinimumTrustLevel: string
-  WeChatAuthEnabled: boolean
-  WeChatServerAddress: string
-  WeChatServerToken: string
-  WeChatAccountQRCodeImageURL: string
   TurnstileCheckEnabled: boolean
   TurnstileSiteKey: string
   TurnstileSecretKey: string
@@ -181,11 +154,9 @@ export type ContentSettings = {
   'console_setting.api_info': string
   'console_setting.announcements': string
   'console_setting.faq': string
-  'console_setting.uptime_kuma_groups': string
   'console_setting.api_info_enabled': boolean
   'console_setting.announcements_enabled': boolean
   'console_setting.faq_enabled': boolean
-  'console_setting.uptime_kuma_enabled': boolean
   DataExportEnabled: boolean
   DataExportDefaultTime: string
   DataExportInterval: number
@@ -280,7 +251,6 @@ export type BillingSettings = {
 
 export type OperationsSettings = {
   DefaultCollapseSidebar: boolean
-  DemoSiteEnabled: boolean
   SelfUseModeEnabled: boolean
   QuotaRemindThreshold: string
   SMTPServer: string
@@ -292,9 +262,6 @@ export type OperationsSettings = {
   SMTPStartTLSEnabled: boolean
   SMTPInsecureSkipVerify: boolean
   SMTPForceAuthLogin: boolean
-  WorkerUrl: string
-  WorkerValidKey: string
-  WorkerAllowHttpImageRequestEnabled: boolean
   LogConsumeEnabled: boolean
   'performance_setting.disk_cache_enabled': boolean
   'performance_setting.disk_cache_threshold_mb': number

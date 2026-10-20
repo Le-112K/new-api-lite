@@ -40,7 +40,7 @@ func setupAccessTokenAudit(t *testing.T) (*model.User, string) {
 	require.NoError(t, err)
 	require.NoError(t, i18n.Init())
 	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserSession{}, &model.Log{}, &model.AuditLog{}, &model.CasbinRule{}, &model.AuthzRole{}, &model.UserAccessToken{}, &model.Option{},
-		&model.AuthFlow{}, &model.UserOAuthBinding{}))
+		&model.AuthFlow{}))
 	model.DB, model.LOG_DB = db, db
 	common.SetDatabaseTypes(common.DatabaseTypeSQLite, common.DatabaseTypeSQLite)
 	require.NoError(t, model.EnsureLegacyAccessTokenRetireAt(time.Now().Unix()))
@@ -742,7 +742,7 @@ func TestSecurityAndOperationEventsUseAuditTable(t *testing.T) {
 	c.Set("role", user.Role)
 	c.Set(common.RequestIdKey, "correlated-request")
 	recordLoginAudit(user, c)
-	for _, action := range []string{"user.security_verify", "user.password_change", "user.binding_start", "user.binding_bind", "user.binding_unbind", "user.email_binding_resend", "user.binding_clear"} {
+	for _, action := range []string{"user.security_verify", "user.password_change", "user.binding_start", "user.binding_bind", "user.email_binding_resend"} {
 		recordUserSecurityAudit(c, user.Id, action, nil)
 	}
 	recordManageAudit(c, "option.update", map[string]any{"key": "safe"})
@@ -752,7 +752,7 @@ func TestSecurityAndOperationEventsUseAuditTable(t *testing.T) {
 	}
 	var audits []model.AuditLog
 	require.NoError(t, model.LOG_DB.Find(&audits).Error)
-	assert.Len(t, audits, 10)
+	assert.Len(t, audits, 8)
 	for _, entry := range audits {
 		assert.Equal(t, "correlated-request", entry.RequestId)
 		assert.Equal(t, user.Role, entry.ActorRole)
@@ -764,7 +764,7 @@ func TestSecurityAndOperationEventsUseAuditTable(t *testing.T) {
 	require.NoError(t, err)
 	var count int64
 	require.NoError(t, model.LOG_DB.Model(&model.AuditLog{}).Count(&count).Error)
-	assert.EqualValues(t, 10, count)
+	assert.EqualValues(t, 8, count)
 }
 
 // Released schemas copied from v1.0.0-rc.33; only the Go type names differ.

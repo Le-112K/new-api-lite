@@ -17,7 +17,6 @@ import (
 	"github.com/QuantumNous/new-api/setting/model_setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
-	"github.com/QuantumNous/new-api/setting/system_setting"
 
 	"github.com/gin-gonic/gin"
 )
@@ -167,51 +166,11 @@ func UpdateOption(c *gin.Context) {
 		}
 	}
 	switch option.Key {
-	case "GitHubOAuthEnabled":
-		if option.Value == "true" && common.GitHubClientId == "" {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "无法启用 GitHub OAuth，请先填入 GitHub Client Id 以及 GitHub Client Secret！",
-			})
-			return
-		}
-	case "discord.enabled":
-		if option.Value == "true" && system_setting.GetDiscordSettings().ClientId == "" {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "无法启用 Discord OAuth，请先填入 Discord Client Id 以及 Discord Client Secret！",
-			})
-			return
-		}
-	case "oidc.enabled":
-		if option.Value == "true" && system_setting.GetOIDCSettings().ClientId == "" {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "无法启用 OIDC 登录，请先填入 OIDC Client Id 以及 OIDC Client Secret！",
-			})
-			return
-		}
-	case "LinuxDOOAuthEnabled":
-		if option.Value == "true" && common.LinuxDOClientId == "" {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "无法启用 LinuxDO OAuth，请先填入 LinuxDO Client Id 以及 LinuxDO Client Secret！",
-			})
-			return
-		}
 	case "EmailDomainRestrictionEnabled":
 		if option.Value == "true" && len(common.EmailDomainWhitelist) == 0 {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "无法启用邮箱域名限制，请先填入限制的邮箱域名！",
-			})
-			return
-		}
-	case "WeChatAuthEnabled":
-		if option.Value == "true" && common.WeChatServerAddress == "" {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "无法启用微信登录，请先填入微信登录相关配置信息！",
 			})
 			return
 		}
@@ -222,15 +181,6 @@ func UpdateOption(c *gin.Context) {
 				"message": "无法启用 Turnstile 校验，请先填入 Turnstile 校验相关配置信息！",
 			})
 
-			return
-		}
-	case "TelegramOAuthEnabled":
-		if option.Value == "true" && !system_setting.GetTelegramSettings().IsConfigured() {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"code":    "TELEGRAM_OAUTH_NOT_CONFIGURED",
-				"message": "Telegram OAuth is not configured or enabled. Please contact your administrator.",
-			})
 			return
 		}
 	case "theme.frontend":
@@ -408,15 +358,6 @@ func UpdateOption(c *gin.Context) {
 		}
 	case "console_setting.faq":
 		err = console_setting.ValidateConsoleSettings(option.Value.(string), "FAQ")
-		if err != nil {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": err.Error(),
-			})
-			return
-		}
-	case "console_setting.uptime_kuma_groups":
-		err = console_setting.ValidateConsoleSettings(option.Value.(string), "UptimeKumaGroups")
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,

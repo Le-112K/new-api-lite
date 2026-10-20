@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>运营控制台 · 渠道页 设计预览</title>
+<style>
+  /* ============================================================
+     色值与 web/src/styles/{theme-apple-bw,aperture-tokens,
+     console-tokens}.css 完全一致，便于与真实实现对照。
+     ============================================================ */
+  [data-theme='light'] {
+    --background: #f5f5f7;
+    --card: #ffffff;
+    --foreground: #0a0a0a;
+    --muted: #f5f5f7;
+    --muted-foreground: #6e6e73;
+    --accent: #ffffff;
+    --border: #e8e8ed;
+    --table-header: #fbfbfb;
+    --gray-300: #d2d2d7;
+    --gray-600: #6e6e73;
+    --gray-700: #48484a;
+    --gray-900: #1d1d1f;
+    --emphasis: #0a0a0a;
+    --emphasis-soft: #f2f2f4;
+    --success-soft: #e4f3ea;
+    --success-on-soft: #0e6b3c;
+    --warning-soft: #fbedd9;
+    --warning-on-soft: #8a4700;
+    --neutral-soft: #f5f5f7;
+    --neutral-on-soft: #48484a;
+    --cx-text: var(--foreground);
+    --cx-text-3: var(--gray-600);
+    --cx-line: var(--border);
+    --cx-fill-1: var(--muted);
+    --row-hover: #f5f5f7;
+    --row-selected: #f2f2f4;
+    --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  [data-theme='dark'] {
+    --background: #0a0a0a;
+    --card: #141414;
+    --foreground: #ffffff;
+    --muted: #1c1c1e;
+    --muted-foreground: #a1a1a6;
+    --accent: #1c1c1e;
+    --border: rgba(255, 255, 255, 0.1);
+    --table-header: #1c1c1e;
+    --gray-300: #d2d2d7;
+    --gray-600: #8e8e93;
+    --gray-700: #c7c7cc;
+    --gray-900: #1d1d1f;
+    --emphasis: #ffffff;
+    --emphasis-soft: rgba(255, 255, 255, 0.08);
+    --success-soft: #12291b;
+    --success-on-soft: #4ade80;
+    --warning-soft: #2a1e08;
+    --warning-on-soft: #ffc24d;
+    --neutral-soft: rgba(255, 255, 255, 0.06);
+    --neutral-on-soft: #c7c7cc;
+    --cx-text: var(--foreground);
+    --cx-text-3: var(--muted-foreground);
+    --cx-line: var(--border);
+    --cx-fill-1: var(--muted);
+    --row-hover: #1c1c1e;
+    --row-selected: rgba(255, 255, 255, 0.08);
+    --shadow-panel: none;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { margin: 0; }
+
+  body {
+    background: var(--background);
+    color: var(--cx-text);
+    font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, 'PingFang SC',
+      'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    transition: background 200ms ease, color 200ms ease;
+  }
+
+  /* ---------- 预览外壳（不属于设计本身） ---------- */
+  .stage { max-width: 1240px; margin: 0 auto; padding: 28px 24px 72px; }
+
+  .stage-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .stage-title { font-size: 13px; letter-spacing: 0.02em; color: var(--cx-text-3); }
+  .stage-title b { color: var(--cx-text); font-weight: 600; }
+  .stage-title span { margin-left: 8px; padding-left: 8px; border-left: 1px solid var(--cx-line); }
+
+  .theme-switch {
+    display: inline-flex;
+    padding: 3px;
+    border-radius: 999px;
+    background: var(--cx-fill-1);
+    border: 1px solid var(--cx-line);
+  }
+
+  .theme-switch button {
+    border: 0;
+    background: transparent;
+    color: var(--cx-text-3);
+    font: inherit;
+    font-size: 12px;
+    padding: 5px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .theme-switch button[aria-pressed='true'] {
+    background: var(--card);
+    color: var(--cx-text);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  }
+
+  .caption {
+    margin: 0 0 10px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--cx-text-3);
+    text-transform: uppercase;
+  }
+
+  .caption.zh { letter-spacing: 0; text-transform: none; font-size: 12px; }
+
+  /* ---------- 1. 页头 ---------- */
+  .page-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 4px 0 20px;
+  }
+
+  .page-head h1 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 28px;
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+
+  .page-head p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--cx-text-3);
+    max-width: 68ch;
+  }
+
+  .head-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+  .meta-note {
+    font-size: 12px;
+    color: var(--cx-text-3);
+    padding-right: 8px;
+  }
+
+  /* ---------- 按钮（外壳只用灰阶） ---------- */
+  .btn {
+    height: 36px;
+    padding: 0 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--emphasis);
+    color: var(--card);
+    border: 1px solid var(--emphasis);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--cx-text);
+    border: 1px solid var(--cx-line);
+  }
+
+  .btn-ghost:hover { background: var(--cx-fill-1); }
+
+  .icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--cx-text-3);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+  }
+
+  .icon-btn:hover { background: var(--cx-fill-1); color: var(--cx-text); }
+
+  /* ---------- 2. 面板（一页只有一个） ---------- */
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--cx-line);
+    border-radius: 20px;
+    box-shadow: var(--shadow-panel);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---------- 工具栏 ---------- */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    min-height: 56px;
+  }
+
+  .search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 240px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 12px;
+    background: var(--cx-fill-1);
+    border: 1px solid transparent;
+    color: var(--cx-text-3);
+    font-size: 13px;
+  }
+
+  .search:focus-within { border-color: var(--gray-300); background: var(--card); }
+  .search input {
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    color: var(--cx-text);
+    width: 100%;
+  }
+  .search input::placeholder { color: var(--cx-text-3); }
+
+  .pill-select {
+    height: 36px;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 12px;
+    border: 1px solid var(--cx-line);
+    background: transparent;
+    color: var(--cx-text);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .pill-select:hover { background: var(--cx-fill-1); }
+  .pill-select .k { color: var(--cx-text-3); }
+  .caret { color: var(--cx-text-3); font-size: 10px; }
+
+  .toolbar-right { margin-left: auto; display: flex; align-items: center; gap: 2px; }
+
+  .divider-v { width: 1px; height: 18px; background: var(--cx-line); margin: 0 6px; }
+
+  /* ---------- 表格 ---------- */
+  .table-scroll { overflow-x: auto; }
+
+  table {
+    width: 100%;
+    min-width: 860px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--table-header);
+    height: 36px;
+    padding: 0 12px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--cx-text-3);
+    white-space: nowrap;
+    border-bottom: 1px solid var(--cx-line);
+  }
+
+  thead th.num { text-align: right; }
+  thead th.act { text-align: right; width: 96px; }
+  thead th.chk { width: 40px; padding-left: 16px; }
+
+  tbody td {
+    height: 44px;
+    padding: 0 12px;
+    font-size: 13px;
+    color: var(--cx-text);
+    border-bottom: 1px solid var(--cx-line);
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover td { background: var(--row-hover); }
+
+  tbody tr[data-selected='true'] td { background: var(--row-selected); }
+
+  /* 选中态靠首列 2px 竖条承担区分，而不是靠底色 —— 悬停 #F5F5F7 与
+     选中 #F2F2F4 相差不到 2%，只靠色差人眼分辨不出来。 */
+  tbody tr[data-selected='true'] { position: relative; }
+  tbody tr[data-selected='true'] > td:first-child { position: relative; }
+  tbody tr[data-selected='true'] > td:first-child::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--emphasis);
+  }
+
+  td.chk { padding-left: 16px; }
+
+  .cb {
+    width: 15px;
+    height: 15px;
+    border-radius: 4px;
+    border: 1px solid var(--gray-300);
+    display: inline-block;
+    vertical-align: middle;
+    background: var(--card);
+  }
+
+  .cb[data-checked='true'] {
+    background: var(--emphasis);
+    border-color: var(--emphasis);
+    position: relative;
+  }
+
+  .cb[data-checked='true']::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 4px;
+    height: 8px;
+    border: solid var(--card);
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(45deg);
+  }
+
+  .cb[data-mixed='true'] {
+    background: var(--emphasis);
+    border-color: var(--emphasis);
+    position: relative;
+  }
+
+  .cb[data-mixed='true']::after {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 6px;
+    width: 7px;
+    height: 1.5px;
+    background: var(--card);
+  }
+
+  .cell-name { display: flex; flex-direction: column; gap: 1px; }
+  .cell-name b { font-weight: 500; font-size: 13px; }
+  .cell-name small {
+    font-size: 11px;
+    color: var(--cx-text-3);
+    font-family: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+  }
+
+  td.num { text-align: right; }
+  td.muted { color: var(--cx-text-3); }
+  td.act { text-align: right; }
+
+  /* 一行最多一个胶囊：状态 */
+  .status {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1;
+    font-weight: 500;
+  }
+
+  .status.ok { background: var(--success-soft); color: var(--success-on-soft); }
+  .status.warn { background: var(--warning-soft); color: var(--warning-on-soft); }
+  .status.off { background: var(--neutral-soft); color: var(--neutral-on-soft); }
+
+  .type-text { color: var(--cx-text-3); font-size: 13px; }
+
+  .row-more {
+    width: 28px; height: 28px; border-radius: 8px;
+    border: 1px solid transparent; background: transparent;
+    color: var(--cx-text-3); cursor: pointer; font-size: 14px;
+  }
+  .row-more:hover { background: var(--cx-fill-1); color: var(--cx-text); }
+
+  /* ---------- 选择条（在流内，不悬浮） ---------- */
+  .selection {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 48px;
+    padding: 0 16px;
+    background: var(--cx-fill-1);
+    border-top: 1px solid var(--cx-line);
+    font-size: 12px;
+    color: var(--cx-text-3);
+  }
+
+  .selection b { color: var(--cx-text); font-weight: 600; }
+  .selection .spacer { flex: 1; }
+
+  .link-btn {
+    border: 0; background: transparent; font: inherit; font-size: 12px;
+    color: var(--cx-text); cursor: pointer; padding: 4px 6px; border-radius: 6px;
+  }
+  .link-btn:hover { background: rgba(128, 128, 128, 0.12); }
+  .link-btn.danger { color: #a81a1a; }
+  [data-theme='dark'] .link-btn.danger { color: #ff7b72; }
+
+  /* ---------- 分页器 ---------- */
+  .pager {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 44px;
+    padding: 0 16px;
+    border-top: 1px solid var(--cx-line);
+    font-size: 12px;
+    color: var(--cx-text-3);
+  }
+
+  .pager .range b { color: var(--cx-text); font-weight: 500; }
+  .pager .spacer { flex: 1; }
+
+  .page-size {
+    height: 28px; padding: 0 10px; border-radius: 8px;
+    border: 1px solid var(--cx-line); background: transparent;
+    color: var(--cx-text); font: inherit; font-size: 12px; cursor: pointer;
+  }
+
+  .pages { display: flex; align-items: center; gap: 2px; }
+
+  .page-btn {
+    min-width: 28px; height: 28px; padding: 0 8px;
+    border-radius: 8px; border: 0; background: transparent;
+    color: var(--cx-text-3); font: inherit; font-size: 12px; cursor: pointer;
+  }
+
+  .page-btn:hover { background: var(--cx-fill-1); color: var(--cx-text); }
+  .page-btn[aria-current='page'] { background: var(--emphasis); color: var(--card); }
+
+  /* ---------- 3. 手机降级 ---------- */
+  .mobile-frame {
+    width: 390px;
+    border: 1px solid var(--cx-line);
+    border-radius: 20px;
+    background: var(--card);
+    overflow: hidden;
+    box-shadow: var(--shadow-panel);
+  }
+
+  .mobile-frame .page-head { padding: 14px 16px 12px; }
+  .mobile-frame .page-head h1 { font-size: 18px; line-height: 26px; }
+  .mobile-frame .page-head p { display: none; }
+
+  .m-toolbar { padding: 0 16px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .m-toolbar .search { width: 100%; height: 32px; }
+  .m-toolbar .row { display: flex; gap: 8px; }
+  .m-toolbar .pill-select { height: 32px; flex: 0 0 auto; }
+  .m-toolbar .pill-select.grow { flex: 1; justify-content: space-between; }
+
+  .m-card {
+    padding: 12px 16px;
+    border-top: 1px solid var(--cx-line);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .m-card .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .m-card .top b { font-size: 14px; font-weight: 500; }
+  .m-card .top small { display: block; font-size: 11px; color: var(--cx-text-3); font-family: 'SF Mono', ui-monospace, Menlo, monospace; margin-top: 1px; }
+
+  .m-card .kv { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+  .m-card .kv div { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
+  .m-card .kv span { color: var(--cx-text-3); }
+  .m-card .kv em { font-style: normal; color: var(--cx-text); font-variant-numeric: tabular-nums; }
+
+  .m-pager {
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+    height: 44px; border-top: 1px solid var(--cx-line);
+    font-size: 12px; color: var(--cx-text-3);
+  }
+
+  .section-gap { margin-top: 44px; }
+  .note {
+    margin-top: 14px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--cx-text-3);
+    max-width: 620px;
+  }
+
+  @media (max-width: 720px) {
+    .stage { padding: 20px 14px 56px; }
+    .mobile-frame { width: 100%; }
+    .page-head h1 { font-size: 18px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="stage-bar">
+      <div class="stage-title"><b>运营控制台 · 渠道</b><span>设计预览 · 与 console-redesign-direction.md 对应</span></div>
+      <div class="theme-switch" role="group" aria-label="主题切换">
+        <button type="button" data-theme-btn="light" aria-pressed="true">浅色</button>
+        <button type="button" data-theme-btn="dark" aria-pressed="false">深色</button>
+      </div>
+    </div>
+
+    <p class="caption zh">桌面 ≥1024px · 一个页面一个面板，工具栏/表体/选择条/分页器是面板的内部行</p>
+
+    <!-- ================= 页头 ================= -->
+    <div class="page-head">
+      <div>
+        <h1>渠道</h1>
+        <p>接入上游厂商，维护模型映射与可用分组</p>
+      </div>
+      <div class="head-actions">
+        <span class="meta-note">最大重试 3 次</span>
+        <button class="btn btn-ghost" type="button">测试全部</button>
+        <button class="btn btn-primary" type="button">新建渠道</button>
+      </div>
+    </div>
+
+    <!-- ================= 面板 ================= -->
+    <section class="panel" aria-label="渠道列表">
+      <div class="toolbar">
+        <label class="search">
+          <span aria-hidden="true">⌕</span>
+          <input type="search" placeholder="搜索名称、ID 或模型" />
+        </label>
+        <button class="pill-select" type="button">类型 <span class="caret">▾</span></button>
+        <button class="pill-select" type="button">状态 <span class="caret">▾</span></button>
+        <button class="pill-select" type="button">分组 <span class="caret">▾</span></button>
+
+        <div class="toolbar-right">
+          <span class="divider-v"></span>
+          <button class="icon-btn" type="button" aria-label="列设置">▤</button>
+          <button class="icon-btn" type="button" aria-label="切换密度">⇕</button>
+          <button class="icon-btn" type="button" aria-label="刷新">⟳</button>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th class="chk"><span class="cb" data-mixed="true"></span></th>
+              <th>名称</th>
+              <th>类型</th>
+              <th>分组</th>
+              <th class="num">模型</th>
+              <th>状态</th>
+              <th class="act">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr data-selected="true">
+              <td class="chk"><span class="cb" data-checked="true"></span></td>
+              <td><span class="cell-name"><b>deepseek-v3</b><small>#17</small></span></td>
+              <td><span class="type-text">OpenAI 兼容</span></td>
+              <td class="muted">默认 · vip</td>
+              <td class="num">12</td>
+              <td><span class="status ok">启用</span></td>
+              <td class="act"><button class="row-more" type="button" aria-label="更多操作">⋯</button></td>
+            </tr>
+            <tr data-selected="true">
+              <td class="chk"><span class="cb" data-checked="true"></span></td>
+              <td><span class="cell-name"><b>火山方舟 doubao</b><small>#23</small></span></td>
+              <td><span class="type-text">火山方舟</span></td>
+              <td class="muted">默认</td>
+              <td class="num">8</td>
+              <td><span class="status ok">启用</span></td>
+              <td class="act"><button class="row-more" type="button" aria-label="更多操作">⋯</button></td>
+            </tr>
+            <tr>
+              <td class="chk"><span class="cb"></span></td>
+              <td><span class="cell-name"><b>claude-sonnet</b><small>#31</small></span></td>
+              <td><span class="type-text">Anthropic</span></td>
+              <td class="muted">默认</td>
+              <td class="num">5</td>
+              <td><span class="status warn">自动禁用</span></td>
+              <td class="act"><button class="row-more" type="button" aria-label="更多操作">⋯</button></td>
+            </tr>
+            <tr>
+              <td class="chk"><span class="cb"></span></td>
+              <td><span class="cell-name"><b>gemini-2.5-pro</b><small>#42</small></span></td>
+              <td><span class="type-text">Gemini</span></td>
+              <td class="muted">svip</td>
+              <td class="num">4</td>
+              <td><span class="status off">已禁用</span></td>
+              <td class="act"><button class="row-more" type="button" aria-label="更多操作">⋯</button></td>
+            </tr>
+            <tr>
+              <td class="chk"><span class="cb"></span></td>
+              <td><span class="cell-name"><b>siliconflow</b><small>#58</small></span></td>
+              <td><span class="type-text">SiliconFlow</span></td>
+              <td class="muted">默认</td>
+              <td class="num">21</td>
+              <td><span class="status ok">启用</span></td>
+              <td class="act"><button class="row-more" type="button" aria-label="更多操作">⋯</button></td>
+            </tr>
+            <tr>
+              <td class="chk"><span class="cb"></span></td>
+              <td><span class="cell-name"><b>newapi 级联</b><small>#61</small></span></td>
+              <td><span class="type-text">New API</span></td>
+              <td class="muted">默认</td>
+              <td class="num">3</td>
+              <td><span class="status ok">启用</span></td>
+              <td class="act"><button class="row-more" type="button" aria-label="更多操作">⋯</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="selection">
+        <span>已选 <b>2</b> 项</span>
+        <span class="spacer"></span>
+        <button class="link-btn" type="button">批量启用</button>
+        <button class="link-btn" type="button">批量禁用</button>
+        <button class="link-btn" type="button">测试</button>
+        <button class="link-btn danger" type="button">删除</button>
+      </div>
+
+      <div class="pager">
+        <span class="range"><b>1–20</b> / 共 348 条</span>
+        <span class="spacer"></span>
+        <button class="page-size" type="button">每页 20 ▾</button>
+        <div class="pages">
+          <button class="page-btn" type="button" aria-label="上一页">‹</button>
+          <button class="page-btn" type="button" aria-current="page">1</button>
+          <button class="page-btn" type="button">2</button>
+          <button class="page-btn" type="button">3</button>
+          <button class="page-btn" type="button">…</button>
+          <button class="page-btn" type="button">18</button>
+          <button class="page-btn" type="button" aria-label="下一页">›</button>
+        </div>
+      </div>
+    </section>
+
+    <p class="note">
+      选中态比悬停态多一条首列 2px 竖条（灰阶）——两种底色相差不到 2%，只靠色差无法分辨。
+      数字列右对齐并启用等宽数字；一行只有「状态」一个胶囊，类型与分组降级为灰字。
+    </p>
+
+    <!-- ================= 手机降级 ================= -->
+    <div class="section-gap">
+      <p class="caption zh">&lt;640px · 表格转卡片，卡片无边框无阴影，面板仍是一整块</p>
+      <div class="mobile-frame">
+        <div class="page-head">
+          <div><h1>渠道</h1></div>
+          <div class="head-actions">
+            <button class="btn btn-primary" type="button" style="height:32px;padding:0 12px;font-size:12px">新建</button>
+          </div>
+        </div>
+
+        <div class="m-toolbar">
+          <label class="search"><span aria-hidden="true">⌕</span><input type="search" placeholder="搜索渠道" /></label>
+          <div class="row">
+            <button class="pill-select grow" type="button">筛选 <span class="caret">▾</span></button>
+            <button class="pill-select" type="button">状态 <span class="caret">▾</span></button>
+          </div>
+        </div>
+
+        <div class="m-card">
+          <div class="top">
+            <div><b>deepseek-v3</b><small>#17</small></div>
+            <span class="status ok">启用</span>
+          </div>
+          <div class="kv">
+            <div><span>类型</span><em>OpenAI 兼容</em></div>
+            <div><span>模型</span><em>12</em></div>
+            <div><span>分组</span><em>默认 · vip</em></div>
+            <div><span>响应</span><em>820ms</em></div>
+          </div>
+        </div>
+
+        <div class="m-card">
+          <div class="top">
+            <div><b>claude-sonnet</b><small>#31</small></div>
+            <span class="status warn">自动禁用</span>
+          </div>
+          <div class="kv">
+            <div><span>类型</span><em>Anthropic</em></div>
+            <div><span>模型</span><em>5</em></div>
+            <div><span>分组</span><em>默认</em></div>
+            <div><span>响应</span><em>—</em></div>
+          </div>
+        </div>
+
+        <div class="m-pager">
+          <button class="page-btn" type="button" aria-label="上一页">‹</button>
+          <span>1 / 18</span>
+          <button class="page-btn" type="button" aria-label="下一页">›</button>
+        </div>
+      </div>
+
+      <p class="note">
+        手机端隐藏页头描述与面包屑，页边距 16px，控件 32px；筛选并入一个按钮走底部面板；
+        分页器只保留「‹ 1/18 ›」。
+      </p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var root = document.documentElement
+      var buttons = document.querySelectorAll('[data-theme-btn]')
+
+      function apply(theme) {
+        root.setAttribute('data-theme', theme)
+        buttons.forEach(function (b) {
+          b.setAttribute('aria-pressed', String(b.getAttribute('data-theme-btn') === theme))
+        })
+      }
+
+      // 深色直链：console-redesign-preview.html#dark
+      if (window.location.hash === '#dark') apply('dark')
+
+      buttons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          apply(btn.getAttribute('data-theme-btn'))
+        })
+      })
+    })()
+  </script>
+</body>
+</html>

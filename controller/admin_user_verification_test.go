@@ -75,7 +75,7 @@ func setupSecurityEnrollmentTest(t *testing.T) (*model.User, service.AuthIdentit
 	var version string
 	require.NoError(t, db.Raw(versionQuery).Scan(&version).Error)
 	t.Logf("database: %s %s", dialect, version)
-	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserSession{}, &model.AuthFlow{}, &model.UserOAuthBinding{}, &model.Option{}, &model.UserAccessToken{}))
+	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserSession{}, &model.AuthFlow{}, &model.Option{}, &model.UserAccessToken{}))
 	require.NoError(t, logDB.AutoMigrate(&model.AuditLog{}))
 	model.DB, model.LOG_DB = db, logDB
 	require.NoError(t, model.EnsureLegacyAccessTokenRetireAt(time.Now().Unix()))
@@ -119,7 +119,7 @@ func setupAdminUserTest(t *testing.T) (*model.User, service.AuthIdentity, *model
 	require.NoError(t, model.PublishUserAuthCache(operator.Id))
 	password, err := common.Password2Hash("managed-password")
 	require.NoError(t, err)
-	target := &model.User{Username: "managed-user", Password: password, Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1, AffCode: "managed-aff", GitHubId: "managed-github"}
+	target := &model.User{Username: "managed-user", Password: password, Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1, AffCode: "managed-aff"}
 	require.NoError(t, model.DB.Create(target).Error)
 	return operator, identity, target
 }
@@ -218,32 +218,9 @@ func TestAdminUserRiskOperationsRequireProofBeforeMutation(t *testing.T) {
 				assert.Zero(t, count)
 			},
 		},
-		{
-			name: "built-in binding clear", method: http.MethodDelete, path: "/api/user/:id/bindings/:binding_type", handler: AdminClearUserBinding,
-			params: func(target *model.User) gin.Params {
-				return gin.Params{{Key: "id", Value: fmt.Sprint(target.Id)}, {Key: "binding_type", Value: "github"}}
-			},
-			unchanged: func(t *testing.T, target *model.User) {
-				stored, err := model.GetUserById(target.Id, false)
-				require.NoError(t, err)
-				assert.Equal(t, "managed-github", stored.GitHubId)
-			},
-		},
-		{
-			name: "custom oauth unbind", method: http.MethodDelete, path: "/api/user/:id/oauth/bindings/:provider_id", handler: UnbindCustomOAuthByAdmin,
-			params: func(target *model.User) gin.Params {
-				return gin.Params{{Key: "id", Value: fmt.Sprint(target.Id)}, {Key: "provider_id", Value: "7"}}
-			},
-			unchanged: func(t *testing.T, target *model.User) {
-				bindings, err := model.GetUserOAuthBindingsByUserId(target.Id)
-				require.NoError(t, err)
-				assert.Len(t, bindings, 1)
-			},
-		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			_, identity, target := setupAdminUserTest(t)
-			require.NoError(t, model.DB.Create(&model.UserOAuthBinding{UserId: target.Id, ProviderId: 7, ProviderUserId: "provider-user"}).Error)
 			var body string
 			if test.body != nil {
 				body = test.body(target)
@@ -369,35 +346,6 @@ func TestAdminUserProofIsBoundToTargetAndActionAndConsumedOnce(t *testing.T) {
 	assert.Equal(t, "SECURITY_PROOF_CONSUMED", result.Code)
 }
 
-func TestAdminUserBindingProofDistinguishesBuiltInAndCustomBindings(t *testing.T) {
-	_, identity, target := setupAdminUserTest(t)
-	require.NoError(t, model.DB.Create(&model.UserOAuthBinding{UserId: target.Id, ProviderId: 7, ProviderUserId: "provider-user"}).Error)
-	custom := service.VerificationOperation{Scope: service.VerificationScopeAdminUserBindingClear, Context: []byte(fmt.Sprintf(`{"user_id":%d,"provider_id":7}`, target.Id))}
-	proof := issueSecurityEnrollmentProof(t, identity, custom, service.VerificationMethodPassword)
-	params := gin.Params{{Key: "id", Value: fmt.Sprint(target.Id)}, {Key: "binding_type", Value: "github"}}
-	response := adminUserRequest(http.MethodDelete, "/api/user/:id/bindings/:binding_type", "", proof, identity, common.RoleRootUser, params, AdminClearUserBinding)
-	var result securityEnrollmentResponse
-	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &result))
-	assert.Equal(t, "SECURITY_PROOF_CONTEXT_MISMATCH", result.Code)
-	stored, err := model.GetUserById(target.Id, false)
-	require.NoError(t, err)
-	assert.Equal(t, "managed-github", stored.GitHubId)
-
-	params = gin.Params{{Key: "id", Value: fmt.Sprint(target.Id)}, {Key: "provider_id", Value: "7"}}
-	response = adminUserRequest(http.MethodDelete, "/api/user/:id/oauth/bindings/:provider_id", "", proof, identity, common.RoleRootUser, params, UnbindCustomOAuthByAdmin)
-	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &result))
-	require.True(t, result.Success, response.Body.String())
-	bindings, err := model.GetUserOAuthBindingsByUserId(target.Id)
-	require.NoError(t, err)
-	assert.Empty(t, bindings)
-	var audit model.AuditLog
-	require.NoError(t, model.LOG_DB.Where("action = ?", "user.binding_clear").Last(&audit).Error)
-	require.NotNil(t, audit.Other.Op)
-	providerID, err := common.Marshal(audit.Other.Op.Params["provider_id"])
-	require.NoError(t, err)
-	assert.JSONEq(t, "7", string(providerID))
-}
-
 func TestAdminUserVerificationPolicy(t *testing.T) {
 	t.Run("requires an administrator", func(t *testing.T) {
 		_, identity := setupSecurityEnrollmentTest(t)
@@ -428,7 +376,7 @@ func TestAdminUserVerificationPolicy(t *testing.T) {
 	})
 	t.Run("a user:write token completes the deletion on its own proof", func(t *testing.T) {
 		operator, _, target := setupAdminUserTest(t)
-		require.NoError(t, model.DB.AutoMigrate(&model.ExternalIdentityClaim{}, &model.Token{}))
+		require.NoError(t, model.DB.AutoMigrate(&model.Token{}))
 		raw, _ := createScopedAccessToken(t, operator.Id, 0, "user:write")
 		router := newAccessTokenTestRouter()
 		response := accessTokenRequest(router, http.MethodPost, "/api/verify", raw, "", fmt.Sprintf(`{"scope":"admin.user.delete","method":"password","password":"enrollment-password","context":{"user_id":%d}}`, target.Id))

@@ -20,7 +20,6 @@ import type { AxiosRequestConfig } from 'axios'
 
 import type { PermissionCatalog } from '@/lib/admin-permissions'
 import { api } from '@/lib/api'
-import type { CustomOAuthBinding } from '@/lib/oauth'
 import { requireServerSuccess } from '@/lib/server-error-message'
 
 import type {
@@ -191,50 +190,4 @@ export async function getPermissionCatalog(): Promise<PermissionCatalog> {
     resources: res.data?.data?.resources ?? [],
     roles: res.data?.data?.roles ?? [],
   }
-}
-
-// ============================================================================
-// Admin Binding Management APIs
-// ============================================================================
-
-/**
- * Get user's custom OAuth bindings (admin)
- */
-export async function getUserOAuthBindings(
-  userId: number
-): Promise<ApiResponse<CustomOAuthBinding[]>> {
-  const res = await api.get(`/api/user/${userId}/oauth/bindings`)
-  return res.data
-}
-
-/**
- * Clear a user's built-in binding (admin); requires an
- * `admin.user.binding.clear` proof bound to the binding type
- */
-export async function adminClearUserBinding(
-  userId: number,
-  bindingType: string,
-  proofToken: string
-): Promise<ApiResponse> {
-  const res = await api.delete(
-    `/api/user/${userId}/bindings/${bindingType}`,
-    securityProofConfig(proofToken)
-  )
-  return res.data
-}
-
-/**
- * Unbind custom OAuth for a user (admin); requires an
- * `admin.user.binding.clear` proof bound to the provider ID
- */
-export async function adminUnbindCustomOAuth(
-  userId: number,
-  providerId: number,
-  proofToken: string
-): Promise<ApiResponse> {
-  const res = await api.delete(
-    `/api/user/${userId}/oauth/bindings/${providerId}`,
-    securityProofConfig(proofToken)
-  )
-  return res.data
 }

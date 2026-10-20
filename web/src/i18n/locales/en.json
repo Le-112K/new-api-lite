@@ -4,6 +4,8 @@
     "1000": "1000",
     "10000": "10000",
     "_copy": "_copy",
+    "Accounts, groups and quota": "Accounts, groups and quota",
+    "Connect upstream providers, manage model mappings and available groups": "Connect upstream providers, manage model mappings and available groups",
     "Every request record, filterable by time, model, token, and status.": "Every request record, filterable by time, model, token, and status.",
     "Upstream timeout": "Upstream timeout",
     "Slow": "Slow",
@@ -972,7 +974,6 @@
     "Change model vendor": "Change model vendor",
     "Change Password": "Change Password",
     "Change provider": "Change provider",
-    "Change system settings and custom OAuth providers, and sync prices.": "Change system settings and custom OAuth providers, and sync prices.",
     "Change To": "Change To",
     "Change upstream model names": "Change upstream model names",
     "Change vendor": "Change vendor",
@@ -5280,6 +5281,7 @@
     "Sidebar collapsed by default for new users": "Sidebar collapsed by default for new users",
     "Sidebar modules": "Sidebar modules",
     "Sidebar Personal Settings": "Sidebar Personal Settings",
+    "Password sign-in is disabled. Contact your administrator.": "Password sign-in is disabled. Contact your administrator.",
     "Sign in": "Sign in",
     "Sign In": "Sign In",
     "Sign in now": "Sign in now",
@@ -6454,7 +6456,6 @@
     "View pricing for {{model}}": "View pricing for {{model}}",
     "View redemption codes.": "View redemption codes.",
     "View scope": "View scope",
-    "View system settings, custom OAuth providers, and price sync sources.": "View system settings, custom OAuth providers, and price sync sources.",
     "View the complete details for this": "View the complete details for this",
     "View the complete details for this log entry": "View the complete details for this log entry",
     "View the complete details for this task": "View the complete details for this task",
@@ -6650,6 +6651,8 @@
     "Zhipu": "Zhipu",
     "Zhipu GLM": "Zhipu GLM",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom"
+    "Zoom": "Zoom",
+    "View system settings and price sync sources.": "View system settings and price sync sources.",
+    "Change system settings and sync prices.": "Change system settings and sync prices."
   }
 }

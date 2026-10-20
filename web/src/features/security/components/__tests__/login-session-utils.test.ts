@@ -24,13 +24,9 @@ import { loginMethodLabel, sessionDevice } from '../login-session-utils'
 const translate = ((key: string) => key) as TFunction
 
 describe('login session presentation', () => {
-  test('labels built-in and provider OAuth login methods', () => {
+  test('labels the remaining password login method', () => {
     expect(loginMethodLabel('password', translate)).toBe('Password')
     expect(loginMethodLabel('2fa', translate)).toBe('Two-factor Authentication')
-    expect(loginMethodLabel('oauth:github', translate)).toBe('OAuth · GitHub')
-    expect(loginMethodLabel('oauth:custom-provider', translate)).toBe(
-      'OAuth · custom-provider'
-    )
   })
 
   test('labels iPad Safari as iOS when its user agent also mentions Mac OS X', () => {

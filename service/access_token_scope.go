@@ -97,8 +97,8 @@ var accessTokenStaticResources = []AccessTokenResource{
 		accessTokenEdit("Create, edit, and delete prefill groups."),
 	}},
 	{Resource: "option", LabelKey: "System settings", group: AccessTokenGroupSystem, minRole: common.RoleRootUser, Actions: []authz.ActionDefinition{
-		accessTokenView("View system settings, custom OAuth providers, and price sync sources."),
-		accessTokenEdit("Change system settings and custom OAuth providers, and sync prices."),
+		accessTokenView("View system settings and price sync sources."),
+		accessTokenEdit("Change system settings and sync prices."),
 	}},
 	{Resource: "ops", LabelKey: "Operations", group: AccessTokenGroupSystem, minRole: common.RoleRootUser, Actions: []authz.ActionDefinition{
 		accessTokenView("View performance, system tasks, and system information."),
@@ -214,11 +214,9 @@ var accessTokenVerificationScopes = map[string]string{
 	VerificationScopeAdminUserUpdate:       "user:write",
 	VerificationScopeAdminUserDelete:       "user:write",
 	VerificationScopeAdminUserManage:       "user:write",
-	VerificationScopeAdminUserBindingClear: "user:write",
 	VerificationScopePasswordSet:           "account_security:write",
 	VerificationScopePasswordChange:        "account_security:write",
 	VerificationScopeAccountBind:           "account_security:write",
-	VerificationScopeAccountUnbind:         "account_security:write",
 	VerificationScopeAccountDelete:         "account_security:write",
 	VerificationScopeAccessTokenGenerate:   "",
 	VerificationScopeAccessTokenUpdate:     "",

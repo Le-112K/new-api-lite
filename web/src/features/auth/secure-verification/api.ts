@@ -17,17 +17,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { api } from '@/lib/api'
-import { buildOAuthAuthorizationUrl } from '@/lib/oauth'
 import {
   AuthOperationError,
   authRequestOptions,
   authResult,
 } from '@/lib/secure-verification'
 
-import { createOAuthAuthorization } from '../api'
-import { openOAuthPopup } from '../lib/oauth-popup'
 import { encryptPassword } from '../lib/password-encryption'
-import type { SystemStatus } from '../types'
 import type {
   SecurityProof,
   SecurityProofScope,
@@ -89,9 +85,6 @@ export async function verify(
         )
         break
       }
-      case 'oauth':
-        proof = await verifyOAuth(input.provider, operation, signal)
-        break
     }
     signal.throwIfAborted()
     if (
@@ -105,61 +98,5 @@ export async function verify(
     return proof
   } catch (error) {
     throw AuthOperationError.from(error)
-  }
-}
-
-async function verifyOAuth(
-  provider: string,
-  operation: VerificationOperation,
-  signal: AbortSignal
-): Promise<SecurityProof> {
-  const exchange = await openOAuthPopup({
-    provider,
-    intent: 'verify',
-    signal,
-    prepare: async (popupSignal) => {
-      const [authorization, status] = await Promise.all([
-        createOAuthAuthorization(provider, 'verify', operation, popupSignal),
-        authResult<SystemStatus>(
-          api.get('/api/status', {
-            ...authRequestOptions,
-            signal: popupSignal,
-            disableDuplicate: true,
-          })
-        ),
-      ])
-      return {
-        state: authorization.state,
-        url:
-          authorization.authorizationUrl ??
-          buildOAuthAuthorizationUrl(provider, authorization.state, status),
-      }
-    },
-  })
-  try {
-    const callback = exchange.callback
-    const proof = await authResult<SecurityProof>(
-      api.get(`/api/oauth/${provider}`, {
-        ...authRequestOptions,
-        singleUseAuthorization: true,
-        disableDuplicate: true,
-        signal: exchange.signal,
-        params: {
-          state: callback.state,
-          code: callback.code,
-          error: callback.error,
-          error_description: callback.errorDescription,
-        },
-      })
-    )
-    exchange.signal.throwIfAborted()
-    exchange.finish({ success: true })
-    return proof
-  } catch (error) {
-    const failure = AuthOperationError.from(
-      exchange.signal.aborted ? exchange.signal.reason : error
-    )
-    exchange.finish({ success: false, message: failure.message })
-    throw failure
   }
 }

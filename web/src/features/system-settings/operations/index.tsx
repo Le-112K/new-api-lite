@@ -16,8 +16,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useStatus } from '@/hooks/use-status'
-
 import { SettingsPage } from '../components/settings-page'
 import type { OperationsSettings } from '../types'
 import {
@@ -28,7 +26,6 @@ import {
 
 const defaultOperationsSettings: OperationsSettings = {
   DefaultCollapseSidebar: false,
-  DemoSiteEnabled: false,
   SelfUseModeEnabled: false,
   QuotaRemindThreshold: '',
   SMTPServer: '',
@@ -40,9 +37,6 @@ const defaultOperationsSettings: OperationsSettings = {
   SMTPStartTLSEnabled: false,
   SMTPInsecureSkipVerify: false,
   SMTPForceAuthLogin: false,
-  WorkerUrl: '',
-  WorkerValidKey: '',
-  WorkerAllowHttpImageRequestEnabled: false,
   LogConsumeEnabled: false,
   'performance_setting.disk_cache_enabled': false,
   'performance_setting.disk_cache_threshold_mb': 10,
@@ -59,8 +53,6 @@ const defaultOperationsSettings: OperationsSettings = {
 }
 
 export function OperationsSettings() {
-  const { status } = useStatus()
-
   return (
     <SettingsPage
       routePath='/_authenticated/system-settings/operations/$section'
@@ -68,10 +60,6 @@ export function OperationsSettings() {
       defaultSection={OPERATIONS_DEFAULT_SECTION}
       getSectionContent={getOperationsSectionContent}
       getSectionMeta={getOperationsSectionMeta}
-      extraArgs={[
-        status?.version as string | undefined,
-        status?.start_time as number | null | undefined,
-      ]}
       loadingMessage='Loading maintenance settings...'
     />
   )

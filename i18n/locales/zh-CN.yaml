@@ -105,13 +105,6 @@ user.register_failed: "用户注册失败或用户ID获取失败"
 user.default_token_failed: "生成默认令牌失败"
 user.aff_code_empty: "affCode 为空！"
 user.email_empty: "email 为空！"
-user.github_id_empty: "GitHub id 为空！"
-user.discord_id_empty: "discord id 为空！"
-user.oidc_id_empty: "oidc id 为空！"
-user.wechat_id_empty: "WeChat id 为空！"
-user.telegram_id_empty: "Telegram id 为空！"
-user.telegram_not_bound: "该 Telegram 账户未绑定"
-user.linux_do_id_empty: "Linux DO id 为空！"
 user.quota_change_zero: "额度变更量不能为0"
 
 # Quota messages
@@ -235,21 +228,6 @@ ability.db_corrupted: "数据库一致性被破坏"
 ability.repair_running: "已经有一个修复任务在运行中，请稍后再试"
 
 # OAuth messages
-oauth.invalid_code: "无效的授权码"
-oauth.get_user_error: "获取用户信息失败"
-oauth.account_used: "该账户已被其他用户绑定"
-oauth.unknown_provider: "未知的 OAuth 提供商"
-oauth.state_invalid: "state 参数为空或不匹配"
-oauth.not_enabled: "管理员未开启通过 {{.Provider}} 登录以及注册"
-oauth.user_deleted: "用户已注销"
-oauth.user_banned: "用户已被封禁"
-oauth.bind_success: "绑定成功"
-oauth.already_bound: "该 {{.Provider}} 账户已被绑定"
-oauth.not_auto_linked: "无法自动将该 {{.Provider}} 账户关联到现有账户，请使用其他方式登录或注册后，在账户设置中绑定 {{.Provider}}"
-oauth.connect_failed: "无法连接至 {{.Provider}} 服务器，请稍后重试"
-oauth.token_failed: "{{.Provider}} 获取 Token 失败，请检查设置"
-oauth.user_info_empty: "{{.Provider}} 获取用户信息为空，请检查设置"
-oauth.trust_level_low: "Linux DO 信任等级未达到管理员设置的最低信任等级"
 
 # Model layer error messages
 redeem.failed: "兑换失败，请稍后重试"
@@ -271,10 +249,3 @@ distributor.no_available_channel: "分组 {{.Group}} 下模型 {{.Model}} 无可
 distributor.invalid_request_parse_model: "无效的请求，无法解析模型"
 
 # Custom OAuth provider messages
-custom_oauth.not_found: "自定义 OAuth 提供商不存在"
-custom_oauth.slug_empty: "标识符不能为空"
-custom_oauth.slug_exists: "标识符已存在"
-custom_oauth.name_empty: "提供商名称不能为空"
-custom_oauth.has_bindings: "无法删除已有用户绑定的提供商"
-custom_oauth.binding_not_found: "OAuth 绑定不存在"
-custom_oauth.provider_id_field_invalid: "无法从提供商响应中提取用户 ID"

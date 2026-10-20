@@ -21,7 +21,6 @@ var (
 		"light-green": true, "teal": true, "light-blue": true, "indigo": true,
 		"violet": true, "grey": true, "slate": true,
 	}
-	slugRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 )
 
 func parseJSONArray(jsonStr string, typeName string) ([]map[string]interface{}, error) {
@@ -77,8 +76,6 @@ func ValidateConsoleSettings(settingsStr string, settingType string) error {
 		return validateAnnouncements(settingsStr)
 	case "FAQ":
 		return validateFAQ(settingsStr)
-	case "UptimeKumaGroups":
-		return validateUptimeKumaGroups(settingsStr)
 	default:
 		return fmt.Errorf("未知的设置类型：%s", settingType)
 	}
@@ -238,73 +235,4 @@ func GetAnnouncements() []map[string]interface{} {
 
 func GetFAQ() []map[string]interface{} {
 	return getJSONList(GetConsoleSetting().FAQ)
-}
-
-func validateUptimeKumaGroups(groupsStr string) error {
-	groups, err := parseJSONArray(groupsStr, "Uptime Kuma分组配置")
-	if err != nil {
-		return err
-	}
-
-	if len(groups) > 20 {
-		return fmt.Errorf("Uptime Kuma分组数量不能超过20个")
-	}
-
-	nameSet := make(map[string]bool)
-
-	for i, group := range groups {
-		categoryName, ok := group["categoryName"].(string)
-		if !ok || categoryName == "" {
-			return fmt.Errorf("第%d个分组缺少分类名称字段", i+1)
-		}
-		if nameSet[categoryName] {
-			return fmt.Errorf("第%d个分组的分类名称与其他分组重复", i+1)
-		}
-		nameSet[categoryName] = true
-		urlStr, ok := group["url"].(string)
-		if !ok || urlStr == "" {
-			return fmt.Errorf("第%d个分组缺少URL字段", i+1)
-		}
-		slug, ok := group["slug"].(string)
-		if !ok || slug == "" {
-			return fmt.Errorf("第%d个分组缺少Slug字段", i+1)
-		}
-		description, ok := group["description"].(string)
-		if !ok {
-			description = ""
-		}
-
-		if err := validateURL(urlStr, i+1, "分组"); err != nil {
-			return err
-		}
-
-		if exceedsMaxCharacters(categoryName, 50) {
-			return fmt.Errorf("第%d个分组的分类名称长度不能超过50字符", i+1)
-		}
-		if exceedsMaxCharacters(urlStr, 500) {
-			return fmt.Errorf("第%d个分组的URL长度不能超过500字符", i+1)
-		}
-		if exceedsMaxCharacters(slug, 100) {
-			return fmt.Errorf("第%d个分组的Slug长度不能超过100字符", i+1)
-		}
-		if exceedsMaxCharacters(description, 200) {
-			return fmt.Errorf("第%d个分组的描述长度不能超过200字符", i+1)
-		}
-
-		if !slugRegex.MatchString(slug) {
-			return fmt.Errorf("第%d个分组的Slug只能包含字母、数字、下划线和连字符", i+1)
-		}
-
-		if err := checkDangerousContent(description, i+1, "分组"); err != nil {
-			return err
-		}
-		if err := checkDangerousContent(categoryName, i+1, "分组"); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func GetUptimeKumaGroups() []map[string]interface{} {
-	return getJSONList(GetConsoleSetting().UptimeKumaGroups)
 }

@@ -345,7 +345,6 @@ func migrateDB() error {
 		&User{},
 		&UserSession{},
 		&AuthFlow{},
-		&ExternalIdentityClaim{},
 		&Option{},
 		&LoginEncryptionKey{},
 		&Redemption{},
@@ -361,8 +360,6 @@ func migrateDB() error {
 		&SubscriptionOrder{},
 		&UserSubscription{},
 		&SubscriptionPreConsumeRecord{},
-		&CustomOAuthProvider{},
-		&UserOAuthBinding{},
 		&PerfMetric{},
 		&SystemTask{},
 		&SystemTaskLock{},
@@ -378,9 +375,6 @@ func migrateDB() error {
 	}
 	if err := EnsureLegacyAccessTokenRetireAt(common.GetTimestamp()); err != nil {
 		return fmt.Errorf("initialize legacy access token deadline: %w", err)
-	}
-	if err := InitializeExternalIdentityClaims(); err != nil {
-		return err
 	}
 	if common.UsingMainDatabase(common.DatabaseTypeSQLite) {
 		if err := ensureSubscriptionPlanTableSQLite(); err != nil {

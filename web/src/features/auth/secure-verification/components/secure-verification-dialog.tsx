@@ -24,13 +24,8 @@ import { Dialog } from '@/components/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-import type {
-  SecureVerificationState,
-  VerificationInput,
-  VerificationMethod,
-} from '../types'
+import type { SecureVerificationState, VerificationInput } from '../types'
 
 interface SecureVerificationDialogProps {
   state: SecureVerificationState
@@ -38,12 +33,6 @@ interface SecureVerificationDialogProps {
   onCancel: () => void
   onRetry: () => void
   onInputChange: (input: VerificationInput) => void
-}
-
-const methodLabels: Record<VerificationMethod, string> = {
-  password: 'Password',
-  oauth: 'Linked account',
-  session: 'Login session',
 }
 
 export function SecureVerificationDialog(props: SecureVerificationDialogProps) {
@@ -59,24 +48,8 @@ export function SecureVerificationDialog(props: SecureVerificationDialogProps) {
   if (input?.method === 'password') {
     canVerify = canVerify && input.password.length > 0
   }
-  // Linked-account verification starts from the provider button itself.
-  const showSubmit = state.phase !== 'error' && input?.method !== 'oauth'
   const error = 'error' in state ? state.error : undefined
   const formId = `${inputId}-form`
-
-  const selectMethod = (method: string) => {
-    switch (method) {
-      case 'password':
-        props.onInputChange({ method, password: '' })
-        break
-      case 'oauth':
-        props.onInputChange({
-          method,
-          provider: ready?.requirements.oauth_providers[0]?.slug ?? '',
-        })
-        break
-    }
-  }
 
   return (
     <Dialog
@@ -107,7 +80,7 @@ export function SecureVerificationDialog(props: SecureVerificationDialogProps) {
               {t('Retry')}
             </Button>
           )}
-          {showSubmit && (
+          {state.phase !== 'error' && (
             <Button type='submit' form={formId} disabled={!canVerify}>
               {verifying && <Loader2 className='size-4 animate-spin' />}
               {t('Verify')}
@@ -149,65 +122,23 @@ export function SecureVerificationDialog(props: SecureVerificationDialogProps) {
               )}
             </div>
           ) : (
-            <Tabs value={input.method} onValueChange={selectMethod}>
-              <TabsList>
-                {ready.requirements.methods.map((option) => (
-                  <TabsTrigger
-                    key={option.method}
-                    value={option.method}
-                    disabled={!option.available || verifying}
-                  >
-                    {t(methodLabels[option.method])}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              <TabsContent value='password' className='space-y-2'>
-                <Label htmlFor={inputId}>{t('Password')}</Label>
-                <Input
-                  id={inputId}
-                  type='password'
-                  autoComplete='current-password'
-                  autoFocus
-                  disabled={verifying}
-                  value={input.method === 'password' ? input.password : ''}
-                  onChange={(event) =>
-                    props.onInputChange({
-                      method: 'password',
-                      password: event.target.value,
-                    })
-                  }
-                />
-              </TabsContent>
-              <TabsContent value='oauth' className='space-y-2'>
-                <p className='text-muted-foreground text-sm'>
-                  {t(
-                    'Continue with an account already linked to your profile.'
-                  )}
-                </p>
-                <div className='flex flex-wrap gap-2'>
-                  {ready.requirements.oauth_providers.map((provider) => (
-                    <Button
-                      key={provider.slug}
-                      type='button'
-                      disabled={verifying}
-                      onClick={() =>
-                        void props.onVerify({
-                          method: 'oauth',
-                          provider: provider.slug,
-                        })
-                      }
-                    >
-                      {verifying &&
-                        input.method === 'oauth' &&
-                        input.provider === provider.slug && (
-                          <Loader2 className='size-4 animate-spin' />
-                        )}
-                      {t('Continue with {{name}}', { name: provider.name })}
-                    </Button>
-                  ))}
-                </div>
-              </TabsContent>
-            </Tabs>
+            <div className='space-y-2'>
+              <Label htmlFor={inputId}>{t('Password')}</Label>
+              <Input
+                id={inputId}
+                type='password'
+                autoComplete='current-password'
+                autoFocus
+                disabled={verifying}
+                value={input.method === 'password' ? input.password : ''}
+                onChange={(event) =>
+                  props.onInputChange({
+                    method: 'password',
+                    password: event.target.value,
+                  })
+                }
+              />
+            </div>
           )}
         </form>
       )}

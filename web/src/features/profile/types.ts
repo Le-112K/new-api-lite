@@ -73,18 +73,6 @@ export interface UserProfile {
   created_time: number
   /** User settings (JSON string) */
   setting?: string
-  /** WeChat ID (OAuth) */
-  wechat_id?: string
-  /** GitHub ID (OAuth) */
-  github_id?: string
-  /** Discord ID (OAuth) */
-  discord_id?: string
-  /** OIDC ID (OAuth) */
-  oidc_id?: string
-  /** Telegram ID (OAuth) */
-  telegram_id?: string
-  /** LinuxDO ID (OAuth) */
-  linux_do_id?: string
 }
 
 /**

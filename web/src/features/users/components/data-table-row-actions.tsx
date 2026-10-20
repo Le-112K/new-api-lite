@@ -24,7 +24,6 @@ import {
   PowerOff,
   ArrowUp,
   ArrowDown,
-  Link2,
   CreditCard,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -57,7 +56,6 @@ import {
 } from '../constants'
 import { getUserActionMessage } from '../lib'
 import type { User } from '../types'
-import { UserBindingDialog } from './dialogs/user-binding-dialog'
 import { useUsers } from './users-provider'
 
 const MANAGE_ACTION_TITLES: Record<AdminUserManageAction, string> = {
@@ -76,7 +74,6 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const user = row.original
   const { setOpen, setCurrentRow, triggerRefresh, requestVerification } =
     useUsers()
-  const [bindingDialogOpen, setBindingDialogOpen] = useState(false)
   const [subscriptionsDialogOpen, setSubscriptionsDialogOpen] = useState(false)
 
   const handleEdit = () => {
@@ -186,18 +183,6 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         <DropdownMenuItem
           onSelect={(event) => {
             event.preventDefault()
-            setBindingDialogOpen(true)
-          }}
-        >
-          {t('Manage Bindings')}
-          <DropdownMenuShortcut>
-            <Link2 size={16} />
-          </DropdownMenuShortcut>
-        </DropdownMenuItem>
-
-        <DropdownMenuItem
-          onSelect={(event) => {
-            event.preventDefault()
             setSubscriptionsDialogOpen(true)
           }}
         >
@@ -220,13 +205,6 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </DropdownMenuShortcut>
         </DropdownMenuItem>
       </DataTableRowActionMenu>
-
-      <UserBindingDialog
-        open={bindingDialogOpen}
-        onOpenChange={setBindingDialogOpen}
-        userId={user.id}
-        onUnbindSuccess={triggerRefresh}
-      />
 
       <UserSubscriptionsDialog
         open={subscriptionsDialogOpen}

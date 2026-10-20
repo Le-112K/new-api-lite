@@ -19,10 +19,8 @@ For commercial licensing, please contact support@quantumnous.com
 import { SystemBehaviorSection } from '../general/system-behavior-section'
 import { EmailSettingsSection } from '../integrations/email-settings-section'
 import { MonitoringSettingsSection } from '../integrations/monitoring-settings-section'
-import { WorkerSettingsSection } from '../integrations/worker-settings-section'
 import { LogSettingsSection } from '../maintenance/log-settings-section'
 import { PerformanceSection } from '../maintenance/performance-section'
-import { UpdateCheckerSection } from '../maintenance/update-checker-section'
 import type { OperationsSettings } from '../types'
 import { createSectionRegistry } from '../utils/section-registry'
 import { SystemTasksPanel } from './system-tasks/system-tasks-panel'
@@ -35,7 +33,6 @@ const OPERATIONS_SECTIONS = [
       <SystemBehaviorSection
         defaultValues={{
           DefaultCollapseSidebar: settings.DefaultCollapseSidebar,
-          DemoSiteEnabled: settings.DemoSiteEnabled,
           SelfUseModeEnabled: settings.SelfUseModeEnabled,
         }}
       />
@@ -80,20 +77,6 @@ const OPERATIONS_SECTIONS = [
     ),
   },
   {
-    id: 'worker',
-    titleKey: 'Worker Proxy',
-    build: (settings: OperationsSettings) => (
-      <WorkerSettingsSection
-        defaultValues={{
-          WorkerUrl: settings.WorkerUrl,
-          WorkerValidKey: settings.WorkerValidKey,
-          WorkerAllowHttpImageRequestEnabled:
-            settings.WorkerAllowHttpImageRequestEnabled,
-        }}
-      />
-    ),
-  },
-  {
     id: 'logs',
     titleKey: 'Log Maintenance',
     build: (settings: OperationsSettings) => (
@@ -129,20 +112,6 @@ const OPERATIONS_SECTIONS = [
     ),
   },
   {
-    id: 'update-checker',
-    titleKey: 'System maintenance',
-    build: (
-      _settings: OperationsSettings,
-      currentVersion?: string | null,
-      startTime?: number | null
-    ) => (
-      <UpdateCheckerSection
-        currentVersion={currentVersion}
-        startTime={startTime}
-      />
-    ),
-  },
-  {
     id: 'tasks',
     titleKey: 'System Tasks',
     build: () => <SystemTasksPanel />,
@@ -153,8 +122,7 @@ export type OperationsSectionId = (typeof OPERATIONS_SECTIONS)[number]['id']
 
 const operationsRegistry = createSectionRegistry<
   OperationsSectionId,
-  OperationsSettings,
-  [string | null | undefined, number | null | undefined]
+  OperationsSettings
 >({
   sections: OPERATIONS_SECTIONS,
   defaultSection: 'behavior',

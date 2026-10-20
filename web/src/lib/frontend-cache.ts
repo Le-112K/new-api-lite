@@ -26,7 +26,6 @@ const PRESERVED_LOCAL_STORAGE_KEYS = new Set([
   'user',
   'uid',
   'aff',
-  'oauth:binding:result',
 ])
 
 export function initializeFrontendCache(): void {

@@ -106,19 +106,6 @@ async function renderPage(path = '/security') {
   })
   client.setQueryData(['status'], {
     checkin_enabled: false,
-    wechat_login: true,
-    github_oauth: true,
-    oidc_enabled: true,
-    custom_oauth_providers: [
-      {
-        id: 1,
-        name: 'Gitea',
-        slug: 'gitea',
-        client_id: 'test-client',
-        authorization_endpoint: 'https://example.com/oauth/authorize',
-        scopes: 'openid',
-      },
-    ],
   })
   const root = createRootRoute()
   const security = createRoute({
@@ -189,20 +176,19 @@ describe('security page migration', () => {
     ).toBeVisible()
   })
 
-  it('built-in and custom bindings share one compact responsive grid', async () => {
+  it('shows the email binding in one compact responsive grid', async () => {
     await renderPage()
     const bindings = await screen.findByRole('list', {
       name: 'Account Bindings',
     })
-    expect(within(bindings).getAllByRole('listitem')).toHaveLength(5)
-    expect(within(bindings).getByText('Gitea')).toBeVisible()
+    expect(within(bindings).getAllByRole('listitem')).toHaveLength(1)
+    expect(within(bindings).getByText('Email')).toBeVisible()
     expect(bindings).toHaveClass(
       'grid-cols-1',
       'sm:grid-cols-2',
       'lg:grid-cols-3',
       'gap-2'
     )
-    expect(screen.queryByText('Custom OAuth')).not.toBeInTheDocument()
   })
 
   it('the password action opens the existing dialog by keyboard and Escape closes it', async () => {

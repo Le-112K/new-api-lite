@@ -61,11 +61,23 @@ interface MobileCardListProps<TData> {
   emptyDescription?: string
   getRowKey?: (row: Row<TData>) => string | number
   getRowClassName?: (row: Row<TData>) => string | undefined
+  /**
+   * Draw the list's own hairline frame. Defaults to `true`, which is what every
+   * page has always looked like. Pass `false` when the list already sits inside
+   * a bordered panel — otherwise the panel border and the list border stack and
+   * read as a picture frame inside a picture frame.
+   */
+  framed?: boolean
 }
 
-function ListSkeleton() {
+function ListSkeleton({ framed = true }: { framed?: boolean }) {
   return (
-    <div className='divide-y overflow-hidden rounded-lg border'>
+    <div
+      className={cn(
+        'divide-y overflow-hidden',
+        framed && 'rounded-lg border'
+      )}
+    >
       {[1, 2, 3, 4, 5].map((i) => (
         <div key={i} className='px-3 py-2.5'>
           <div className='flex items-center justify-between'>
@@ -88,9 +100,14 @@ function ListSkeleton() {
   )
 }
 
-function FallbackListSkeleton() {
+function FallbackListSkeleton({ framed = true }: { framed?: boolean }) {
   return (
-    <div className='divide-y overflow-hidden rounded-lg border'>
+    <div
+      className={cn(
+        'divide-y overflow-hidden',
+        framed && 'rounded-lg border'
+      )}
+    >
       {[1, 2, 3, 4, 5].map((i) => (
         <div key={i} className='space-y-1.5 px-3 py-2.5'>
           {[1, 2, 3].map((j) => (
@@ -124,6 +141,7 @@ export function MobileCardList<TData>(props: MobileCardListProps<TData>) {
     emptyDescription,
     getRowKey,
     getRowClassName,
+    framed = true,
   } = props
   const { t } = useTranslation()
 
@@ -138,14 +156,18 @@ export function MobileCardList<TData>(props: MobileCardListProps<TData>) {
   )
 
   if (isLoading) {
-    return hasCompactMeta ? <ListSkeleton /> : <FallbackListSkeleton />
+    return hasCompactMeta ? (
+      <ListSkeleton framed={framed} />
+    ) : (
+      <FallbackListSkeleton framed={framed} />
+    )
   }
 
   const rows = table.getRowModel().rows
 
   if (!rows || rows.length === 0) {
     return (
-      <div className='rounded-lg border p-6'>
+      <div className={cn('p-6', framed && 'rounded-lg border')}>
         <Empty className='border-none p-0'>
           <EmptyHeader>
             <EmptyMedia variant='icon'>
@@ -160,7 +182,12 @@ export function MobileCardList<TData>(props: MobileCardListProps<TData>) {
   }
 
   return (
-    <div className='divide-y overflow-hidden rounded-lg border'>
+    <div
+      className={cn(
+        'divide-y overflow-hidden',
+        framed && 'rounded-lg border'
+      )}
+    >
       {enableRowSelection && (
         <label className='flex items-center gap-2 px-3 py-2 text-xs'>
           <Checkbox

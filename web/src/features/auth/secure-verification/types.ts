@@ -18,14 +18,13 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import type { AuthBundle } from '@/stores/auth-store'
 
-export type VerificationMethod = 'password' | 'oauth' | 'session'
+export type VerificationMethod = 'password' | 'session'
 export type SecurityProofScope =
   | 'channel.key.read'
   | 'access_token.generate'
   | 'access_token.update'
   | 'access_token.revoke'
   | 'account.binding.bind'
-  | 'account.binding.unbind'
   | 'account.password.set'
   | 'account.password.change'
   | 'account.delete'
@@ -33,7 +32,6 @@ export type SecurityProofScope =
   | 'admin.user.update'
   | 'admin.user.delete'
   | 'admin.user.manage'
-  | 'admin.user.binding.clear'
 
 /** ManageUser actions that change a user's status or role and need step-up. */
 export type AdminUserManageAction = 'disable' | 'enable' | 'promote' | 'demote'
@@ -44,7 +42,6 @@ export type VerificationOperation =
       scope: 'account.binding.bind'
       context: { provider: string; email?: string; code?: string }
     }
-  | { scope: 'account.binding.unbind'; context: { provider_id: number } }
   | { scope: 'admin.user.create'; context: { role: number } }
   | {
       scope: 'admin.user.update' | 'admin.user.delete'
@@ -53,12 +50,6 @@ export type VerificationOperation =
   | {
       scope: 'admin.user.manage'
       context: { user_id: number; action: AdminUserManageAction }
-    }
-  | {
-      scope: 'admin.user.binding.clear'
-      context:
-        | { user_id: number; binding_type: string }
-        | { user_id: number; provider_id: number }
     }
   | {
       scope: 'access_token.generate'
@@ -77,7 +68,6 @@ export type VerificationOperation =
         SecurityProofScope,
         | 'channel.key.read'
         | 'account.binding.bind'
-        | 'account.binding.unbind'
         | 'access_token.generate'
         | 'access_token.update'
         | 'access_token.revoke'
@@ -96,13 +86,11 @@ export interface SecurityProof {
 export interface VerificationRequirements {
   scope: SecurityProofScope | 'auth.login'
   methods: { method: VerificationMethod; available: boolean; reason?: string }[]
-  oauth_providers: { slug: string; name: string }[]
   password_encryption_enabled: boolean
 }
 
 export type VerificationInput =
   | { method: 'password'; password: string }
-  | { method: 'oauth'; provider: string }
   | { method: 'session' }
 
 export type RequestVerificationOptions = VerificationOperation & {

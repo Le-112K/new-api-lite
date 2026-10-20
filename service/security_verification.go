@@ -5,18 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
-	"github.com/QuantumNous/new-api/oauth"
 	"gorm.io/gorm"
 )
 
 const (
 	VerificationMethodPassword = "password"
-	VerificationMethodOAuth    = "oauth"
 	VerificationMethodSession  = "session"
 	VerificationScopeChannelKeyRead = "channel.key.read"
 	VerificationScopeLogin          = "auth.login"
@@ -24,18 +21,16 @@ const (
 	VerificationScopeAccessTokenRevoke   = "access_token.revoke"
 	VerificationScopeAccessTokenUpdate   = "access_token.update"
 	VerificationScopeAccountBind         = "account.binding.bind"
-	VerificationScopeAccountUnbind       = "account.binding.unbind"
 	VerificationScopePasswordSet         = "account.password.set"
 	VerificationScopePasswordChange      = "account.password.change"
 	VerificationScopeAccountDelete       = "account.delete"
 	// Administrative step-up scopes bind the managed user into the proof so a
 	// proof issued for one account cannot be replayed against another.
-	VerificationScopeAdminUserCreate       = "admin.user.create"
-	VerificationScopeAdminUserUpdate       = "admin.user.update"
-	VerificationScopeAdminUserDelete       = "admin.user.delete"
-	VerificationScopeAdminUserManage       = "admin.user.manage"
-	VerificationScopeAdminUserBindingClear = "admin.user.binding.clear"
-	verificationScopeAdminUserPrefix       = "admin.user."
+	VerificationScopeAdminUserCreate = "admin.user.create"
+	VerificationScopeAdminUserUpdate = "admin.user.update"
+	VerificationScopeAdminUserDelete = "admin.user.delete"
+	VerificationScopeAdminUserManage = "admin.user.manage"
+	verificationScopeAdminUserPrefix = "admin.user."
 )
 
 // adminUserManageActions are the ManageUser actions that change a user's
@@ -46,7 +41,6 @@ var (
 	ErrVerificationFailed         = errors.New("Verification failed. Please try again.")
 	ErrVerificationUnavailable    = errors.New("This verification method is currently unavailable.")
 	ErrVerificationLocked         = errors.New("Verification is temporarily locked.")
-	ErrVerificationFlowRequired   = errors.New("This verification method requires its dedicated verification flow.")
 	ErrVerificationContextInvalid = errors.New("The action details are invalid.")
 	ErrVerificationForbidden      = errors.New("You do not have permission to perform this action.")
 )
@@ -68,10 +62,6 @@ type AccountBindingContext struct {
 	Code     string `json:"code,omitempty"`
 }
 
-type AccountUnbindingContext struct {
-	ProviderID int `json:"provider_id"`
-}
-
 type AdminUserContext struct {
 	UserID int `json:"user_id"`
 }
@@ -79,14 +69,6 @@ type AdminUserContext struct {
 type AdminUserManageContext struct {
 	UserID int    `json:"user_id"`
 	Action string `json:"action"`
-}
-
-// AdminUserBindingContext names exactly one binding: a built-in binding type
-// or a custom OAuth provider ID.
-type AdminUserBindingContext struct {
-	UserID      int    `json:"user_id"`
-	BindingType string `json:"binding_type,omitempty"`
-	ProviderID  int    `json:"provider_id,omitempty"`
 }
 
 type AdminUserCreateContext struct {
@@ -171,20 +153,7 @@ func BindVerificationOperation(operation VerificationOperation) (VerificationBin
 			if len(fields) != 2 || common.Validate.Var(context.Email, "required,email") != nil || context.Code != "" {
 				return VerificationBinding{}, ErrVerificationContextInvalid
 			}
-		case "wechat":
-			context.Code = strings.TrimSpace(context.Code)
-			if len(fields) != 2 || context.Code == "" || len(context.Code) > 128 || context.Email != "" {
-				return VerificationBinding{}, ErrVerificationContextInvalid
-			}
 		default:
-			if len(fields) != 1 || context.Provider == "" || len(context.Provider) > 64 || oauth.GetProvider(context.Provider) == nil {
-				return VerificationBinding{}, ErrVerificationContextInvalid
-			}
-		}
-		normalized = context
-	case VerificationScopeAccountUnbind:
-		var context AccountUnbindingContext
-		if len(fields) != 1 || common.Unmarshal(fields["provider_id"], &context.ProviderID) != nil || context.ProviderID <= 0 {
 			return VerificationBinding{}, ErrVerificationContextInvalid
 		}
 		normalized = context
@@ -197,16 +166,6 @@ func BindVerificationOperation(operation VerificationOperation) (VerificationBin
 	case VerificationScopeAdminUserManage:
 		var context AdminUserManageContext
 		if len(fields) != 2 || common.Unmarshal(operation.Context, &context) != nil || context.UserID <= 0 || !slices.Contains(adminUserManageActions, context.Action) {
-			return VerificationBinding{}, ErrVerificationContextInvalid
-		}
-		normalized = context
-	case VerificationScopeAdminUserBindingClear:
-		var context AdminUserBindingContext
-		if len(fields) != 2 || common.Unmarshal(operation.Context, &context) != nil || context.UserID <= 0 || context.ProviderID < 0 {
-			return VerificationBinding{}, ErrVerificationContextInvalid
-		}
-		context.BindingType = strings.ToLower(strings.TrimSpace(context.BindingType))
-		if (context.BindingType == "") == (context.ProviderID == 0) || len(context.BindingType) > 32 {
 			return VerificationBinding{}, ErrVerificationContextInvalid
 		}
 		normalized = context
@@ -283,17 +242,10 @@ type VerificationMethodOption struct {
 	Reason    string `json:"reason,omitempty"`
 }
 
-type VerificationOAuthProvider struct {
-	Slug   string `json:"slug"`
-	Name   string `json:"name"`
-	UserID string `json:"-"`
-}
-
 type VerificationRequirements struct {
-	Scope                     string                      `json:"scope"`
-	Methods                   []VerificationMethodOption  `json:"methods"`
-	OAuthProviders            []VerificationOAuthProvider `json:"oauth_providers"`
-	PasswordEncryptionEnabled bool                        `json:"password_encryption_enabled"`
+	Scope                     string                     `json:"scope"`
+	Methods                   []VerificationMethodOption `json:"methods"`
+	PasswordEncryptionEnabled bool                       `json:"password_encryption_enabled"`
 }
 
 // securityVerificationPolicy is the only operation-to-method policy. Device
@@ -306,23 +258,21 @@ func securityVerificationPolicy(scope string, state model.UserVerificationState)
 		// require a step-up here were removed. An empty list means the caller
 		// treats the account as "no step-up required" and issues the session.
 	case VerificationScopeAccessTokenGenerate, VerificationScopeAccessTokenUpdate, VerificationScopeAccessTokenRevoke,
-		VerificationScopeAccountBind, VerificationScopeAccountUnbind,
-		VerificationScopePasswordSet, VerificationScopePasswordChange, VerificationScopeAccountDelete,
-		VerificationScopeAdminUserCreate, VerificationScopeAdminUserUpdate, VerificationScopeAdminUserDelete,
-		VerificationScopeAdminUserManage, VerificationScopeAdminUserBindingClear:
+		VerificationScopeAccountBind, VerificationScopePasswordSet, VerificationScopePasswordChange,
+		VerificationScopeAccountDelete, VerificationScopeAdminUserCreate, VerificationScopeAdminUserUpdate,
+		VerificationScopeAdminUserDelete, VerificationScopeAdminUserManage:
 		if scope == VerificationScopeAccountDelete && state.Role == common.RoleRootUser {
 			return nil, ErrVerificationForbidden
 		}
 		if (scope == VerificationScopePasswordSet && state.HasPassword) || (scope == VerificationScopePasswordChange && !state.HasPassword) {
 			return nil, ErrVerificationForbidden
 		}
-		if len(methods) == 0 {
-			if state.HasPassword {
-				methods = []string{VerificationMethodPassword}
-			} else {
-				methods = []string{VerificationMethodOAuth}
-			}
+		// The password is the only remaining step-up factor. An account without
+		// one cannot authorize these actions at all.
+		if !state.HasPassword {
+			return nil, ErrVerificationUnavailable
 		}
+		methods = []string{VerificationMethodPassword}
 	default:
 		return nil, ErrProofScope
 	}
@@ -357,84 +307,18 @@ func GetVerificationRequirements(identity AuthIdentity, scope string) (*Verifica
 	if err != nil {
 		return nil, err
 	}
-	requirements := &VerificationRequirements{Scope: scope, Methods: methods, OAuthProviders: []VerificationOAuthProvider{}, PasswordEncryptionEnabled: common.PasswordLoginEncryptionEnabled}
+	requirements := &VerificationRequirements{Scope: scope, Methods: methods, PasswordEncryptionEnabled: common.PasswordLoginEncryptionEnabled}
 	for i := range methods {
 		if methods[i].Method == VerificationMethodPassword && !common.PasswordLoginEnabled {
 			switch scope {
-			case VerificationScopeAccountBind, VerificationScopeAccountUnbind, VerificationScopePasswordSet, VerificationScopePasswordChange, VerificationScopeAccountDelete,
-				VerificationScopeAdminUserCreate, VerificationScopeAdminUserUpdate, VerificationScopeAdminUserDelete,
-				VerificationScopeAdminUserManage, VerificationScopeAdminUserBindingClear:
+			case VerificationScopeAccountBind, VerificationScopePasswordSet, VerificationScopePasswordChange,
+				VerificationScopeAccountDelete, VerificationScopeAdminUserCreate, VerificationScopeAdminUserUpdate,
+				VerificationScopeAdminUserDelete, VerificationScopeAdminUserManage:
 				methods[i].Available, methods[i].Reason = false, "Password authentication is disabled."
-			}
-		}
-		if methods[i].Method != VerificationMethodOAuth {
-			continue
-		}
-		// OAuth verification completes through a browser popup bound to a login
-		// session, which an access token cannot provide.
-		if _, ok := model.ParseAccessTokenSessionID(identity.SessionID); ok {
-			methods[i].Available, methods[i].Reason = false, "OAuth verification requires a browser sign-in and is not available with an access token."
-			continue
-		}
-		user, err := model.GetUserById(identity.UserID, false)
-		if err != nil {
-			return nil, err
-		}
-		requirements.OAuthProviders, err = verificationOAuthProviders(user)
-		if err != nil {
-			return nil, err
-		}
-		if len(requirements.OAuthProviders) == 0 {
-			methods[i].Available, methods[i].Reason = false, "No linked OAuth provider is available."
-			if user.TelegramId != "" {
-				if err := oauth.TelegramConfigurationError(); err != nil {
-					methods[i].Reason = err.Error()
-				}
 			}
 		}
 	}
 	return requirements, nil
-}
-
-func verificationOAuthProviders(user *model.User) ([]VerificationOAuthProvider, error) {
-	bindings := map[int]string{}
-	if len(oauth.GetEnabledCustomProviders()) > 0 {
-		stored, err := model.GetUserOAuthBindingsByUserId(user.Id)
-		if err != nil {
-			return nil, err
-		}
-		for _, binding := range stored {
-			bindings[binding.ProviderId] = binding.ProviderUserId
-		}
-	}
-	providers := []VerificationOAuthProvider{}
-	for slug, provider := range oauth.GetAllProviders() {
-		if !provider.IsEnabled() {
-			continue
-		}
-		var userID string
-		if custom, ok := provider.(*oauth.GenericOAuthProvider); ok {
-			userID = bindings[custom.GetProviderId()]
-		} else {
-			switch provider.ProviderUserIDColumn() {
-			case "github_id":
-				userID = user.GitHubId
-			case "discord_id":
-				userID = user.DiscordId
-			case "oidc_id":
-				userID = user.OidcId
-			case "linux_do_id":
-				userID = user.LinuxDOId
-			case "telegram_id":
-				userID = user.TelegramId
-			}
-		}
-		if userID != "" {
-			providers = append(providers, VerificationOAuthProvider{Slug: slug, Name: provider.GetName(), UserID: userID})
-		}
-	}
-	sort.Slice(providers, func(i, j int) bool { return providers[i].Slug < providers[j].Slug })
-	return providers, nil
 }
 
 func RequireVerificationMethod(identity AuthIdentity, scope, method string) (*VerificationRequirements, error) {
@@ -563,23 +447,8 @@ func VerifySecurityInput(identity AuthIdentity, input VerificationInput) (*Secur
 		if password == "" || user.Password == "" || !common.ValidatePasswordAndHash(password, user.Password) {
 			return nil, ErrVerificationFailed
 		}
-	case VerificationMethodOAuth:
-		return nil, ErrVerificationFlowRequired
 	default:
 		return nil, ErrProofMethod
 	}
 	return CompleteSecurityVerification(identity, binding, input.Method)
-}
-
-func GetOAuthVerificationBinding(identity AuthIdentity, scope, provider string) (string, error) {
-	requirements, err := RequireVerificationMethod(identity, scope, VerificationMethodOAuth)
-	if err != nil {
-		return "", err
-	}
-	for _, linked := range requirements.OAuthProviders {
-		if linked.Slug == provider {
-			return linked.UserID, nil
-		}
-	}
-	return "", ErrVerificationUnavailable
 }

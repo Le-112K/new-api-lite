@@ -62,7 +62,7 @@ func TestProcessChannelErrorMasksDisableReasonAndNotification(t *testing.T) {
 	previousCache, previousRedis := common.MemoryCacheEnabled, common.RedisEnabled
 	previousAutoDisable, previousErrorLog := common.AutomaticDisableChannelEnabled, constant.ErrorLogEnabled
 	previousNotifyLimit := constant.NotifyLimitCount
-	previousClient, previousWorker := httpClient, system_setting.WorkerUrl
+	previousClient := httpClient
 	fetch := system_setting.GetFetchSetting()
 	previousFetch := *fetch
 	t.Cleanup(func() {
@@ -71,7 +71,7 @@ func TestProcessChannelErrorMasksDisableReasonAndNotification(t *testing.T) {
 		common.MemoryCacheEnabled, common.RedisEnabled = previousCache, previousRedis
 		common.AutomaticDisableChannelEnabled, constant.ErrorLogEnabled = previousAutoDisable, previousErrorLog
 		constant.NotifyLimitCount = previousNotifyLimit
-		httpClient, system_setting.WorkerUrl = previousClient, previousWorker
+		httpClient = previousClient
 		*fetch = previousFetch
 	})
 	database, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
@@ -95,7 +95,7 @@ func TestProcessChannelErrorMasksDisableReasonAndNotification(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	t.Cleanup(server.Close)
-	httpClient, system_setting.WorkerUrl = server.Client(), ""
+	httpClient = server.Client()
 	fetch.EnableSSRFProtection = false
 	settings, err := common.Marshal(kitdto.UserSetting{NotifyType: kitdto.NotifyTypeWebhook, WebhookUrl: server.URL})
 	require.NoError(t, err)

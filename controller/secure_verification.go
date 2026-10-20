@@ -7,7 +7,6 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
-	"github.com/QuantumNous/new-api/oauth"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/gin-gonic/gin"
 )
@@ -52,21 +51,6 @@ func writeSecurityOperationError(c *gin.Context, err error) {
 	case errors.Is(err, model.ErrAccountPasswordState), errors.Is(err, model.ErrAccountBindingChanged):
 		status = http.StatusConflict
 		code, message = "ACCOUNT_SECURITY_STATE_CHANGED", err.Error()
-	case errors.Is(err, model.ErrLastLoginMethod):
-		code, message = "LAST_LOGIN_METHOD", err.Error()
-	case errors.Is(err, oauth.ErrTelegramOAuthNotConfigured):
-		code, message = "TELEGRAM_OAUTH_NOT_CONFIGURED", oauth.ErrTelegramOAuthNotConfigured.Error()
-	case errors.Is(err, oauth.ErrTelegramOAuthConflict):
-		code, message = "TELEGRAM_OAUTH_CONFLICT", oauth.ErrTelegramOAuthConflict.Error()
-	case errors.Is(err, oauth.ErrTelegramOAuthFailed):
-		code, message = "TELEGRAM_OAUTH_FAILED", oauth.ErrTelegramOAuthFailed.Error()
-	case errors.Is(err, oauth.ErrTelegramAccountNotBound):
-		code, message = "TELEGRAM_ACCOUNT_NOT_BOUND", oauth.ErrTelegramAccountNotBound.Error()
-	case errors.Is(err, model.ErrExternalIdentityAlreadyClaimed):
-		code, message = "ACCOUNT_ALREADY_BOUND", "This external account is already bound."
-		if c.Param("provider") == "telegram" {
-			code, message = "TELEGRAM_BIND_ALREADY_BOUND", "This Telegram account is already bound."
-		}
 	case errors.Is(err, service.ErrVerificationContextInvalid):
 		status = http.StatusBadRequest
 		code, message = "SECURITY_CONTEXT_INVALID", service.ErrVerificationContextInvalid.Error()
@@ -77,15 +61,10 @@ func writeSecurityOperationError(c *gin.Context, err error) {
 		code, message = "SECURITY_VERIFICATION_FAILED", service.ErrVerificationFailed.Error()
 	case errors.Is(err, service.ErrVerificationUnavailable):
 		code, message = "SECURITY_METHOD_UNAVAILABLE", service.ErrVerificationUnavailable.Error()
-	case errors.Is(err, service.ErrVerificationFlowRequired):
-		status = http.StatusBadRequest
-		code, message = "SECURITY_VERIFICATION_FLOW_REQUIRED", service.ErrVerificationFlowRequired.Error()
 	case errors.Is(err, service.ErrProofMethod):
 		code, message = "SECURITY_PROOF_METHOD_MISMATCH", "This verification method is not allowed for this action."
 	case errors.Is(err, service.ErrProofScope):
 		code, message = "SECURITY_PROOF_SCOPE_MISMATCH", "Verification does not match this action."
-	case errors.Is(err, service.ErrOAuthAccountMismatch):
-		code, message = "OAUTH_ACCOUNT_MISMATCH", service.ErrOAuthAccountMismatch.Error()
 	case errors.Is(err, model.ErrAuthFlowInvalid), errors.Is(err, model.ErrAuthFlowExpired), errors.Is(err, model.ErrAuthFlowConsumed):
 		code, message = "AUTH_FLOW_INVALID", "Verification flow expired"
 	case errors.Is(err, model.ErrUserSessionInvalid), errors.Is(err, model.ErrUserSessionInactive):

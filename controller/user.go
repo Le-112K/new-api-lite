@@ -104,21 +104,10 @@ func loginMethodFromContext(c *gin.Context) string {
 	if method := c.GetString("login_method"); method != "" {
 		return method
 	}
-	switch c.FullPath() {
-	case "/api/user/login":
+	if c.FullPath() == "/api/user/login" {
 		return "password"
-	case "/api/oauth/wechat":
-		return "wechat"
-	case "/api/oauth/telegram/login":
-		return "telegram"
-	case "/api/oauth/:provider":
-		if provider := c.Param("provider"); provider != "" {
-			return "oauth:" + provider
-		}
-		return "oauth"
-	default:
-		return "unknown"
 	}
+	return "unknown"
 }
 
 // recordLoginAudit 记录登录成功审计日志（对所有用户启用，仅记录成功，不记录失败）。
@@ -482,11 +471,6 @@ func buildSelfUserData(user *model.User) map[string]any {
 		"role":              user.Role,
 		"status":            user.Status,
 		"email":             user.Email,
-		"github_id":         user.GitHubId,
-		"discord_id":        user.DiscordId,
-		"oidc_id":           user.OidcId,
-		"wechat_id":         user.WeChatId,
-		"telegram_id":       user.TelegramId,
 		"group":             user.Group,
 		"quota":             user.Quota,
 		"used_quota":        user.UsedQuota,
@@ -496,7 +480,6 @@ func buildSelfUserData(user *model.User) map[string]any {
 		"aff_quota":         user.AffQuota,
 		"aff_history_quota": user.AffHistoryQuota,
 		"inviter_id":        user.InviterId,
-		"linux_do_id":       user.LinuxDOId,
 		"setting":           user.Setting,
 		"stripe_customer":   user.StripeCustomer,
 		"sidebar_modules":   userSetting.SidebarModules, // 正确提取sidebar_modules字段
@@ -701,52 +684,6 @@ func UpdateUser(c *gin.Context) {
 		"message": "",
 	})
 	return
-}
-
-func AdminClearUserBinding(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
-		return
-	}
-
-	bindingType := strings.ToLower(strings.TrimSpace(c.Param("binding_type")))
-	if bindingType == "" {
-		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
-		return
-	}
-
-	user, err := model.GetUserById(id, false)
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
-
-	myRole := c.GetInt("role")
-	if !canManageTargetRole(myRole, user.Role) {
-		common.ApiErrorI18n(c, i18n.MsgUserNoPermissionSameLevel)
-		return
-	}
-	authorization := requireAdminUserProof(c, service.VerificationScopeAdminUserBindingClear, service.AdminUserBindingContext{UserID: user.Id, BindingType: bindingType})
-	if authorization == nil {
-		return
-	}
-
-	if err := user.ClearBinding(bindingType); err != nil {
-		common.ApiError(c, err)
-		return
-	}
-
-	recordManageAuditFor(c, user.Id, "user.binding_clear", map[string]any{
-		"bindingType":         bindingType,
-		"username":            user.Username,
-		"verification_method": authorization.Method,
-	})
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "success",
-	})
 }
 
 func UpdateSelf(c *gin.Context) {

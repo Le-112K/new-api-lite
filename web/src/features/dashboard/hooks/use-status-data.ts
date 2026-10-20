@@ -69,6 +69,5 @@ export function useDashboardContentVisibility() {
     apiInfo: hasStatus && status?.api_info_enabled !== false,
     announcements: hasStatus && status?.announcements_enabled !== false,
     faq: hasStatus && status?.faq_enabled !== false,
-    uptimeKuma: hasStatus && status?.uptime_kuma_enabled !== false,
   }
 }

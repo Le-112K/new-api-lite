@@ -25,7 +25,6 @@ var accessTokenExemptRoutes = []string{
 	"GET /api/setup",
 	"POST /api/setup",
 	"GET /api/status",
-	"GET /api/uptime/status",
 	"GET /api/notice",
 	"GET /api/user-agreement",
 	"GET /api/privacy-policy",
@@ -41,9 +40,6 @@ var accessTokenExemptRoutes = []string{
 	"POST /api/user/register",
 	"GET /api/user/login/encryption-key",
 	"POST /api/user/login",
-	"GET /api/oauth/wechat",
-	"GET /api/oauth/telegram/login",
-	"GET /api/oauth/telegram/bind/:flow_token",
 
 	// Browser session cookie endpoints.
 	"POST /api/user/auth/refresh",

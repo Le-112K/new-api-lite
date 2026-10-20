@@ -11,13 +11,9 @@ import (
 	"github.com/QuantumNous/new-api/common"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 const (
-	AuthFlowPurposeOAuth             = "oauth"
-	AuthFlowPurposeTelegramBind      = "telegram_bind"
-	AuthFlowPurposeTelegramAssertion = "telegram_assertion"
 	AuthFlowIntentLogin              = "login"
 	AuthFlowIntentBind               = "bind"
 	AuthFlowIntentVerify             = "verify"
@@ -164,44 +160,6 @@ func createAuthFlowWithTx(tx *gorm.DB, input AuthFlowCreate) (string, *AuthFlow,
 		return "", nil, err
 	}
 	return token, flow, nil
-}
-
-// ClaimExternalAuthAssertion records a signed provider assertion as consumed.
-// The assertion is HMACed before storage and the unique token_hash index makes
-// replay rejection atomic on SQLite, MySQL and PostgreSQL.
-func ClaimExternalAuthAssertion(purpose, assertion string, expiresAt time.Time) error {
-	return DB.Transaction(func(tx *gorm.DB) error {
-		return ClaimExternalAuthAssertionWithTx(tx, purpose, assertion, expiresAt)
-	})
-}
-
-// ClaimExternalAuthAssertionWithTx records a provider assertion in the
-// caller's transaction so replay protection can commit atomically with the
-// authentication flow and its resulting state change.
-func ClaimExternalAuthAssertionWithTx(tx *gorm.DB, purpose, assertion string, expiresAt time.Time) error {
-	purpose = strings.TrimSpace(purpose)
-	assertion = strings.TrimSpace(assertion)
-	now := time.Now()
-	if tx == nil || purpose == "" || assertion == "" || !expiresAt.After(now) {
-		return ErrAuthFlowInvalid
-	}
-	flow := AuthFlow{
-		TokenHash:  authFlowTokenHash("external:" + purpose + ":" + assertion),
-		Purpose:    purpose,
-		ExpiresAt:  expiresAt,
-		ConsumedAt: &now,
-	}
-	result := tx.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "token_hash"}},
-		DoNothing: true,
-	}).Create(&flow)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected != 1 {
-		return ErrAuthFlowConsumed
-	}
-	return nil
 }
 
 // GetAuthFlow validates a flow without consuming it. Callers must still use

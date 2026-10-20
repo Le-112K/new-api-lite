@@ -10,7 +10,6 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/relaykit/dto"
-	"github.com/QuantumNous/new-api/setting/system_setting"
 )
 
 func NotifyRootUser(t string, subject string, content string) {
@@ -130,54 +129,31 @@ func sendBarkNotify(barkURL string, data dto.Notify) error {
 	var resp *http.Response
 	var err error
 
-	if system_setting.EnableWorker() {
-		// 使用worker发送请求
-		workerReq := &WorkerRequest{
-			URL:    finalURL,
-			Key:    system_setting.WorkerValidKey,
-			Method: http.MethodGet,
-			Headers: map[string]string{
-				"User-Agent": "OneAPI-Bark-Notify/1.0",
-			},
-		}
+	// SSRF防护：验证Bark URL
+	if err := ValidateSSRFProtectedFetchURL(finalURL); err != nil {
+		return fmt.Errorf("request reject: %v", err)
+	}
 
-		resp, err = DoWorkerRequest(workerReq)
-		if err != nil {
-			return fmt.Errorf("failed to send bark request through worker: %v", err)
-		}
-		defer resp.Body.Close()
+	// 直接发送请求
+	req, err = http.NewRequest(http.MethodGet, finalURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create bark request: %v", err)
+	}
 
-		// 检查响应状态
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return fmt.Errorf("bark request failed with status code: %d", resp.StatusCode)
-		}
-	} else {
-		// SSRF防护：验证Bark URL（非Worker模式）
-		if err := ValidateSSRFProtectedFetchURL(finalURL); err != nil {
-			return fmt.Errorf("request reject: %v", err)
-		}
+	// 设置User-Agent
+	req.Header.Set("User-Agent", "OneAPI-Bark-Notify/1.0")
 
-		// 直接发送请求
-		req, err = http.NewRequest(http.MethodGet, finalURL, nil)
-		if err != nil {
-			return fmt.Errorf("failed to create bark request: %v", err)
-		}
+	// 发送请求
+	client := GetSSRFProtectedHTTPClient()
+	resp, err = client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send bark request: %v", err)
+	}
+	defer resp.Body.Close()
 
-		// 设置User-Agent
-		req.Header.Set("User-Agent", "OneAPI-Bark-Notify/1.0")
-
-		// 发送请求
-		client := GetSSRFProtectedHTTPClient()
-		resp, err = client.Do(req)
-		if err != nil {
-			return fmt.Errorf("failed to send bark request: %v", err)
-		}
-		defer resp.Body.Close()
-
-		// 检查响应状态
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return fmt.Errorf("bark request failed with status code: %d", resp.StatusCode)
-		}
+	// 检查响应状态
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("bark request failed with status code: %d", resp.StatusCode)
 	}
 
 	return nil
@@ -221,57 +197,32 @@ func sendGotifyNotify(gotifyUrl string, gotifyToken string, priority int, data d
 	var req *http.Request
 	var resp *http.Response
 
-	if system_setting.EnableWorker() {
-		// 使用worker发送请求
-		workerReq := &WorkerRequest{
-			URL:    finalURL,
-			Key:    system_setting.WorkerValidKey,
-			Method: http.MethodPost,
-			Headers: map[string]string{
-				"Content-Type": "application/json; charset=utf-8",
-				"User-Agent":   "OneAPI-Gotify-Notify/1.0",
-			},
-			Body: payloadBytes,
-		}
+	// SSRF防护：验证Gotify URL
+	if err := ValidateSSRFProtectedFetchURL(finalURL); err != nil {
+		return fmt.Errorf("request reject: %v", err)
+	}
 
-		resp, err = DoWorkerRequest(workerReq)
-		if err != nil {
-			return fmt.Errorf("failed to send gotify request through worker: %v", err)
-		}
-		defer resp.Body.Close()
+	// 直接发送请求
+	req, err = http.NewRequest(http.MethodPost, finalURL, bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		return fmt.Errorf("failed to create gotify request: %v", err)
+	}
 
-		// 检查响应状态
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return fmt.Errorf("gotify request failed with status code: %d", resp.StatusCode)
-		}
-	} else {
-		// SSRF防护：验证Gotify URL（非Worker模式）
-		if err := ValidateSSRFProtectedFetchURL(finalURL); err != nil {
-			return fmt.Errorf("request reject: %v", err)
-		}
+	// 设置请求头
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Set("User-Agent", "NewAPI-Gotify-Notify/1.0")
 
-		// 直接发送请求
-		req, err = http.NewRequest(http.MethodPost, finalURL, bytes.NewBuffer(payloadBytes))
-		if err != nil {
-			return fmt.Errorf("failed to create gotify request: %v", err)
-		}
+	// 发送请求
+	client := GetSSRFProtectedHTTPClient()
+	resp, err = client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send gotify request: %v", err)
+	}
+	defer resp.Body.Close()
 
-		// 设置请求头
-		req.Header.Set("Content-Type", "application/json; charset=utf-8")
-		req.Header.Set("User-Agent", "NewAPI-Gotify-Notify/1.0")
-
-		// 发送请求
-		client := GetSSRFProtectedHTTPClient()
-		resp, err = client.Do(req)
-		if err != nil {
-			return fmt.Errorf("failed to send gotify request: %v", err)
-		}
-		defer resp.Body.Close()
-
-		// 检查响应状态
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return fmt.Errorf("gotify request failed with status code: %d", resp.StatusCode)
-		}
+	// 检查响应状态
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("gotify request failed with status code: %d", resp.StatusCode)
 	}
 
 	return nil

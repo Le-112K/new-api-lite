@@ -451,7 +451,6 @@ const AUDIT_TEMPLATES: Record<string, string> = {
   'user.password_change': 'Account password change',
   'user.binding_start': 'Account binding request',
   'user.binding_bind': 'Account binding',
-  'user.binding_unbind': 'Account unlinking',
   'user.email_binding_resend': 'Email confirmation code resend',
 
   login: 'Logged in successfully via {{method}}',
@@ -464,18 +463,12 @@ const AUDIT_TEMPLATES: Record<string, string> = {
   'user.quota_add': 'Increased user quota by {{quota}}',
   'user.quota_subtract': 'Decreased user quota by {{quota}}',
   'user.quota_override': 'Overrode user quota from {{from}} to {{to}}',
-  'user.binding_clear': 'Cleared {{bindingType}} binding for user {{username}}',
   'user.topup_complete': 'Completed top-up order for the user',
-  'user.oauth_unbind': 'Removed an OAuth binding for the user',
   // System settings
   'option.update': 'Updated system setting {{key}}',
   'option.payment_compliance': 'Confirmed payment compliance',
   'option.reset_ratio': 'Reset model ratios',
   'option.clear_affinity_cache': 'Cleared channel affinity cache',
-  // Custom OAuth
-  'custom_oauth.create': 'Created a custom OAuth provider',
-  'custom_oauth.update': 'Updated a custom OAuth provider',
-  'custom_oauth.delete': 'Deleted a custom OAuth provider',
   // Performance / cache
   'performance.clear_disk_cache': 'Cleared disk cache',
   'performance.gc': 'Triggered garbage collection',
@@ -526,7 +519,6 @@ const AUDIT_TEMPLATES: Record<string, string> = {
   'subscription.plan_update': 'Updated a subscription plan',
   'subscription.bind': 'Bound a subscription',
   // Logs
-  'log.clear': 'Cleared historical logs',
   'log.cleanup_start': 'Log cleanup task started.',
   // Generic middleware fallback
   generic: '{{method}} {{route}}',

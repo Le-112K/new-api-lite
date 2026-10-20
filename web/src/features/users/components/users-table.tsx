@@ -206,6 +206,7 @@ export function UsersTable() {
     <DataTablePage
       table={table}
       columns={columns}
+      presentation='panel'
       isLoading={isLoading}
       isFetching={isFetching}
       emptyTitle={t('No Users Found')}
