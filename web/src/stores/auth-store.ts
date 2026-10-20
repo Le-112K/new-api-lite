@@ -40,7 +40,6 @@ export interface AuthUser {
   request_count?: number
   language?: string
   setting?: Record<string, unknown> | string
-  stripe_customer?: string
   sidebar_modules?: string
   permissions?: UserPermissions
 }

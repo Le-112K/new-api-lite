@@ -25,32 +25,14 @@ import { useSystemConfig } from '@/hooks/use-system-config'
 import { getSelf } from '@/lib/api'
 
 import { BillingHistoryDialog } from './components/dialogs/billing-history-dialog'
-import { CreemConfirmDialog } from './components/dialogs/creem-confirm-dialog'
 import { PaymentConfirmDialog } from './components/dialogs/payment-confirm-dialog'
 import { RechargeFormCard } from './components/recharge-form-card'
 import { SubscriptionPlansCard } from './components/subscription-plans-card'
 import { WalletStatsCard } from './components/wallet-stats-card'
-import { DEFAULT_DISCOUNT_RATE, PAYMENT_TYPES } from './constants'
-import {
-  useTopupInfo,
-  usePayment,
-  useRedemption,
-  useCreemPayment,
-  useWaffoPayment,
-  useWaffoPancakePayment,
-} from './hooks'
-import {
-  getDefaultPaymentType,
-  getMinTopupAmount,
-  dispatchSelectedPayment,
-} from './lib'
-import type {
-  UserWalletData,
-  PaymentMethod,
-  PresetAmount,
-  CreemProduct,
-  WaffoPayMethod,
-} from './types'
+import { DEFAULT_DISCOUNT_RATE } from './constants'
+import { useTopupInfo, usePayment, useRedemption } from './hooks'
+import { getDefaultPaymentType, getMinTopupAmount } from './lib'
+import type { UserWalletData, PaymentMethod, PresetAmount } from './types'
 
 interface WalletProps {
   initialShowHistory?: boolean
@@ -64,16 +46,10 @@ export function Wallet(props: WalletProps) {
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null)
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<PaymentMethod>()
-  const [selectedWaffoMethodIndex, setSelectedWaffoMethodIndex] = useState<
-    number | null
-  >(null)
   const [paymentLoading, setPaymentLoading] = useState<string | null>(null)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
   const [billingDialogOpen, setBillingDialogOpen] = useState(false)
   const [redemptionCode, setRedemptionCode] = useState('')
-  const [creemDialogOpen, setCreemDialogOpen] = useState(false)
-  const [selectedCreemProduct, setSelectedCreemProduct] =
-    useState<CreemProduct | null>(null)
   const [showSubscriptionPanel, setShowSubscriptionPanel] = useState(true)
 
   const { status } = useStatus()
@@ -94,10 +70,6 @@ export function Wallet(props: WalletProps) {
     processPayment,
   } = usePayment()
   const { redeeming, redeemCode } = useRedemption()
-  const { processing: creemProcessing, processCreemPayment } = useCreemPayment()
-  const { processing: waffoProcessing, processWaffoPayment } = useWaffoPayment()
-  const { processing: pancakeProcessing, processWaffoPancakePayment } =
-    useWaffoPancakePayment()
 
   // Fetch and refresh user data
   const fetchUser = useCallback(async () => {
@@ -162,7 +134,6 @@ export function Wallet(props: WalletProps) {
   // Handle payment method selection
   const handlePaymentMethodSelect = async (method: PaymentMethod) => {
     setSelectedPaymentMethod(method)
-    setSelectedWaffoMethodIndex(null)
     setPaymentLoading(method.type)
 
     try {
@@ -184,16 +155,7 @@ export function Wallet(props: WalletProps) {
   const handlePaymentConfirm = async () => {
     if (!selectedPaymentMethod) return
 
-    const success = await dispatchSelectedPayment(
-      selectedPaymentMethod,
-      topupAmount,
-      selectedWaffoMethodIndex,
-      {
-        regular: processPayment,
-        waffo: processWaffoPayment,
-        waffoPancake: processWaffoPancakePayment,
-      }
-    )
+    const success = await processPayment(topupAmount, selectedPaymentMethod.type)
 
     if (success) {
       setConfirmDialogOpen(false)
@@ -209,45 +171,6 @@ export function Wallet(props: WalletProps) {
     if (success) {
       setRedemptionCode('')
       await fetchUser()
-    }
-  }
-
-  // Handle Creem product selection
-  const handleCreemProductSelect = (product: CreemProduct) => {
-    setSelectedCreemProduct(product)
-    setCreemDialogOpen(true)
-  }
-
-  // Handle Creem payment confirmation
-  const handleCreemConfirm = async () => {
-    if (!selectedCreemProduct) return
-
-    const success = await processCreemPayment(selectedCreemProduct.productId)
-    if (success) {
-      setCreemDialogOpen(false)
-      setSelectedCreemProduct(null)
-      await fetchUser()
-    }
-  }
-
-  const handleWaffoMethodSelect = async (
-    method: WaffoPayMethod,
-    index: number
-  ) => {
-    const loadingKey = `waffo-${index}`
-    setSelectedPaymentMethod({
-      name: method.name,
-      type: PAYMENT_TYPES.WAFFO,
-      icon: method.icon,
-    })
-    setSelectedWaffoMethodIndex(index)
-    setPaymentLoading(loadingKey)
-
-    try {
-      await calculatePaymentAmount(topupAmount, PAYMENT_TYPES.WAFFO)
-      setConfirmDialogOpen(true)
-    } finally {
-      setPaymentLoading(null)
     }
   }
 
@@ -299,16 +222,6 @@ export function Wallet(props: WalletProps) {
                   priceRatio={(status?.price as number) || 1}
                   usdExchangeRate={effectiveUsdExchangeRate}
                   onOpenBilling={() => setBillingDialogOpen(true)}
-                  creemProducts={topupInfo?.creem_products}
-                  enableCreemTopup={topupInfo?.enable_creem_topup}
-                  onCreemProductSelect={handleCreemProductSelect}
-                  enableWaffoTopup={topupInfo?.enable_waffo_topup}
-                  waffoPayMethods={topupInfo?.waffo_pay_methods}
-                  waffoMinTopup={topupInfo?.waffo_min_topup}
-                  onWaffoMethodSelect={handleWaffoMethodSelect}
-                  enableWaffoPancakeTopup={
-                    topupInfo?.enable_waffo_pancake_topup
-                  }
                 />
               </div>
 
@@ -331,7 +244,7 @@ export function Wallet(props: WalletProps) {
         paymentAmount={paymentAmount}
         paymentMethod={selectedPaymentMethod}
         calculating={calculating}
-        processing={processing || waffoProcessing || pancakeProcessing}
+        processing={processing}
         discountRate={getDiscountRate()}
         usdExchangeRate={effectiveUsdExchangeRate}
       />
@@ -339,14 +252,6 @@ export function Wallet(props: WalletProps) {
       <BillingHistoryDialog
         open={billingDialogOpen}
         onOpenChange={setBillingDialogOpen}
-      />
-
-      <CreemConfirmDialog
-        open={creemDialogOpen}
-        onOpenChange={setCreemDialogOpen}
-        onConfirm={handleCreemConfirm}
-        product={selectedCreemProduct}
-        processing={creemProcessing}
       />
     </>
   )

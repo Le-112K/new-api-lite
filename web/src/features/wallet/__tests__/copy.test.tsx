@@ -52,7 +52,7 @@ it('translates billing history statuses and updates them when the language chang
           amount: 10,
           money: 10,
           trade_no: `order-${id}`,
-          payment_method: 'stripe',
+          payment_method: 'alipay',
           create_time: 1,
         })),
       },
@@ -84,10 +84,8 @@ it.each([
         <RechargeFormCard
           topupInfo={{
             enable_online_topup: true,
-            enable_stripe_topup: false,
             pay_methods: [],
             min_topup: 1,
-            stripe_min_topup: 1,
             amount_options: [100, 20],
             discount: {},
           }}

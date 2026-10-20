@@ -88,21 +88,6 @@ func getUserQuotaForPaymentGuardTest(t *testing.T, userID int) int {
 	return user.Quota
 }
 
-func TestRechargeWaffoPancake_RejectsMismatchedPaymentMethod(t *testing.T) {
-	truncateTables(t)
-
-	insertUserForPaymentGuardTest(t, 101, 0)
-	insertTopUpForPaymentGuardTest(t, "waffo-pancake-guard", 101, PaymentProviderStripe)
-
-	err := RechargeWaffoPancake("waffo-pancake-guard")
-	require.Error(t, err)
-
-	topUp := GetTopUpByTradeNo("waffo-pancake-guard")
-	require.NotNil(t, topUp)
-	assert.Equal(t, common.TopUpStatusPending, topUp.Status)
-	assert.Equal(t, 0, getUserQuotaForPaymentGuardTest(t, 101))
-}
-
 func TestUpdatePendingTopUpStatus_RejectsMismatchedPaymentProvider(t *testing.T) {
 	testCases := []struct {
 		name                    string
@@ -112,17 +97,17 @@ func TestUpdatePendingTopUpStatus_RejectsMismatchedPaymentProvider(t *testing.T)
 		targetStatus            string
 	}{
 		{
-			name:                    "stripe expire",
+			name:                    "creem order expired by stripe",
 			tradeNo:                 "stripe-expire-guard",
-			storedPaymentProvider:   PaymentProviderCreem,
-			expectedPaymentProvider: PaymentProviderStripe,
+			storedPaymentProvider:   "creem",
+			expectedPaymentProvider: "stripe",
 			targetStatus:            common.TopUpStatusExpired,
 		},
 		{
-			name:                    "waffo failed",
+			name:                    "stripe order failed by waffo",
 			tradeNo:                 "waffo-failed-guard",
-			storedPaymentProvider:   PaymentProviderStripe,
-			expectedPaymentProvider: PaymentProviderWaffo,
+			storedPaymentProvider:   "stripe",
+			expectedPaymentProvider: "waffo",
 			targetStatus:            common.TopUpStatusFailed,
 		},
 	}
@@ -145,7 +130,7 @@ func TestCompleteSubscriptionOrder_RejectsMismatchedPaymentProvider(t *testing.T
 
 	insertUserForPaymentGuardTest(t, 202, 0)
 	plan := insertSubscriptionPlanForPaymentGuardTest(t, 301)
-	insertSubscriptionOrderForPaymentGuardTest(t, "sub-guard-order", 202, plan.Id, PaymentProviderStripe)
+	insertSubscriptionOrderForPaymentGuardTest(t, "sub-guard-order", 202, plan.Id, "stripe")
 
 	err := CompleteSubscriptionOrder("sub-guard-order", `{"provider":"epay"}`, PaymentProviderEpay, "alipay")
 	require.ErrorIs(t, err, ErrPaymentMethodMismatch)
@@ -164,9 +149,9 @@ func TestExpireSubscriptionOrder_RejectsMismatchedPaymentProvider(t *testing.T) 
 
 	insertUserForPaymentGuardTest(t, 303, 0)
 	plan := insertSubscriptionPlanForPaymentGuardTest(t, 401)
-	insertSubscriptionOrderForPaymentGuardTest(t, "sub-expire-guard", 303, plan.Id, PaymentProviderStripe)
+	insertSubscriptionOrderForPaymentGuardTest(t, "sub-expire-guard", 303, plan.Id, "stripe")
 
-	err := ExpireSubscriptionOrder("sub-expire-guard", PaymentProviderCreem)
+	err := ExpireSubscriptionOrder("sub-expire-guard", "creem")
 	require.ErrorIs(t, err, ErrPaymentMethodMismatch)
 
 	order := GetSubscriptionOrderByTradeNo("sub-expire-guard")
@@ -274,7 +259,7 @@ func TestRechargeEpayRejectsForeignAndNonPendingOrders(t *testing.T) {
 	user := insertUserForPaymentGuardTest(t, 504, 7)
 
 	t.Run("order from another payment provider", func(t *testing.T) {
-		order := createEpayTestOrder(t, user.Id, "EPAYTESTSTRIPE", PaymentProviderStripe, common.TopUpStatusPending)
+		order := createEpayTestOrder(t, user.Id, "EPAYTESTSTRIPE", "stripe", common.TopUpStatusPending)
 		_, err := RechargeEpay(order.TradeNo, "alipay", "127.0.0.1")
 		assert.ErrorIs(t, err, ErrPaymentMethodMismatch)
 		assert.Equal(t, 7, getUserQuotaForPaymentGuardTest(t, user.Id))

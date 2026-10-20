@@ -16,10 +16,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import i18next from 'i18next'
-import { CreditCard, Landmark } from 'lucide-react'
+import { CreditCard } from 'lucide-react'
 import { type ReactNode } from 'react'
-import { SiAlipay, SiWechat, SiStripe } from 'react-icons/si'
+import { SiAlipay, SiWechat } from 'react-icons/si'
 
 import { ReactIconByName } from '@/components/react-icon-by-name'
 
@@ -111,48 +110,6 @@ export function getPaymentIcon(
           className={className}
           style={{ color: PAYMENT_ICON_COLORS[PAYMENT_TYPES.WECHAT] }}
         />
-      )
-    case PAYMENT_TYPES.STRIPE:
-      return (
-        <SiStripe
-          className={className}
-          style={{ color: PAYMENT_ICON_COLORS[PAYMENT_TYPES.STRIPE] }}
-        />
-      )
-    case PAYMENT_TYPES.CREEM:
-      return (
-        <Landmark
-          className={className}
-          style={{ color: PAYMENT_ICON_COLORS[PAYMENT_TYPES.CREEM] }}
-        />
-      )
-    case PAYMENT_TYPES.WAFFO:
-      return (
-        <CreditCard
-          className={className}
-          style={{ color: PAYMENT_ICON_COLORS[PAYMENT_TYPES.WAFFO] }}
-        />
-      )
-    case PAYMENT_TYPES.WAFFO_PANCAKE:
-      // The W glyph fills only ~40% of its viewBox vertically (wide and
-      // short letterform); scale(2) brings its rendered height in line
-      // with Stripe's S and Creem's Landmark.
-      return (
-        <span
-          className={`inline-flex items-center justify-center leading-none ${className}`}
-          style={{ transform: 'scale(2)' }}
-        >
-          <img
-            src='/waffo-logo-light.svg'
-            alt={i18next.t('Waffo')}
-            className='block h-full w-full object-contain dark:hidden'
-          />
-          <img
-            src='/waffo-logo-dark.svg'
-            alt={i18next.t('Waffo')}
-            className='hidden h-full w-full object-contain dark:block'
-          />
-        </span>
       )
     default:
       return <CreditCard className={className} />

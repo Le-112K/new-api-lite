@@ -39,10 +39,6 @@ const (
 	MsgAuthUserIdMismatch        = "auth.user_id_mismatch"
 	MsgAuthUserBanned            = "auth.user_banned"
 	MsgAuthInsufficientPrivilege = "auth.insufficient_privilege"
-	MsgAuthAccessTokenExpired    = "auth.access_token_expired"
-	MsgAuthLegacyTokenRetired    = "auth.legacy_access_token_retired"
-	MsgAuthAccessTokenScope      = "auth.access_token_scope_denied"
-	MsgAuthAccessTokenLimit      = "auth.access_token_limit"
 )
 
 // Token related messages
@@ -152,10 +148,6 @@ const (
 	MsgPaymentCreateFailed       = "payment.create_failed"
 	MsgPaymentStartFailed        = "payment.start_failed"
 	MsgPaymentAmountTooLow       = "payment.amount_too_low"
-	MsgPaymentStripeNotConfig    = "payment.stripe_not_configured"
-	MsgPaymentWebhookNotConfig   = "payment.webhook_not_configured"
-	MsgPaymentPriceIdNotConfig   = "payment.price_id_not_configured"
-	MsgPaymentCreemNotConfig     = "payment.creem_not_configured"
 	MsgPaymentComplianceRequired = "payment.compliance_required"
 )
 

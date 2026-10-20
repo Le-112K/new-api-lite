@@ -141,41 +141,7 @@ const BILLING_SECTIONS = [
           PayMethods: settings.PayMethods,
           AmountOptions: settings['payment_setting.amount_options'],
           AmountDiscount: settings['payment_setting.amount_discount'],
-          StripeApiSecret: settings.StripeApiSecret,
-          StripeWebhookSecret: settings.StripeWebhookSecret,
-          StripePriceId: settings.StripePriceId,
-          StripeUnitPrice: settings.StripeUnitPrice,
-          StripeMinTopUp: settings.StripeMinTopUp,
-          StripePromotionCodesEnabled: settings.StripePromotionCodesEnabled,
-          CreemApiKey: settings.CreemApiKey,
-          CreemWebhookSecret: settings.CreemWebhookSecret,
-          CreemTestMode: settings.CreemTestMode,
-          CreemProducts: settings.CreemProducts,
         }}
-        waffoDefaultValues={{
-          WaffoEnabled: settings.WaffoEnabled ?? false,
-          WaffoApiKey: settings.WaffoApiKey ?? '',
-          WaffoPrivateKey: settings.WaffoPrivateKey ?? '',
-          WaffoPublicCert: settings.WaffoPublicCert ?? '',
-          WaffoSandboxPublicCert: settings.WaffoSandboxPublicCert ?? '',
-          WaffoSandboxApiKey: settings.WaffoSandboxApiKey ?? '',
-          WaffoSandboxPrivateKey: settings.WaffoSandboxPrivateKey ?? '',
-          WaffoSandbox: settings.WaffoSandbox ?? false,
-          WaffoMerchantId: settings.WaffoMerchantId ?? '',
-          WaffoCurrency: settings.WaffoCurrency ?? 'USD',
-          WaffoUnitPrice: settings.WaffoUnitPrice ?? 1,
-          WaffoMinTopUp: settings.WaffoMinTopUp ?? 1,
-          WaffoNotifyUrl: settings.WaffoNotifyUrl ?? '',
-          WaffoReturnUrl: settings.WaffoReturnUrl ?? '',
-          WaffoPayMethods: settings.WaffoPayMethods ?? '[]',
-        }}
-        waffoPancakeDefaultValues={{
-          WaffoPancakeMerchantID: settings.WaffoPancakeMerchantID ?? '',
-          WaffoPancakePrivateKey: settings.WaffoPancakePrivateKey ?? '',
-          WaffoPancakeReturnURL: settings.WaffoPancakeReturnURL ?? '',
-        }}
-        waffoPancakeProvisionedStoreID={settings.WaffoPancakeStoreID ?? ''}
-        waffoPancakeProvisionedProductID={settings.WaffoPancakeProductID ?? ''}
         complianceDefaults={{
           confirmed: settings['payment_setting.compliance_confirmed'] ?? false,
           termsVersion:

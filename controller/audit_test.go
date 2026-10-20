@@ -294,7 +294,6 @@ type releasedAuditUser struct {
 	LinuxDOId        string                     `json:"linux_do_id" gorm:"column:linux_do_id;index"`
 	Setting          string                     `json:"setting" gorm:"type:text;column:setting"`
 	Remark           string                     `json:"remark,omitempty" gorm:"type:varchar(255)" validate:"max=255"`
-	StripeCustomer   string                     `json:"stripe_customer" gorm:"type:varchar(64);column:stripe_customer;index"`
 	CreatedAt        int64                      `json:"created_at" gorm:"autoCreateTime;column:created_at"`
 	LastLoginAt      int64                      `json:"last_login_at" gorm:"default:0;column:last_login_at"`
 	AuthVersion      int64                      `json:"-" gorm:"type:bigint;not null;default:1;column:auth_version"`
@@ -593,13 +592,13 @@ func TestAuditDatabaseMatrix(t *testing.T) {
 						assert.Equal(t, "historical login", old.Content)
 					}
 					const tokenRef = "5f2a9c1d8b7e4f0a3c6d9e2b5f8a1c4d7e0b3f6a9c2d5e8b1f4a7c0d3e6b9f2a"
-					model.RecordAuditLog(nil, model.AuditLog{ActorRole: common.RoleAdminUser, UserId: 1, Username: "owner", CreatedAt: 99, Category: model.AuditCategoryAccessToken, TokenRef: tokenRef, Ip: "192.0.2.1", Success: true})
+					model.RecordAuditLog(nil, model.AuditLog{ActorRole: common.RoleAdminUser, UserId: 1, Username: "owner", CreatedAt: 99, Category: model.AuditCategorySecurity, TokenRef: tokenRef, Ip: "192.0.2.1", Success: true})
 					byRef, _, err := model.GetAuditLogs(model.AuditLogFilter{UserId: 1, TokenRef: tokenRef}, 0, 10, common.RoleCommonUser)
 					require.NoError(t, err)
 					require.Len(t, byRef, 1, "audit rows of a token are found by its token_ref")
 					require.NoError(t, model.LOG_DB.Where("token_ref = ?", tokenRef).Delete(&model.AuditLog{}).Error)
 					for _, timestamp := range []int64{101, 102, 103} {
-						model.RecordAuditLog(nil, model.AuditLog{ActorRole: common.RoleAdminUser, UserId: 1, Username: "owner", CreatedAt: timestamp, Category: model.AuditCategoryAccessToken, TokenRef: tokenRef, Ip: "192.0.2.1", Success: timestamp != 102})
+						model.RecordAuditLog(nil, model.AuditLog{ActorRole: common.RoleAdminUser, UserId: 1, Username: "owner", CreatedAt: timestamp, Category: model.AuditCategorySecurity, TokenRef: tokenRef, Ip: "192.0.2.1", Success: timestamp != 102})
 					}
 					first, total, err := model.GetAuditLogs(model.AuditLogFilter{UserId: 1}, 0, 2, common.RoleCommonUser)
 					require.NoError(t, err)
@@ -674,7 +673,7 @@ func TestIndependentAuditLogStores(t *testing.T) {
 					assert.Equal(t, "retained historical login", old.Content)
 				}
 				const independentRef = "9c1d8b7e4f0a3c6d9e2b5f8a1c4d7e0b3f6a9c2d5e8b1f4a7c0d3e6b9f2a5f2a"
-				model.RecordAuditLog(nil, model.AuditLog{ActorRole: common.RoleAdminUser, UserId: 1, Username: "independent", Category: model.AuditCategoryAccessToken, TokenRef: independentRef, Ip: "192.0.2.8", Success: false, Status: 403})
+				model.RecordAuditLog(nil, model.AuditLog{ActorRole: common.RoleAdminUser, UserId: 1, Username: "independent", Category: model.AuditCategoryOperation, TokenRef: independentRef, Ip: "192.0.2.8", Success: false, Status: 403})
 				entries, total, err := model.GetAuditLogs(model.AuditLogFilter{UserId: 1}, 0, 20, common.RoleAdminUser)
 				require.NoError(t, err)
 				assert.EqualValues(t, 1, total)

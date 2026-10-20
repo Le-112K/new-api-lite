@@ -27,15 +27,8 @@ import type {
   RedemptionResponse,
   AmountResponse,
   PaymentResponse,
-  StripePaymentResponse,
   BillingHistoryResponse,
   CompleteOrderRequest,
-  CreemPaymentRequest,
-  CreemPaymentResponse,
-  WaffoPaymentRequest,
-  WaffoPaymentResponse,
-  WaffoPancakePaymentRequest,
-  WaffoPancakePaymentResponse,
 } from './types'
 
 // ============================================================================
@@ -80,30 +73,6 @@ export async function calculateAmount(
 }
 
 /**
- * Calculate payment amount for Stripe payment
- */
-export async function calculateStripeAmount(
-  request: AmountRequest
-): Promise<AmountResponse> {
-  const res = await api.post('/api/user/stripe/amount', request, {
-    skipBusinessError: true,
-  } as Record<string, unknown>)
-  return res.data
-}
-
-/**
- * Calculate payment amount for Waffo payment
- */
-export async function calculateWaffoAmount(
-  request: AmountRequest
-): Promise<AmountResponse> {
-  const res = await api.post('/api/user/waffo/amount', request, {
-    skipBusinessError: true,
-  } as Record<string, unknown>)
-  return res.data
-}
-
-/**
  * Request regular payment
  */
 export async function requestPayment(
@@ -116,66 +85,6 @@ export async function requestPayment(
     ...res.data,
     url: res.data.url || (res as unknown as { url?: string }).url,
   }
-}
-
-/**
- * Request Stripe payment
- */
-export async function requestStripePayment(
-  request: PaymentRequest
-): Promise<StripePaymentResponse> {
-  const res = await api.post('/api/user/stripe/pay', request, {
-    skipBusinessError: true,
-  } as Record<string, unknown>)
-  return res.data
-}
-
-/**
- * Request Creem payment
- */
-export async function requestCreemPayment(
-  request: CreemPaymentRequest
-): Promise<CreemPaymentResponse> {
-  const res = await api.post('/api/user/creem/pay', request, {
-    skipBusinessError: true,
-  } as Record<string, unknown>)
-  return res.data
-}
-
-/**
- * Request Waffo payment
- */
-export async function requestWaffoPayment(
-  request: WaffoPaymentRequest
-): Promise<WaffoPaymentResponse> {
-  const res = await api.post('/api/user/waffo/pay', request, {
-    skipBusinessError: true,
-  } as Record<string, unknown>)
-  return res.data
-}
-
-/**
- * Calculate payment amount for Waffo Pancake payment
- */
-export async function calculateWaffoPancakeAmount(
-  request: AmountRequest
-): Promise<AmountResponse> {
-  const res = await api.post('/api/user/waffo-pancake/amount', request, {
-    skipBusinessError: true,
-  } as Record<string, unknown>)
-  return res.data
-}
-
-/**
- * Request Waffo Pancake payment
- */
-export async function requestWaffoPancakePayment(
-  request: WaffoPancakePaymentRequest
-): Promise<WaffoPancakePaymentResponse> {
-  const res = await api.post('/api/user/waffo-pancake/pay', request, {
-    skipBusinessError: true,
-  } as Record<string, unknown>)
-  return res.data
 }
 
 /**

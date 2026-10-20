@@ -45,8 +45,6 @@ type PaymentMethodsVisualEditorProps = {
 
 const PAYMENT_TYPE_ICON_NAMES: Record<string, string> = {
   alipay: 'SiAlipay',
-  stripe: 'SiStripe',
-  waffo_pancake: 'LuCreditCard',
   wxpay: 'SiWechat',
 }
 
@@ -78,23 +76,6 @@ export function PaymentMethodsVisualEditor({
         icon: getDefaultIconName('wxpay'),
         name: '微信',
         type: 'wxpay',
-      },
-    },
-    {
-      name: t('Stripe'),
-      template: {
-        icon: getDefaultIconName('stripe'),
-        min_topup: '10',
-        name: 'Stripe',
-        type: 'stripe',
-      },
-    },
-    {
-      name: 'Waffo Pancake',
-      template: {
-        icon: getDefaultIconName('waffo_pancake'),
-        name: 'Waffo Pancake',
-        type: 'waffo_pancake',
       },
     },
     {

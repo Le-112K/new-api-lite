@@ -93,7 +93,6 @@ type User struct {
 	DeletedAt            gorm.DeletedAt             `gorm:"index"`
 	Setting              string                     `json:"setting" gorm:"type:text;column:setting"`
 	Remark               string                     `json:"remark,omitempty" gorm:"type:varchar(255)" validate:"max=255"`
-	StripeCustomer       string                     `json:"stripe_customer" gorm:"type:varchar(64);column:stripe_customer;index"`
 	CreatedAt            int64                      `json:"created_at" gorm:"autoCreateTime;column:created_at"`
 	LastLoginAt          int64                      `json:"last_login_at" gorm:"default:0;column:last_login_at"`
 	AuthVersion          int64                      `json:"-" gorm:"type:bigint;not null;default:1;column:auth_version"`
@@ -343,7 +342,7 @@ func GetAllUsers(pageInfo *common.PageInfo, sortOptions ...UserSortOptions) (use
 
 	// Get paginated users within same transaction
 	order := resolveUserSortOptions(sortOptions)
-	err = order.Apply(tx.Unscoped()).Limit(pageInfo.GetPageSize()).Offset(pageInfo.GetStartIdx()).Omit("password", "access_token").Find(&users).Error
+	err = order.Apply(tx.Unscoped()).Limit(pageInfo.GetPageSize()).Offset(pageInfo.GetStartIdx()).Omit("password").Find(&users).Error
 	if err != nil {
 		tx.Rollback()
 		return nil, 0, err
@@ -412,7 +411,7 @@ func SearchUsers(keyword string, group string, role *int, status *int, startIdx 
 
 	// 获取分页数据
 	order := resolveUserSortOptions(sortOptions)
-	err = order.Apply(query.Omit("password", "access_token")).Limit(num).Offset(startIdx).Find(&users).Error
+	err = order.Apply(query.Omit("password")).Limit(num).Offset(startIdx).Find(&users).Error
 	if err != nil {
 		tx.Rollback()
 		return nil, 0, err
@@ -435,13 +434,13 @@ func GetUserById(id int, selectAll bool) (*User, error) {
 	if selectAll {
 		err = DB.First(&user, "id = ?", id).Error
 	} else {
-		err = DB.Omit("password", "access_token").First(&user, "id = ?", id).Error
+		err = DB.Omit("password").First(&user, "id = ?", id).Error
 	}
 	return &user, err
 }
 
 // GetSelfUserById reads dashboard profile data and password existence in one
-// query. The password hash and management access token are never selected.
+// query. The password hash is never selected.
 func GetSelfUserById(id int) (*User, error) {
 	if id == 0 {
 		return nil, errors.New("id 为空！")
@@ -453,7 +452,7 @@ func GetSelfUserById(id int) (*User, error) {
 	err := DB.Model(&User{}).Select([]string{
 		"id", "username", "display_name", "role", "status", "email",
 		"group", "quota", "used_quota", "request_count", "setting",
-		"stripe_customer", "auth_version",
+		"auth_version",
 		"CASE WHEN password <> '' THEN 1 ELSE 0 END AS has_password",
 	}).First(&profile, "id = ?", id).Error
 	profile.User.HasPassword = profile.HasPassword
@@ -645,7 +644,6 @@ func (user *User) UpdateWithTx(tx *gorm.DB, updatePassword bool) error {
 		}
 	}
 	if err = tx.Model(&current).Omit(
-		"access_token",
 		"quota",
 		"used_quota",
 		"request_count",
