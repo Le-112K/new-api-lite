@@ -52,7 +52,6 @@ const _systemInfoSchema = z.object({
   TaskPublicAddress: z.string().refine(isValidTaskPublicAddress),
   Logo: z.string().url().optional().or(z.literal('')),
   Footer: z.string().optional(),
-  About: z.string().optional(),
   HomePageContent: z.string().optional(),
   general_setting: z.object({
     docs_link: z.string(),
@@ -84,7 +83,6 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
     TaskPublicAddress: normalizeValue(defaultValues.TaskPublicAddress),
     Logo: normalizeValue(defaultValues.Logo),
     Footer: normalizeValue(defaultValues.Footer),
-    About: normalizeValue(defaultValues.About),
     HomePageContent: normalizeValue(defaultValues.HomePageContent),
     general_setting: {
       docs_link: normalizeValue(defaultValues.general_setting?.docs_link),
@@ -108,7 +106,6 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
     }),
     Logo: z.string().url().optional().or(z.literal('')),
     Footer: z.string().optional(),
-    About: z.string().optional(),
     HomePageContent: z.string().optional(),
     general_setting: z.object({
       docs_link: z.string(),
@@ -271,31 +268,6 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
                     </FormControl>
                     <FormDescription>
                       {t('Footer text displayed at the bottom of pages')}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name='About'
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('About')}</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder={t(
-                          'Enter HTML code (e.g., <p>About us...</p>) or a URL (e.g., https://example.com) to embed as iframe'
-                        )}
-                        rows={4}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      {t(
-                        'Supports HTML markup or iframe embedding. Enter HTML code directly, or provide a complete URL to automatically embed it as an iframe.'
-                      )}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

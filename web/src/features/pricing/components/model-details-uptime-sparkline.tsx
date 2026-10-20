@@ -32,7 +32,7 @@ import {
 } from '@/features/performance-metrics/lib/format'
 import { cn } from '@/lib/utils'
 
-import { aggregateUptime, type UptimeDayPoint } from '../lib/mock-stats'
+import { aggregateUptime, type UptimeDayPoint } from '../lib/uptime'
 
 // ---------------------------------------------------------------------------
 // Uptime sparkline
