@@ -176,7 +176,7 @@ const RETAINED_CHANNEL_PRESENTATION: Record<
     descriptionKey:
       'Configure endpoint routing, authentication and protocol conversion for different upstream services',
     detailKey:
-      "New API's flexible channel lets you configure upstream addresses and authentication per endpoint, choose native forwarding or supported protocol conversions, and configure model listing and balance queries independently",
+      "New API's flexible channel lets you configure upstream addresses and authentication per endpoint, choose native forwarding or supported protocol conversions, and configure model listing independently",
     badge: { labelKey: 'Flexible integration', tone: 'primary' },
   },
   59: { descriptionKey: 'Connect to model services through a Sub2API gateway' },
@@ -358,7 +358,6 @@ export const ERROR_MESSAGES = {
   UPDATE_FAILED: 'Failed to update channel',
   DELETE_FAILED: 'Failed to delete channel',
   TEST_FAILED: 'Failed to test channel',
-  BALANCE_QUERY_FAILED: 'Failed to query balance',
   FETCH_MODELS_FAILED: 'Failed to fetch models',
 } as const
 
@@ -369,7 +368,6 @@ export const SUCCESS_MESSAGES = {
   ENABLED: 'Channel enabled successfully',
   DISABLED: 'Channel disabled successfully',
   TESTED: 'Channel test completed',
-  BALANCE_QUERIED: 'Balance queried successfully',
   MODELS_FETCHED: 'Models fetched successfully',
   COPIED: 'Channel copied successfully',
   TAG_SET: 'Tag set successfully',
@@ -410,19 +408,8 @@ export const SORT_OPTIONS = [
   { value: 'priority', label: 'Priority (Default)' },
   { value: 'id', label: 'ID' },
   { value: 'name', label: 'Name' },
-  { value: 'balance', label: 'Balance' },
   { value: 'response_time', label: 'Response Time' },
 ] as const
-
-// ============================================================================
-// Balance Display
-// ============================================================================
-
-export const BALANCE_THRESHOLDS = {
-  LOW: 1,
-  MEDIUM: 10,
-  HIGH: 100,
-} as const
 
 // ============================================================================
 // Response Time Thresholds (in ms)

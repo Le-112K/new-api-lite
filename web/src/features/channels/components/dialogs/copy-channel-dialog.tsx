@@ -43,7 +43,7 @@ export function CopyChannelDialog({
   const { currentRow } = useChannels()
   const queryClient = useQueryClient()
   const [suffix, setSuffix] = useState('_copy')
-  const [resetBalance, setResetBalance] = useState(true)
+  const [resetUsedQuota, setResetUsedQuota] = useState(true)
   const [isCopying, setIsCopying] = useState(false)
 
   if (!currentRow) return null
@@ -55,13 +55,13 @@ export function CopyChannelDialog({
       currentRow.id,
       {
         suffix,
-        reset_balance: resetBalance,
+        reset_used_quota: resetUsedQuota,
       },
       queryClient,
       () => {
         onOpenChange(false)
         setSuffix('_copy')
-        setResetBalance(true)
+        setResetUsedQuota(true)
       }
     )
 
@@ -115,13 +115,13 @@ export function CopyChannelDialog({
 
         <div className='flex items-center space-x-2'>
           <Checkbox
-            id='reset-balance'
-            checked={resetBalance}
-            onCheckedChange={(checked) => setResetBalance(!!checked)}
+            id='reset-used-quota'
+            checked={resetUsedQuota}
+            onCheckedChange={(checked) => setResetUsedQuota(!!checked)}
             disabled={isCopying}
           />
-          <Label htmlFor='reset-balance' className='text-sm font-normal'>
-            {t('Reset balance and used quota')}
+          <Label htmlFor='reset-used-quota' className='text-sm font-normal'>
+            {t('Reset used quota')}
           </Label>
         </div>
       </div>

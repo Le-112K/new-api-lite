@@ -48,8 +48,6 @@ export const channelSchema = z.object({
   response_time: z.number(), // in milliseconds
   base_url: z.string().nullish(),
   other: z.string().default(''),
-  balance: z.number().default(0), // in USD
-  balance_updated_time: z.number(),
   models: z.string().default(''),
   group: z.string().default('default'),
   used_quota: z.number().default(0),
@@ -198,14 +196,6 @@ export interface ChannelTestResponse {
   }
 }
 
-export interface ChannelBalanceResponse {
-  success: boolean
-  message?: string
-  balance?: number
-  currency?: string
-  raw_response?: string
-}
-
 export interface FetchModelsResponse {
   success: boolean
   message?: string
@@ -266,7 +256,6 @@ export type ChannelSortBy =
   | 'id'
   | 'name'
   | 'priority'
-  | 'balance'
   | 'response_time'
   | 'test_time'
 
@@ -304,7 +293,7 @@ export interface ChannelTestParams {
 
 export interface CopyChannelParams {
   suffix?: string
-  reset_balance?: boolean
+  reset_used_quota?: boolean
 }
 
 export interface MultiKeyManageParams {

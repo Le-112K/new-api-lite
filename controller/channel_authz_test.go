@@ -84,12 +84,10 @@ func TestChannelHasSensitiveChanges(t *testing.T) {
 
 	t.Run("read-only fields are ignored by sensitivity check", func(t *testing.T) {
 		updated := PatchChannel{Channel: *origin}
-		updated.Balance = 99
 		updated.UsedQuota = 100
 		updated.ResponseTime = 200
 
 		assert.False(t, channelHasSensitiveChanges(&updated, origin, map[string]any{
-			"balance":       updated.Balance,
 			"used_quota":    updated.UsedQuota,
 			"response_time": updated.ResponseTime,
 		}))
@@ -98,32 +96,26 @@ func TestChannelHasSensitiveChanges(t *testing.T) {
 
 func TestClearChannelReadOnlyFields(t *testing.T) {
 	channel := PatchChannel{Channel: model.Channel{
-		CreatedTime:        11,
-		TestTime:           22,
-		ResponseTime:       33,
-		Balance:            44.5,
-		BalanceUpdatedTime: 55,
-		UsedQuota:          66,
-		Models:             "gpt-4o",
-		Group:              "default",
+		CreatedTime:  11,
+		TestTime:     22,
+		ResponseTime: 33,
+		UsedQuota:    66,
+		Models:       "gpt-4o",
+		Group:        "default",
 	}}
 
 	clearChannelReadOnlyFields(&channel, map[string]any{
-		"created_time":         channel.CreatedTime,
-		"test_time":            channel.TestTime,
-		"response_time":        channel.ResponseTime,
-		"balance":              channel.Balance,
-		"balance_updated_time": channel.BalanceUpdatedTime,
-		"used_quota":           channel.UsedQuota,
-		"models":               channel.Models,
-		"group":                channel.Group,
+		"created_time":  channel.CreatedTime,
+		"test_time":     channel.TestTime,
+		"response_time": channel.ResponseTime,
+		"used_quota":    channel.UsedQuota,
+		"models":        channel.Models,
+		"group":         channel.Group,
 	})
 
 	assert.Zero(t, channel.CreatedTime)
 	assert.Zero(t, channel.TestTime)
 	assert.Zero(t, channel.ResponseTime)
-	assert.Zero(t, channel.Balance)
-	assert.Zero(t, channel.BalanceUpdatedTime)
 	assert.Zero(t, channel.UsedQuota)
 	assert.Equal(t, "gpt-4o", channel.Models)
 	assert.Equal(t, "default", channel.Group)

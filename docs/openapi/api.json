@@ -2645,67 +2645,6 @@
         ]
       }
     },
-    "/api/channel/update_balance": {
-      "get": {
-        "summary": "更新所有渠道余额",
-        "deprecated": false,
-        "description": "👨‍💼 需要管理员权限（Admin）",
-        "tags": [
-          "渠道管理"
-        ],
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "成功",
-            "headers": {}
-          }
-        },
-        "security": [
-          {
-            "Combination343": []
-          },
-          {
-            "Combination1243": []
-          }
-        ]
-      }
-    },
-    "/api/channel/update_balance/{id}": {
-      "get": {
-        "summary": "更新指定渠道余额",
-        "deprecated": false,
-        "description": "👨‍💼 需要管理员权限（Admin）",
-        "tags": [
-          "渠道管理"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "",
-            "required": true,
-            "example": 0,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "成功",
-            "headers": {}
-          }
-        },
-        "security": [
-          {
-            "Combination343": []
-          },
-          {
-            "Combination1243": []
-          }
-        ]
-      }
-    },
     "/api/channel/disabled": {
       "delete": {
         "summary": "删除已禁用渠道",
@@ -3133,7 +3072,7 @@
             }
           },
           {
-            "name": "reset_balance",
+            "name": "reset_used_quota",
             "in": "query",
             "description": "",
             "required": false,

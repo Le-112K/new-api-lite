@@ -24,7 +24,6 @@ import {
   Trash2,
   Tags,
   TestTube,
-  DollarSign,
   ListChecks,
   SortAsc,
   RefreshCw,
@@ -62,7 +61,6 @@ import {
   handleDeleteAllDisabled,
   handleFixAbilities,
   handleTestAllChannels,
-  handleUpdateAllBalances,
 } from '../lib'
 import { useChannels } from './channels-provider'
 
@@ -215,17 +213,6 @@ export function ChannelsPrimaryButtons() {
               {t('Test All Channels')}
               <DropdownMenuShortcut>
                 <TestTube className='h-4 w-4' />
-              </DropdownMenuShortcut>
-            </DropdownMenuItem>
-
-            <DropdownMenuItem
-              onClick={() => {
-                handleUpdateAllBalances(queryClient)
-              }}
-            >
-              {t('Update All Balances')}
-              <DropdownMenuShortcut>
-                <DollarSign className='h-4 w-4' />
               </DropdownMenuShortcut>
             </DropdownMenuItem>
 

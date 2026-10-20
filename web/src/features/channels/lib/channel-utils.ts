@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { formatCurrencyFromUSD, formatQuotaWithCurrency } from '@/lib/currency'
+import { formatQuotaWithCurrency } from '@/lib/currency'
 import { formatTimestampToDate } from '@/lib/format'
 
 import {
@@ -320,42 +320,6 @@ export function validateChannelSettings(settings: string): boolean {
 }
 
 // ============================================================================
-// Balance Formatting
-// ============================================================================
-
-/**
- * Format balance with currency symbol
- */
-export function formatBalance(balance: number | null | undefined): string {
-  if (balance == null || Number.isNaN(balance)) {
-    return '-'
-  }
-  return formatCurrencyFromUSD(balance, {
-    digitsLarge: 2,
-    digitsSmall: 4,
-    abbreviate: false,
-  })
-}
-
-/**
- * Get balance status color
- */
-export function getBalanceVariant(
-  balance: number
-): 'success' | 'warning' | 'danger' | 'neutral' {
-  if (balance === 0) {
-    return 'neutral'
-  }
-  if (balance < 1) {
-    return 'danger'
-  }
-  if (balance < 10) {
-    return 'warning'
-  }
-  return 'success'
-}
-
-// ============================================================================
 // Response Time Utilities
 // ============================================================================
 
@@ -553,16 +517,11 @@ export function validateGroups(groups: string): boolean {
 }
 
 /**
- * Check if channel needs attention (low balance, auto-disabled, etc.)
+ * Check if channel needs attention (auto-disabled, all keys disabled, etc.)
  */
 export function channelNeedsAttention(channel: Channel): boolean {
   // Auto-disabled
   if (channel.status === 3) {
-    return true
-  }
-
-  // Low balance (less than $1)
-  if (channel.balance > 0 && channel.balance < 1) {
     return true
   }
 
@@ -585,9 +544,6 @@ export function channelNeedsAttention(channel: Channel): boolean {
 export function getAttentionReason(channel: Channel): string | null {
   if (channel.status === 3) {
     return 'Auto-disabled'
-  }
-  if (channel.balance > 0 && channel.balance < 1) {
-    return 'Low balance'
   }
   if (
     channel.channel_info?.is_multi_key &&
@@ -654,10 +610,8 @@ export function aggregateChannelsByTag(
         response_time: 0,
         priority: -1 as unknown as number | null,
         weight: -1 as unknown as number | null,
-        balance: 0,
         test_time: 0,
         created_time: 0,
-        balance_updated_time: 0,
         models: '',
         children: [],
       } as TagRow

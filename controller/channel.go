@@ -280,6 +280,23 @@ func GetAllChannels(c *gin.Context) {
 	return
 }
 
+// GetAuthHeader builds the bearer auth header used when calling an OpenAI-style
+// upstream on behalf of a channel.
+func GetAuthHeader(token string) http.Header {
+	h := http.Header{}
+	h.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+	return h
+}
+
+// GetClaudeAuthHeader builds the auth header used when calling an Anthropic
+// upstream on behalf of a channel.
+func GetClaudeAuthHeader(token string) http.Header {
+	h := http.Header{}
+	h.Add("x-api-key", token)
+	h.Add("anthropic-version", "2023-06-01")
+	return h
+}
+
 func buildFetchModelsHeaders(channel *model.Channel, key string) (http.Header, error) {
 	var headers http.Header
 	switch channel.Type {
@@ -1476,8 +1493,8 @@ func GetTagModels(c *gin.Context) {
 // POST /api/channel/copy/:id
 // Optional query params:
 //
-//	suffix         - string appended to the original name (default "_复制")
-//	reset_balance  - bool, when true will reset balance & used_quota to 0 (default true)
+//	suffix           - string appended to the original name (default "_复制")
+//	reset_used_quota - bool, when true will reset used_quota to 0 (default true)
 func CopyChannel(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -1486,10 +1503,10 @@ func CopyChannel(c *gin.Context) {
 	}
 
 	suffix := c.DefaultQuery("suffix", "_复制")
-	resetBalance := true
-	if rbStr := c.DefaultQuery("reset_balance", "true"); rbStr != "" {
-		if v, err := strconv.ParseBool(rbStr); err == nil {
-			resetBalance = v
+	resetUsedQuota := true
+	if rqStr := c.DefaultQuery("reset_used_quota", "true"); rqStr != "" {
+		if v, err := strconv.ParseBool(rqStr); err == nil {
+			resetUsedQuota = v
 		}
 	}
 
@@ -1507,8 +1524,7 @@ func CopyChannel(c *gin.Context) {
 	clone.Name = origin.Name + suffix
 	clone.TestTime = 0
 	clone.ResponseTime = 0
-	if resetBalance {
-		clone.Balance = 0
+	if resetUsedQuota {
 		clone.UsedQuota = 0
 	}
 

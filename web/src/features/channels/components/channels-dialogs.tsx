@@ -17,7 +17,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { useChannels } from './channels-provider'
-import { BalanceQueryDialog } from './dialogs/balance-query-dialog'
 import { ChannelTestDialog } from './dialogs/channel-test-dialog'
 import { CopyChannelDialog } from './dialogs/copy-channel-dialog'
 import { EditTagDialog } from './dialogs/edit-tag-dialog'
@@ -42,12 +41,6 @@ export function ChannelsDialogs() {
       {/* Test Channel Dialog */}
       <ChannelTestDialog
         open={open === 'test-channel'}
-        onOpenChange={(v) => !v && setOpen(null)}
-      />
-
-      {/* Balance Query Dialog */}
-      <BalanceQueryDialog
-        open={open === 'balance-query'}
         onOpenChange={(v) => !v && setOpen(null)}
       />
 

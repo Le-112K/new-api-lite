@@ -55,8 +55,6 @@ function channel(name: string): Channel {
     test_time: 0,
     response_time: 0,
     other: '',
-    balance: 0,
-    balance_updated_time: 0,
     models: 'gpt-4o',
     group: 'vip',
     used_quota: 0,

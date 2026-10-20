@@ -56,7 +56,7 @@
 | ------- | --------------------------- | ------------------------------------------------------- | --- |
 | 渠道 CRUD | 增删改查、批量启停、复制                | `controller/channel.go`（2,055 行）                        | P0  |
 | 渠道测试    | 单条/批量连通性测试、响应时间             | `controller/channel-test.go`（1,157 行）                   | P0  |
-| 上游余额查询  | 查 OpenAI/DeepSeek/硅基流动等账户余额 | `controller/channel-billing.go`                         | P2  |
+| ~~上游余额查询~~ | 已在本 fork 移除（含 `CHANNEL_UPDATE_FREQUENCY` 定时任务） | —（原 `controller/channel-billing.go`）                    | 已删  |
 | 模型发现    | 从上游拉 `/v1/models` 并与本地比对    | `controller/channel_upstream_update.go`                 | P1  |
 | 多 Key   | 一个渠道挂多个 key，轮询/随机/失败切换      | `model/channel.go` + `ChannelInfo`                      | P1  |
 | 渠道亲和    | 同一会话固定同一上游（保上下文）            | `service/channel_affinity.go`                           | P2  |
@@ -305,7 +305,7 @@ SQLite / MySQL / PostgreSQL（日志库可另配 ClickHouse）、Redis 缓存、
 | --------- | ------- | --------------------------------------------------------------- |
 | **P0 保命** | 缺了产品不成立 | 渠道接入、协议中继、倍率计费、预扣结算、密钥鉴权、额度、用量日志、渠道调度                           |
 | **P1 运营** | 日常要用    | 模型发现、价格同步、用户管理、分组、注册登录、审计、系统任务、限流                               |
-| **P2 可选** | 特定场景才要  | 多 Key、渠道亲和、上游余额查询、性能指标、余额告警、OAuth 多provider、阶梯计费                |
+| **P2 可选** | 特定场景才要  | 多 Key、渠道亲和、性能指标、余额告警、OAuth 多provider、阶梯计费                |
 | **P3 冗余** | 与定位无关   | 订阅套餐、4 家支付中的 3 家、签到、Uptime Kuma、自更新检查、排行榜、多节点监控、Worker 代理、演示站模式 |
 
 

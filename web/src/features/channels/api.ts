@@ -25,7 +25,6 @@ import type {
   BatchDeleteParams,
   BatchSetTagParams,
   Channel,
-  ChannelBalanceResponse,
   ChannelOpsResponse,
   ChannelTestResponse,
   CopyChannelParams,
@@ -208,19 +207,6 @@ export async function testChannel(
   const res = await api.get(
     `/api/channel/test/${id}`,
     channelActionConfig({ params })
-  )
-  return res.data
-}
-
-/**
- * Update channel balance
- */
-export async function updateChannelBalance(
-  id: number
-): Promise<ChannelBalanceResponse> {
-  const res = await api.get(
-    `/api/channel/update_balance/${id}`,
-    channelActionConfig()
   )
   return res.data
 }
@@ -512,20 +498,6 @@ export async function testAllChannels(): Promise<{
   message?: string
 }> {
   const res = await api.get('/api/channel/test', channelActionConfig())
-  return res.data
-}
-
-/**
- * Update balance for all enabled channels
- */
-export async function updateAllChannelsBalance(): Promise<{
-  success: boolean
-  message?: string
-}> {
-  const res = await api.get(
-    '/api/channel/update_balance',
-    channelActionConfig()
-  )
   return res.data
 }
 

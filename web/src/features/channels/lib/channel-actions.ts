@@ -37,7 +37,6 @@ import {
   fixChannelAbilities,
   editTagChannels,
   testAllChannels,
-  updateAllChannelsBalance,
 } from '../api'
 import { CHANNEL_STATUS, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants'
 import type { ChannelTestResponse, CopyChannelParams } from '../types'
@@ -650,30 +649,5 @@ export async function handleTestAllChannels(
     }
   } catch (error) {
     handleServerError(error, i18next.t('Failed to test all channels'))
-  }
-}
-
-/**
- * Update balance for all enabled channels
- */
-export async function handleUpdateAllBalances(
-  queryClient?: QueryClient,
-  onSuccess?: () => void
-): Promise<void> {
-  try {
-    const response = await updateAllChannelsBalance()
-    if (response.success) {
-      toast.success(
-        i18next.t(
-          'Updating all channel balances. This may take a while. Please refresh to see results.'
-        )
-      )
-      queryClient?.invalidateQueries({ queryKey: channelsQueryKeys.lists() })
-      onSuccess?.()
-    } else {
-      handleServerError(response, i18next.t('Failed to update all balances'))
-    }
-  } catch (error) {
-    handleServerError(error, i18next.t('Failed to update all balances'))
   }
 }

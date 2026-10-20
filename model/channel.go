@@ -34,8 +34,6 @@ type Channel struct {
 	ResponseTime       int     `json:"response_time"` // in milliseconds
 	BaseURL            *string `json:"base_url" gorm:"column:base_url;default:''"`
 	Other              string  `json:"other"`
-	Balance            float64 `json:"balance"` // in USD
-	BalanceUpdatedTime int64   `json:"balance_updated_time" gorm:"bigint"`
 	Models             string  `json:"models"`
 	Group              string  `json:"group" gorm:"type:varchar(64);default:'default'"`
 	UsedQuota          int64   `json:"used_quota" gorm:"bigint;default:0"`
@@ -81,7 +79,6 @@ var channelSortColumns = map[string]string{
 	"id":            "id",
 	"name":          "name",
 	"priority":      "priority",
-	"balance":       "balance",
 	"response_time": "response_time",
 	"test_time":     "test_time",
 }
@@ -611,16 +608,6 @@ func (channel *Channel) UpdateResponseTime(responseTime int64) {
 	}).Error
 	if err != nil {
 		common.SysLog(fmt.Sprintf("failed to update response time: channel_id=%d, error=%v", channel.Id, err))
-	}
-}
-
-func (channel *Channel) UpdateBalance(balance float64) {
-	err := DB.Model(channel).Select("balance_updated_time", "balance").Updates(Channel{
-		BalanceUpdatedTime: common.GetTimestamp(),
-		Balance:            balance,
-	}).Error
-	if err != nil {
-		common.SysLog(fmt.Sprintf("failed to update balance: channel_id=%d, error=%v", channel.Id, err))
 	}
 }
 

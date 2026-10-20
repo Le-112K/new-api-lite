@@ -55,7 +55,6 @@ test('keeps the long string inside the status tooltip is wrapped when show', asy
     created_time: 1,
     test_time: 0,
     response_time: 0,
-    balance_updated_time: 0,
     other_info: JSON.stringify({ status_reason: reason }),
   })
   const queryClient = new QueryClient()

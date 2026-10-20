@@ -27,9 +27,6 @@ import type {
 export const CHANNEL_TYPE_ADVANCED_CUSTOM = 58
 export const ADVANCED_CUSTOM_MODEL_LIST_PATH = '/v1/models'
 export const ADVANCED_CUSTOM_MODEL_LIST_LABEL = 'OpenAI Models'
-export const ADVANCED_CUSTOM_BALANCE_PATH =
-  '/v1/dashboard/billing/credit_grants'
-export const ADVANCED_CUSTOM_BALANCE_LABEL = 'Balance Query'
 
 export const ADVANCED_CUSTOM_CONVERTER_OPTIONS: Array<{
   value: AdvancedCustomConverter
@@ -171,7 +168,6 @@ export const ADVANCED_CUSTOM_INCOMING_PATH_OPTIONS: AdvancedCustomIncomingPathOp
 const ADVANCED_CUSTOM_ROUTE_SUMMARY_LABELS: Record<string, string> = {
   '/v1/chat/completions': 'OpenAI Chat',
   [ADVANCED_CUSTOM_MODEL_LIST_PATH]: ADVANCED_CUSTOM_MODEL_LIST_LABEL,
-  [ADVANCED_CUSTOM_BALANCE_PATH]: ADVANCED_CUSTOM_BALANCE_LABEL,
 }
 
 export type AdvancedCustomValidationError = {
@@ -325,10 +321,7 @@ export function getAdvancedCustomTemplateConfig(
 }
 
 export function isAdvancedCustomManagementPath(path: string): boolean {
-  return (
-    path === ADVANCED_CUSTOM_MODEL_LIST_PATH ||
-    path === ADVANCED_CUSTOM_BALANCE_PATH
-  )
+  return path === ADVANCED_CUSTOM_MODEL_LIST_PATH
 }
 
 export function getAdvancedCustomManagementRoute(
@@ -610,7 +603,6 @@ export function validateAdvancedCustomConfig(
     { catchAllIndex: number | null; models: Map<string, number> }
   >()
   let modelListRouteIndex: number | null = null
-  let balanceRouteIndex: number | null = null
   for (let index = 0; index < routes.length; index += 1) {
     const route = routes[index]
     const incomingPath = route.incoming_path?.trim() || ''
@@ -631,19 +623,14 @@ export function validateAdvancedCustomConfig(
       }
     }
     if (isAdvancedCustomManagementPath(incomingPath)) {
-      const isModelListRoute = incomingPath === ADVANCED_CUSTOM_MODEL_LIST_PATH
-      const existingIndex = isModelListRoute
-        ? modelListRouteIndex
-        : balanceRouteIndex
-      const routeLabel = isModelListRoute ? 'OpenAI Models' : 'Balance Query'
-      if (existingIndex !== null) {
+      const routeLabel = 'OpenAI Models'
+      if (modelListRouteIndex !== null) {
         return {
           routeIndex: index,
           message: `Only one ${routeLabel} route is allowed`,
         }
       }
-      if (isModelListRoute) modelListRouteIndex = index
-      else balanceRouteIndex = index
+      modelListRouteIndex = index
       if (routeModels.length > 0) {
         return {
           routeIndex: index,

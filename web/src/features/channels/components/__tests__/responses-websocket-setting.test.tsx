@@ -88,8 +88,7 @@ describe('Responses WebSocket channel setting', () => {
           created_time: 0,
           test_time: 0,
           response_time: 0,
-          balance_updated_time: 0,
-          setting: JSON.stringify({ responses_websocket_enabled: enabled }),
+            setting: JSON.stringify({ responses_websocket_enabled: enabled }),
         })
         const values = transformChannelToFormDefaults(channel)
         const payloads = [

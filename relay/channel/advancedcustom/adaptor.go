@@ -173,10 +173,6 @@ func (a *Adaptor) BuildModelListRequest(info *relaycommon.RelayInfo) (string, ht
 	return a.buildManagementRequest(info, dto.AdvancedCustomModelListPath)
 }
 
-func (a *Adaptor) BuildBalanceRequest(info *relaycommon.RelayInfo) (string, http.Header, error) {
-	return a.buildManagementRequest(info, dto.AdvancedCustomBalancePath)
-}
-
 func (a *Adaptor) buildManagementRequest(info *relaycommon.RelayInfo, managementPath string) (string, http.Header, error) {
 	if info == nil {
 		return "", nil, errors.New("missing relay info")
@@ -193,8 +189,6 @@ func (a *Adaptor) buildManagementRequest(info *relaycommon.RelayInfo, management
 	switch managementPath {
 	case dto.AdvancedCustomModelListPath:
 		route, ok = config.ModelListRoute()
-	case dto.AdvancedCustomBalancePath:
-		route, ok = config.BalanceRoute()
 	default:
 		return "", nil, fmt.Errorf("unsupported advanced custom management path: %s", managementPath)
 	}

@@ -84,7 +84,6 @@ const CHANNEL_SORTABLE_COLUMNS = new Set<ChannelSortBy>([
   'id',
   'name',
   'priority',
-  'balance',
   'response_time',
   'test_time',
 ])
@@ -335,7 +334,7 @@ export function ChannelsTable() {
       id: false,
       priority: false,
       weight: false,
-      balance: false,
+      used_quota: false,
       response_time: false,
       test_time: false,
       tag: false,

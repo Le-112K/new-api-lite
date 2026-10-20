@@ -113,14 +113,6 @@ func main() {
 	// 数据看板
 	go model.UpdateQuotaData()
 
-	if os.Getenv("CHANNEL_UPDATE_FREQUENCY") != "" {
-		frequency, err := strconv.Atoi(os.Getenv("CHANNEL_UPDATE_FREQUENCY"))
-		if err != nil {
-			common.FatalLog("failed to parse CHANNEL_UPDATE_FREQUENCY: " + err.Error())
-		}
-		go controller.AutomaticallyUpdateChannels(frequency)
-	}
-
 	// Subscription quota reset task (daily/weekly/monthly/custom)
 	service.StartSubscriptionQuotaResetTask()
 

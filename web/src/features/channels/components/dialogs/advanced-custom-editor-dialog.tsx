@@ -24,7 +24,6 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
-  CircleDollarSign,
   Code2,
   Info,
   ListTree,
@@ -79,8 +78,6 @@ import {
 import { cn } from '@/lib/utils'
 
 import {
-  ADVANCED_CUSTOM_BALANCE_LABEL,
-  ADVANCED_CUSTOM_BALANCE_PATH,
   ADVANCED_CUSTOM_AUTH_MODE_OPTIONS,
   ADVANCED_CUSTOM_CONVERTER_OPTIONS,
   ADVANCED_CUSTOM_INCOMING_PATH_OPTIONS,
@@ -127,7 +124,7 @@ type AdvancedCustomEditorDialogProps = {
   onSave: (value: string) => void
 }
 
-type AdvancedCustomEditorTab = 'forwarding' | 'models' | 'balance' | 'json'
+type AdvancedCustomEditorTab = 'forwarding' | 'models' | 'json'
 
 const longSelectContentClass = 'w-[360px] max-w-[calc(100vw-2rem)]'
 const longSelectItemClass =
@@ -144,7 +141,6 @@ const emptyAdvancedRoutes: AdvancedCustomRoute[] = []
 const advancedCustomTabs = new Set<AdvancedCustomEditorTab>([
   'forwarding',
   'models',
-  'balance',
   'json',
 ])
 
@@ -338,10 +334,6 @@ export function AdvancedCustomEditorDialog({
   const modelListRoute = getAdvancedCustomManagementRoute(
     normalizedConfig,
     ADVANCED_CUSTOM_MODEL_LIST_PATH
-  )
-  const balanceRoute = getAdvancedCustomManagementRoute(
-    normalizedConfig,
-    ADVANCED_CUSTOM_BALANCE_PATH
   )
   const selectedTemplate = useMemo(
     () =>
@@ -719,13 +711,6 @@ export function AdvancedCustomEditorDialog({
                 {modelListRoute ? t('Configured') : t('Not configured')}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value='balance'>
-              <CircleDollarSign className='size-4' aria-hidden='true' />
-              {t('Balance Query')}
-              <Badge variant='outline'>
-                {balanceRoute ? t('Configured') : t('Not configured')}
-              </Badge>
-            </TabsTrigger>
             <TabsTrigger value='json'>
               <Code2 className='size-4' aria-hidden='true' />
               {t('Full JSON')}
@@ -917,26 +902,6 @@ export function AdvancedCustomEditorDialog({
           />
         </TabsContent>
 
-        <TabsContent value='balance' className='p-4'>
-          <ManagementRouteEditor
-            route={balanceRoute}
-            path={ADVANCED_CUSTOM_BALANCE_PATH}
-            title={ADVANCED_CUSTOM_BALANCE_LABEL}
-            description={t(
-              'This route is used only by channel management to query the upstream balance.'
-            )}
-            onChange={(route) =>
-              setConfig((current) =>
-                replaceAdvancedCustomManagementRoute(
-                  current,
-                  ADVANCED_CUSTOM_BALANCE_PATH,
-                  route
-                )
-              )
-            }
-          />
-        </TabsContent>
-
         <TabsContent value='json' className='p-4'>
           <JsonCodeEditor
             value={jsonText}
@@ -962,7 +927,7 @@ export function AdvancedCustomEditorDialog({
         onOpenChange={setTemplateConfirmOpen}
         title={t('Replace forwarding routes?')}
         desc={t(
-          'This will remove {{removed}} forwarding routes and replace them with the {{template}} template ({{created}} routes). Model list and balance routes will be preserved.',
+          'This will remove {{removed}} forwarding routes and replace them with the {{template}} template ({{created}} routes). The model list route will be preserved.',
           {
             removed: routeRows.length,
             created: selectedTemplate?.config.advanced_routes?.length || 0,
