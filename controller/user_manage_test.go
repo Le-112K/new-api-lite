@@ -68,7 +68,7 @@ func setupManageUserTestDB(t *testing.T) *gorm.DB {
 			}
 		}
 	})
-	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserSession{}, &model.CasbinRule{}, &model.AuthzRole{}, &model.AuthFlow{}, &model.UserAccessToken{}))
+	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserSession{}, &model.CasbinRule{}, &model.AuthzRole{}, &model.AuthFlow{}))
 	require.NoError(t, logDB.AutoMigrate(&model.Log{}, &model.AuditLog{}))
 	versionQuery := "SELECT version()"
 	if dialect == "sqlite" {
@@ -466,24 +466,25 @@ func TestManageUserQuotaTargetsAndWalletBounds(t *testing.T) {
 
 func TestManageUserQuotaMiddlewareKeepsOneOperationPerRequest(t *testing.T) {
 	db := setupManageUserTestDB(t)
-	pat := "quota-middleware-test-token"
-	operator := model.User{Id: 9999, Username: "root-operator", Role: common.RoleRootUser, Status: common.UserStatusEnabled, AuthVersion: 1, AccessToken: &pat, Quota: 1000}
+	operator := model.User{Username: "root-operator", Role: common.RoleRootUser, Status: common.UserStatusEnabled, AuthVersion: 1, Quota: 1000}
 	require.NoError(t, db.Create(&operator).Error)
+	_, credential := newAuditTestSession(t, operator.Id, "manage-user-session")
 	router := gin.New()
-	router.Use(middleware.RequestId(), middleware.AccessTokenAudit())
+	router.Use(middleware.RequestId())
 	router.POST("/api/user/manage", middleware.AdminAuth(), ManageUser)
 	for _, tc := range []struct {
 		body, action string
 		success      bool
 	}{
-		{`{"id":9999,"action":"add_quota","mode":"add","value":100}`, "user.quota_add", true},
-		{`{"id":9999,"action":"add_quota","mode":"subtract","value":0}`, "user.quota_subtract", false},
-		{`{"id":9999,"action":"add_quota","mode":"invalid","value":1}`, "generic", false},
+		{`{"id":$operator,"action":"add_quota","mode":"add","value":100}`, "user.quota_add", true},
+		{`{"id":$operator,"action":"add_quota","mode":"subtract","value":0}`, "user.quota_subtract", false},
+		{`{"id":$operator,"action":"add_quota","mode":"invalid","value":1}`, "generic", false},
 		{`{"id":`, "generic", false},
 	} {
 		recorder := httptest.NewRecorder()
-		request := httptest.NewRequest(http.MethodPost, "/api/user/manage", strings.NewReader(tc.body))
-		request.Header.Set("Authorization", "Bearer "+pat)
+		body := strings.ReplaceAll(tc.body, "$operator", strconv.Itoa(operator.Id))
+		request := httptest.NewRequest(http.MethodPost, "/api/user/manage", strings.NewReader(body))
+		request.Header.Set("Authorization", "Bearer "+credential)
 		request.Header.Set("Content-Type", "application/json")
 		router.ServeHTTP(recorder, request)
 		assert.Equal(t, http.StatusOK, recorder.Code)
@@ -492,7 +493,7 @@ func TestManageUserQuotaMiddlewareKeepsOneOperationPerRequest(t *testing.T) {
 		require.NotEmpty(t, requestID)
 		var audits []model.AuditLog
 		require.NoError(t, model.LOG_DB.Where("request_id = ?", requestID).Find(&audits).Error)
-		require.Len(t, audits, 2, "one operation audit and one PAT request audit")
+		require.Len(t, audits, 1, "one operation audit per request")
 		for _, audit := range audits {
 			assert.Equal(t, tc.success, audit.Success)
 			if audit.Category != model.AuditCategoryOperation {
@@ -504,7 +505,7 @@ func TestManageUserQuotaMiddlewareKeepsOneOperationPerRequest(t *testing.T) {
 			if tc.success {
 				params, err := common.Marshal(audit.Other.Op.Params)
 				require.NoError(t, err)
-				assert.Contains(t, string(params), `"target_user_id":9999`)
+				assert.Contains(t, string(params), fmt.Sprintf(`"target_user_id":%d`, operator.Id))
 				assert.Contains(t, string(params), `"target_username":"root-operator"`)
 			}
 		}

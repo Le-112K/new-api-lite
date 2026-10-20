@@ -27,7 +27,6 @@ func SetRouter(router *gin.Engine, assets WebAssets) {
 		frontendBaseUrl = strings.TrimSuffix(frontendBaseUrl, "/")
 		router.NoRoute(
 			middleware.RouteTag("web"),
-			middleware.AccessTokenAudit(),
 			func(c *gin.Context) {
 				c.Redirect(http.StatusMovedPermanently, fmt.Sprintf("%s%s", frontendBaseUrl, c.Request.RequestURI))
 			},

@@ -17,10 +17,8 @@ type permissionRoute struct {
 	handler    gin.HandlerFunc
 }
 
-// handlePermissionRoute registers a Casbin-guarded route and declares the same
-// permission as the access token scope that route requires.
+// handlePermissionRoute registers a Casbin-guarded route.
 func handlePermissionRoute(group *gin.RouterGroup, method, relativePath string, permission authz.Permission, handlers ...gin.HandlerFunc) {
-	middleware.DeclareAccessTokenPermissionRoute(method, joinPaths(group.BasePath(), relativePath), permission)
 	group.Handle(method, relativePath, append([]gin.HandlerFunc{middleware.RequirePermission(permission)}, handlers...)...)
 }
 

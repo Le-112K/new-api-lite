@@ -792,16 +792,14 @@ func DeleteUser(c *gin.Context) {
 	if authorization == nil {
 		return
 	}
-	revokedAccessTokens, err := model.HardDeleteUserById(id)
-	if err != nil {
+	if err = model.HardDeleteUserById(id); err != nil {
 		common.ApiError(c, err)
 		return
 	}
 	recordManageAuditFor(c, originUser.Id, "user.delete", map[string]any{
 		"username":              originUser.Username,
 		"id":                    originUser.Id,
-		"verification_method":   authorization.Method,
-		"revoked_access_tokens": revokedAccessTokens,
+		"verification_method": authorization.Method,
 	})
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -813,20 +811,14 @@ func DeleteUser(c *gin.Context) {
 func DeleteSelf(c *gin.Context) {
 	setAuthNoStore(c)
 	succeeded := false
-	var revokedAccessTokens int64
 	defer func() {
-		params := map[string]any{"success": succeeded}
-		if succeeded {
-			params["revoked_access_tokens"] = revokedAccessTokens
-		}
-		recordUserSecurityAudit(c, c.GetInt("id"), "user.account_delete", params)
+		recordUserSecurityAudit(c, c.GetInt("id"), "user.account_delete", map[string]any{"success": succeeded})
 	}()
 	if middleware.RequireSecurityProof(c, service.VerificationOperation{Scope: service.VerificationScopeAccountDelete}) == nil {
 		return
 	}
 	identity, _ := middleware.GetStepUpIdentity(c)
-	var err error
-	if revokedAccessTokens, err = model.DeleteUserForSession(identity); err != nil {
+	if err := model.DeleteUserForSession(identity); err != nil {
 		if errors.Is(err, model.ErrCannotDeleteRootUser) {
 			common.ApiErrorI18n(c, i18n.MsgUserCannotDeleteRootUser)
 			return
@@ -980,8 +972,7 @@ func ManageUser(c *gin.Context) {
 		if authorization == nil {
 			return
 		}
-		revokedAccessTokens, err := user.Delete()
-		if err != nil {
+		if err := user.Delete(); err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": err.Error(),
@@ -994,11 +985,10 @@ func ManageUser(c *gin.Context) {
 			common.SysLog(fmt.Sprintf("failed to invalidate tokens cache for user %d: %s", user.Id, err.Error()))
 		}
 		recordManageAuditFor(c, user.Id, "user.manage", map[string]any{
-			"action":                req.Action,
-			"username":              user.Username,
-			"id":                    user.Id,
-			"verification_method":   authorization.Method,
-			"revoked_access_tokens": revokedAccessTokens,
+			"action":              req.Action,
+			"username":            user.Username,
+			"id":                  user.Id,
+			"verification_method": authorization.Method,
 		})
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,

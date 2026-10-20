@@ -10,9 +10,7 @@ import (
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/gin-gonic/gin"
-	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/require"
-	"gorm.io/gorm"
 )
 
 func withHeaderNavModules(t *testing.T, raw string) {
@@ -48,18 +46,7 @@ func performHeaderNavRequest(t *testing.T, handler gin.HandlerFunc, authenticate
 
 	var accessToken string
 	if authenticated {
-		previousDB, previousRedis := model.DB, common.RedisEnabled
-		db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-		require.NoError(t, err)
-		require.NoError(t, db.AutoMigrate(&model.User{}, &model.Option{}))
-		model.DB = db
-		common.RedisEnabled = false
-		require.NoError(t, model.EnsureLegacyAccessTokenRetireAt(time.Now().Unix()))
-		t.Cleanup(func() {
-			model.DB = previousDB
-			common.RedisEnabled = previousRedis
-		})
-		accessToken = "header-nav-pat"
+		setupDashboardAuthMiddlewareTest(t)
 		user := model.User{
 			Username:    "tester",
 			Password:    "unused-password-hash",
@@ -68,8 +55,18 @@ func performHeaderNavRequest(t *testing.T, handler gin.HandlerFunc, authenticate
 			Group:       "default",
 			AuthVersion: 1,
 		}
-		user.SetAccessToken(accessToken)
-		require.NoError(t, db.Create(&user).Error)
+		require.NoError(t, model.DB.Create(&user).Error)
+		now := time.Now().Unix()
+		require.NoError(t, model.CreateUserSession(&model.UserSession{
+			SID: "header-nav-session", UserID: user.Id, Version: 1, UserAuthVersion: 1,
+			Status: model.UserSessionStatusActive, RefreshHash: "refresh-header-nav",
+			LoginMethod: "password", LastActiveAt: now, ExpiresAt: now + 3600,
+		}))
+		var err error
+		accessToken, _, err = service.IssueAccessToken(service.AuthIdentity{
+			UserID: user.Id, SessionID: "header-nav-session", UserAuthVersion: 1, SessionVersion: 1,
+		})
+		require.NoError(t, err)
 	}
 
 	recorder := httptest.NewRecorder()

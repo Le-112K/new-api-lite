@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/i18n"
@@ -26,6 +25,17 @@ type securityEnrollmentResponse struct {
 	Code    string          `json:"code"`
 	Data    json.RawMessage `json:"data"`
 }
+
+// issueSecurityEnrollmentProof issues a step-up proof for the given operation.
+func issueSecurityEnrollmentProof(t *testing.T, identity service.AuthIdentity, operation service.VerificationOperation, method string) string {
+	t.Helper()
+	binding, err := service.BindVerificationOperation(operation)
+	require.NoError(t, err)
+	proof, _, err := service.IssueSecurityProof(identity, method, binding)
+	require.NoError(t, err)
+	return proof
+}
+
 
 func decodeSecurityEnrollmentResponse(t *testing.T, response *httptest.ResponseRecorder) securityEnrollmentResponse {
 	t.Helper()
@@ -75,10 +85,9 @@ func setupSecurityEnrollmentTest(t *testing.T) (*model.User, service.AuthIdentit
 	var version string
 	require.NoError(t, db.Raw(versionQuery).Scan(&version).Error)
 	t.Logf("database: %s %s", dialect, version)
-	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserSession{}, &model.AuthFlow{}, &model.Option{}, &model.UserAccessToken{}))
+	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserSession{}, &model.AuthFlow{}, &model.Option{}))
 	require.NoError(t, logDB.AutoMigrate(&model.AuditLog{}))
 	model.DB, model.LOG_DB = db, logDB
-	require.NoError(t, model.EnsureLegacyAccessTokenRetireAt(time.Now().Unix()))
 	dbType := common.DatabaseTypeSQLite
 	if dialect == "mysql" {
 		dbType = common.DatabaseTypeMySQL
@@ -363,50 +372,5 @@ func TestAdminUserVerificationPolicy(t *testing.T) {
 		requirements, err := service.GetVerificationRequirements(identity, service.VerificationScopeAdminUserManage)
 		require.NoError(t, err)
 		assert.Equal(t, []service.VerificationMethodOption{{Method: service.VerificationMethodPassword, Available: true}}, requirements.Methods)
-	})
-	t.Run("a legacy token cannot present a proof", func(t *testing.T) {
-		operator, identity, target := setupAdminUserTest(t)
-		require.NoError(t, model.DB.Model(operator).Update("access_token", "legacy-admin-token").Error)
-		proof := issueSecurityEnrollmentProof(t, identity, service.VerificationOperation{Scope: service.VerificationScopeAdminUserDelete, Context: []byte(fmt.Sprintf(`{"user_id":%d}`, target.Id))}, service.VerificationMethodPassword)
-		response := accessTokenRequest(newAccessTokenTestRouter(), http.MethodDelete, fmt.Sprintf("/api/user/%d", target.Id), "legacy-admin-token", proof, "")
-		assert.Equal(t, http.StatusForbidden, response.Code)
-		assert.Equal(t, "SECURITY_PROOF_INVALID", decodeSecurityEnrollmentResponse(t, response).Code)
-		_, err := model.GetUserById(target.Id, false)
-		assert.NoError(t, err)
-	})
-	t.Run("a user:write token completes the deletion on its own proof", func(t *testing.T) {
-		operator, _, target := setupAdminUserTest(t)
-		require.NoError(t, model.DB.AutoMigrate(&model.Token{}))
-		raw, _ := createScopedAccessToken(t, operator.Id, 0, "user:write")
-		router := newAccessTokenTestRouter()
-		response := accessTokenRequest(router, http.MethodPost, "/api/verify", raw, "", fmt.Sprintf(`{"scope":"admin.user.delete","method":"password","password":"enrollment-password","context":{"user_id":%d}}`, target.Id))
-		body := decodeSecurityEnrollmentResponse(t, response)
-		require.True(t, body.Success, body.Message)
-		var proof service.SecurityProof
-		require.NoError(t, common.Unmarshal(body.Data, &proof))
-
-		response = accessTokenRequest(router, http.MethodDelete, fmt.Sprintf("/api/user/%d", target.Id), raw, proof.ProofToken, "")
-		body = decodeSecurityEnrollmentResponse(t, response)
-		require.True(t, body.Success, body.Message)
-		_, err := model.GetUserById(target.Id, true)
-		assert.Error(t, err)
-		var audit model.AuditLog
-		require.NoError(t, model.LOG_DB.Where("action = ?", "user.delete").Last(&audit).Error)
-		assert.Equal(t, "access_token", audit.AuthMethod)
-		auditJSON, err := common.Marshal(audit)
-		require.NoError(t, err)
-		for _, secret := range []string{raw, proof.ProofToken, "enrollment-password"} {
-			assert.NotContains(t, string(auditJSON), secret)
-		}
-	})
-	t.Run("a user:read token cannot obtain a proof", func(t *testing.T) {
-		operator, _, target := setupAdminUserTest(t)
-		raw, _ := createScopedAccessToken(t, operator.Id, 0, "user:read")
-		response := accessTokenRequest(newAccessTokenTestRouter(), http.MethodPost, "/api/verify", raw, "", fmt.Sprintf(`{"scope":"admin.user.delete","method":"password","password":"enrollment-password","context":{"user_id":%d}}`, target.Id))
-		assert.Equal(t, http.StatusForbidden, response.Code)
-		assert.Equal(t, "SECURITY_ACTION_FORBIDDEN", decodeSecurityEnrollmentResponse(t, response).Code)
-		var flows int64
-		require.NoError(t, model.DB.Model(&model.AuthFlow{}).Count(&flows).Error)
-		assert.Zero(t, flows)
 	})
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/model"
-	"github.com/QuantumNous/new-api/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -166,32 +165,11 @@ func finishAdminAudit(c *gin.Context, writer *auditResponseWriter) {
 	model.RecordOperationAuditLog(operatorId, operatorRole, content, ip, action, opParams, adminInfo, auditInfo, c)
 }
 
+// auditAuthMethod reports how the operator authenticated. Dashboard operators
+// always present a login session.
 func auditAuthMethod(c *gin.Context) string {
-	if c.GetBool("use_access_token") {
-		return "access_token"
-	}
 	return "session"
 }
-
-// auditResponseSuccess 依据 HTTP 状态码与响应体推断操作是否成功。
-// 优先解析响应 JSON 中的 success 字段；无法解析时退回到状态码判断。
-func auditResponseSuccess(status int, body []byte) bool {
-	if status >= 400 {
-		return false
-	}
-	trimmed := bytes.TrimSpace(body)
-	if len(trimmed) > 0 && trimmed[0] == '{' {
-		var resp struct {
-			Success *bool `json:"success"`
-		}
-		if err := common.Unmarshal(trimmed, &resp); err == nil && resp.Success != nil {
-			return *resp.Success
-		}
-	}
-	return status < 400
-}
-
-const accessTokenAuditContextKey = "access_token_request_audit"
 
 // TokenOperationAudit runs after UserAuth and before endpoint rate limits.
 // Handlers add only allowlisted metadata; neither bodies nor raw errors are persisted.
@@ -243,65 +221,21 @@ func TokenOperationAudit() gin.HandlerFunc {
 	}
 }
 
-type accessTokenRequestAudit struct {
-	entry  model.AuditLog
-	writer *auditResponseWriter
-}
-
-// AccessTokenAudit also captures public reads and rejections before route-level
-// authentication (for example, rate limiting). It does not grant authentication.
-func AccessTokenAudit() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		raw, present := authorizationToken(c.GetHeader("Authorization"))
-		if present {
-			_, internal, _ := service.ParseDashboardAccessToken(raw)
-			if !internal {
-				if lookup := lookupAccessToken(c, raw); lookup.user != nil {
-					beginAccessTokenAudit(c, lookup.user, lookup.ref)
-					defer finishAccessTokenAudit(c)
-				}
-			}
+// auditResponseSuccess 依据 HTTP 状态码与响应体推断操作是否成功。
+// 优先解析响应 JSON 中的 success 字段；无法解析时退回到状态码判断。
+func auditResponseSuccess(status int, body []byte) bool {
+	if status >= 400 {
+		return false
+	}
+	trimmed := bytes.TrimSpace(body)
+	if len(trimmed) > 0 && trimmed[0] == '{' {
+		var resp struct {
+			Success *bool `json:"success"`
 		}
-		c.Next()
+		if err := common.Unmarshal(trimmed, &resp); err == nil && resp.Success != nil {
+			return *resp.Success
+		}
 	}
+	return status < 400
 }
 
-func beginAccessTokenAudit(c *gin.Context, user *model.UserBase, tokenRef string) {
-	if _, exists := c.Get(accessTokenAuditContextKey); exists {
-		return
-	}
-	writer := &auditResponseWriter{ResponseWriter: c.Writer, body: bytes.NewBuffer(nil), maxSize: 64 * 1024}
-	c.Writer = writer
-	c.Set(accessTokenAuditContextKey, &accessTokenRequestAudit{
-		entry:  model.AuditLog{UserId: user.Id, Username: user.Username, ActorRole: user.Role, Category: model.AuditCategoryAccessToken, AuthMethod: "access_token", TokenRef: tokenRef, CreatedAt: common.GetTimestamp(), EventId: common.NewRequestId()},
-		writer: writer,
-	})
-}
-
-// setAccessTokenAuditParam adds non-secret context, such as why a token was
-// rejected, to the current request's access audit entry.
-func setAccessTokenAuditParam(c *gin.Context, key string, value any) {
-	stored, _ := c.Get(accessTokenAuditContextKey)
-	audit, ok := stored.(*accessTokenRequestAudit)
-	if !ok {
-		return
-	}
-	if audit.entry.Other.Op == nil {
-		audit.entry.Other.Op = &model.AuditOperation{Params: model.AuditFields{}}
-	}
-	audit.entry.Other.Op.Params[key] = value
-}
-
-func finishAccessTokenAudit(c *gin.Context) {
-	value, exists := c.Get(accessTokenAuditContextKey)
-	if !exists {
-		return
-	}
-	audit, ok := value.(*accessTokenRequestAudit)
-	if !ok {
-		return
-	}
-	audit.entry.Status = audit.writer.Status()
-	audit.entry.Success = auditResponseSuccess(audit.entry.Status, audit.writer.body.Bytes())
-	model.RecordAuditLog(c, audit.entry)
-}

@@ -2,7 +2,6 @@ package controller
 
 import (
 	"fmt"
-	"net/http"
 	"strconv"
 	"time"
 
@@ -28,14 +27,6 @@ func requirePaymentCompliance(c *gin.Context) bool {
 }
 
 func ConfirmPaymentCompliance(c *gin.Context) {
-	if c.GetBool("use_access_token") {
-		c.JSON(http.StatusForbidden, gin.H{
-			"success": false,
-			"message": "This operation requires dashboard session authentication. API access token is not allowed.",
-		})
-		return
-	}
-
 	var req PaymentComplianceRequest
 	if err := common.DecodeJson(c.Request.Body, &req); err != nil {
 		common.ApiErrorMsg(c, "参数错误")

@@ -86,8 +86,6 @@ type User struct {
 	Status               int                        `json:"status" gorm:"type:int;default:1"` // enabled, disabled
 	Email                string                     `json:"email" gorm:"index" validate:"max=50"`
 	VerificationCode     string                     `json:"verification_code" gorm:"-:all"`                         // this field is only for Email verification, don't save it to database!
-	AccessToken          *string                    `json:"-" gorm:"type:char(32);column:access_token;uniqueIndex"` // Deprecated: 旧版面板访问令牌，仅在升级后的过渡期内使用；删除 users.access_token 列时一并移除。
-	AccessTokenCreatedAt *int64                     `json:"-" gorm:"type:bigint;column:access_token_created_at"`    // Deprecated: 旧版面板访问令牌，仅在升级后的过渡期内使用；删除 users.access_token 列时一并移除。
 	Quota                int                        `json:"quota" gorm:"type:int;default:0"`
 	UsedQuota            int                        `json:"used_quota" gorm:"type:int;default:0;column:used_quota"` // used quota
 	RequestCount         int                        `json:"request_count" gorm:"type:int;default:0;"`               // request number
@@ -116,38 +114,6 @@ func (user *User) ToBaseUser() *UserBase {
 		CacheSchema: userCacheSchemaVersion,
 	}
 	return cache
-}
-
-// Deprecated: 旧版面板访问令牌，仅在升级后的过渡期内使用；删除 users.access_token 列时一并移除。
-func (user *User) GetAccessToken() string {
-	if user.AccessToken == nil {
-		return ""
-	}
-	return *user.AccessToken
-}
-
-// Deprecated: 旧版面板访问令牌，仅在升级后的过渡期内使用；删除 users.access_token 列时一并移除。
-func (user *User) SetAccessToken(token string) {
-	user.AccessToken = &token
-}
-
-// RevokeUserAccessToken returns the generation actually revoked under the row lock.
-//
-// Deprecated: 旧版面板访问令牌，仅在升级后的过渡期内使用；删除 users.access_token 列时一并移除。
-func RevokeUserAccessToken(id int) (string, error) {
-	var tokenRef string
-	err := DB.Transaction(func(tx *gorm.DB) error {
-		var user User
-		if err := lockForUpdate(tx).Select("id", "access_token").First(&user, id).Error; err != nil {
-			return err
-		}
-		tokenRef = AccessTokenFingerprint(user.GetAccessToken())
-		if tokenRef == "" {
-			return nil
-		}
-		return tx.Model(&User{}).Where("id = ?", id).Updates(map[string]any{"access_token": nil, "access_token_created_at": nil}).Error
-	})
-	return tokenRef, err
 }
 
 func (user *User) GetSetting() dto.UserSetting {
@@ -494,21 +460,19 @@ func GetSelfUserById(id int) (*User, error) {
 	return &profile.User, err
 }
 
-// DeleteUserById soft-deletes a user and returns how many scoped access tokens
-// were deleted with it.
-func DeleteUserById(id int) (int64, error) {
+// DeleteUserById soft-deletes a user.
+func DeleteUserById(id int) error {
 	if id == 0 {
-		return 0, errors.New("id 为空！")
+		return errors.New("id 为空！")
 	}
 	user := User{Id: id}
 	return user.Delete()
 }
 
-// HardDeleteUserById permanently deletes a user and returns how many scoped
-// access tokens were deleted with it.
-func HardDeleteUserById(id int) (int64, error) {
+// HardDeleteUserById permanently deletes a user.
+func HardDeleteUserById(id int) error {
 	if id == 0 {
-		return 0, errors.New("id 为空！")
+		return errors.New("id 为空！")
 	}
 	user := User{Id: id}
 	return user.HardDelete()
@@ -749,21 +713,20 @@ func (user *User) EditWithTx(tx *gorm.DB, updatePassword bool) error {
 	return tx.First(user, user.Id).Error
 }
 
-func (user *User) Delete() (int64, error) {
+func (user *User) Delete() error {
 	return user.delete(nil)
 }
 
-func DeleteUserForSession(identity AuthSessionIdentity) (int64, error) {
+func DeleteUserForSession(identity AuthSessionIdentity) error {
 	user := User{Id: identity.UserID}
 	return user.delete(&identity)
 }
 
-func (user *User) delete(identity *AuthSessionIdentity) (int64, error) {
+func (user *User) delete(identity *AuthSessionIdentity) error {
 	if user.Id == 0 {
-		return 0, errors.New("id 为空！")
+		return errors.New("id 为空！")
 	}
 	var nextAuthVersion int64
-	var revokedAccessTokens int64
 	if err := DB.Transaction(func(tx *gorm.DB) error {
 		if identity != nil {
 			if err := ValidateAuthSessionWithTx(tx, *identity); err != nil {
@@ -782,37 +745,28 @@ func (user *User) delete(identity *AuthSessionIdentity) (int64, error) {
 		if err != nil {
 			return err
 		}
-		revokedAccessTokens, err = DeleteUserAccessTokensWithTx(tx, user.Id)
-		if err != nil {
-			return err
-		}
 		return tx.Delete(user).Error
 	}); err != nil {
-		return 0, err
+		return err
 	}
 	if err := publishCommittedUserAuthVersion(user.Id, nextAuthVersion); err != nil {
-		return revokedAccessTokens, err
+		return err
 	}
 	if _, err := RevokeAllUserSessions(user.Id, "user_deleted"); err != nil {
-		return revokedAccessTokens, err
+		return err
 	}
-	return revokedAccessTokens, invalidateUserCache(user.Id)
+	return invalidateUserCache(user.Id)
 }
 
-func (user *User) HardDelete() (int64, error) {
+func (user *User) HardDelete() error {
 	if user.Id == 0 {
-		return 0, errors.New("id 为空！")
+		return errors.New("id 为空！")
 	}
 	var tokens []Token
 	var deletedAuthVersion int64
-	var revokedAccessTokens int64
 	err := DB.Transaction(func(tx *gorm.DB) error {
 		var err error
 		deletedAuthVersion, err = IncrementUserAuthVersionWithTx(tx, user.Id)
-		if err != nil {
-			return err
-		}
-		revokedAccessTokens, err = DeleteUserAccessTokensWithTx(tx, user.Id)
 		if err != nil {
 			return err
 		}
@@ -827,7 +781,7 @@ func (user *User) HardDelete() (int64, error) {
 		return tx.Unscoped().Delete(user).Error
 	})
 	if err != nil {
-		return 0, err
+		return err
 	}
 	if err := publishCommittedUserAuthVersion(user.Id, deletedAuthVersion); err != nil {
 		common.SysError(fmt.Sprintf("failed to publish auth tombstone after hard deleting user %d: %v", user.Id, err))
@@ -838,7 +792,7 @@ func (user *User) HardDelete() (int64, error) {
 	if err := invalidateUserCache(user.Id); err != nil {
 		common.SysError(fmt.Sprintf("failed to invalidate user cache after hard deleting user %d: %v", user.Id, err))
 	}
-	return revokedAccessTokens, nil
+	return nil
 }
 
 func deleteUserAuthenticationData(tx *gorm.DB, userId int) error {
@@ -960,29 +914,6 @@ func IsAdmin(userId int) bool {
 		return false
 	}
 	return user.Role >= common.RoleAdminUser
-}
-
-// ValidateAccessToken resolves a legacy plaintext access token. After the
-// transition deadline it rejects every value without querying the database.
-//
-// Deprecated: 旧版面板访问令牌，仅在升级后的过渡期内使用；删除 users.access_token 列时一并移除。
-func ValidateAccessToken(token string) (*User, error) {
-	if token == "" {
-		return nil, nil
-	}
-	if LegacyAccessTokensRetired(common.GetTimestamp()) {
-		return nil, ErrLegacyAccessTokenRetired
-	}
-	token = strings.Replace(token, "Bearer ", "", 1)
-	user := &User{}
-	err := DB.Where("access_token = ?", token).First(user).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("%w: %v", ErrDatabase, err)
-	}
-	return user, nil
 }
 
 // GetUserQuota gets quota from Redis first, falls back to DB if needed

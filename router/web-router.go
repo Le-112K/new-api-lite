@@ -25,7 +25,6 @@ func SetWebRouter(router *gin.Engine, assets WebAssets) {
 	router.NoRoute(
 		middleware.RouteTag("web"),
 		gzip.Gzip(gzip.DefaultCompression),
-		middleware.AccessTokenAudit(),
 		middleware.GlobalWebRateLimit(),
 		middleware.Cache(),
 		static.Serve("/", frontendFS),

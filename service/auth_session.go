@@ -150,11 +150,8 @@ func ValidateLoginSession(identity AuthIdentity) (*model.UserSession, *model.Use
 }
 
 // ValidateStepUpIdentity checks that the identity requesting or consuming a
-// proof is still live: a browser session or a scoped access token.
+// proof is still a live browser session.
 func ValidateStepUpIdentity(identity AuthIdentity) error {
-	if _, ok := model.ParseAccessTokenSessionID(identity.SessionID); ok {
-		return model.ValidateAccessTokenIdentity(identity)
-	}
 	_, _, err := ValidateLoginSession(identity)
 	return err
 }
@@ -209,12 +206,6 @@ func AdvanceCurrentSessionToUserVersion(identity AuthIdentity, reason string) (*
 }
 
 func advanceCurrentSessionToVersion(identity AuthIdentity, nextUserAuthVersion int64, reason string) (*AuthBundle, error) {
-	// An access token has no browser session to keep, so every browser session
-	// signs in again at the new auth version. The token itself stays valid.
-	if _, ok := model.ParseAccessTokenSessionID(identity.SessionID); ok {
-		_, err := model.RevokeAllUserSessions(identity.UserID, reason)
-		return nil, err
-	}
 	session, err := model.AdvanceUserSessionAuthVersion(
 		identity.UserID,
 		identity.SessionID,

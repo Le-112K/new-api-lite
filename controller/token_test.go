@@ -642,8 +642,7 @@ func TestAPITokenAuditDatabaseMatrix(t *testing.T) {
 
 func verifyAPITokenAudit(t *testing.T) {
 	t.Helper()
-	pat := "api-token-audit-pat-secret"
-	user := &model.User{Username: "token-owner", Password: "placeholder", Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1, AccessToken: &pat}
+	user := &model.User{Username: "token-owner", Password: "placeholder", Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1}
 	require.NoError(t, model.DB.Create(user).Error)
 	other := &model.User{Username: "other-owner", Password: "placeholder", Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1}
 	require.NoError(t, model.DB.Create(other).Error)
@@ -652,7 +651,7 @@ func verifyAPITokenAudit(t *testing.T) {
 	jwt, _, err := service.IssueAccessToken(service.AuthIdentity{UserID: user.Id, SessionID: session.SID, UserAuthVersion: 1, SessionVersion: 1})
 	require.NoError(t, err)
 	router := gin.New()
-	router.Use(middleware.RequestId(), middleware.AccessTokenAudit())
+	router.Use(middleware.RequestId())
 	tokenRoutes := router.Group("/api/token", middleware.UserAuth(), middleware.TokenOperationAudit())
 	tokenRoutes.POST("/", AddToken)
 	tokenRoutes.PUT("/", UpdateToken)
@@ -676,7 +675,7 @@ func verifyAPITokenAudit(t *testing.T) {
 		success                          bool
 		params                           string
 		initialStatus                    int
-		failWrite, rateLimit, usePAT     bool
+		failWrite, rateLimit            bool
 	}{
 		{name: "create", method: "POST", path: "/", body: `{"name":"created","expired_time":-1,"unlimited_quota":true}`, action: "token.create", success: true},
 		{name: "invalid create", method: "POST", path: "/", body: `{"name":"attempt","remain_quota":-1}`, action: "token.create", params: `{"name":"attempt"}`},
@@ -696,7 +695,6 @@ func verifyAPITokenAudit(t *testing.T) {
 		{name: "foreign delete", method: "DELETE", path: "/$other", action: "token.delete", params: `{"id":$other}`},
 		{name: "missing delete", method: "DELETE", path: "/999999", action: "token.delete", params: `{"id":999999}`},
 		{name: "key view", method: "POST", path: "/$id/key", action: "token.key_view", success: true, params: `{"id":$id,"name":"owned"}`},
-		{name: "PAT key view", method: "POST", path: "/$id/key", action: "token.key_view", success: true, params: `{"id":$id,"name":"owned"}`, usePAT: true},
 		{name: "foreign key view", method: "POST", path: "/$other/key", action: "token.key_view", params: `{"id":$other}`},
 		{name: "rate limited key view", method: "POST", path: "/$id/key", action: "token.key_view", params: `{"id":$id}`, rateLimit: true},
 		{name: "batch delete partial and duplicate", method: "POST", path: "/batch", body: `{"ids":[$id,$id,$other,999999]}`, action: "token.delete_batch", success: true, params: `{"requested_ids":[$id,$id,$other,999999],"total":4,"count":1}`},
@@ -733,11 +731,7 @@ func verifyAPITokenAudit(t *testing.T) {
 				}
 			}
 			request := httptest.NewRequest(tc.method, "/api/token"+replace.Replace(tc.path), strings.NewReader(replace.Replace(tc.body)))
-			credential := jwt
-			if tc.usePAT {
-				credential = pat
-			}
-			request.Header.Set("Authorization", "Bearer "+credential)
+			request.Header.Set("Authorization", "Bearer "+jwt)
 			request.Header.Set("Content-Type", "application/json")
 			request.Header.Set("User-Agent", "api-token-audit-client")
 			request.RemoteAddr = "192.0.2.12:4321"
@@ -751,22 +745,9 @@ func verifyAPITokenAudit(t *testing.T) {
 			}
 			var events []model.AuditLog
 			require.NoError(t, model.LOG_DB.Where("request_id = ?", response.Header().Get(common.RequestIdKey)).Find(&events).Error)
-			expectedEvents := 1
-			if tc.usePAT {
-				expectedEvents = 2
-			}
-			require.Len(t, events, expectedEvents)
-			var operation *model.AuditLog
-			for i := range events {
-				if events[i].Category == model.AuditCategorySecurity {
-					require.Nil(t, operation, "one operation event per request")
-					operation = &events[i]
-				} else {
-					assert.Equal(t, model.AuditCategoryAccessToken, events[i].Category)
-					assert.Equal(t, model.AccessTokenFingerprint(pat), events[i].TokenRef)
-				}
-			}
-			require.NotNil(t, operation)
+			require.Len(t, events, 1, "one operation event per request")
+			operation := &events[0]
+			assert.Equal(t, model.AuditCategorySecurity, operation.Category)
 			assert.Equal(t, tc.action, operation.Action)
 			assert.Equal(t, tc.success, operation.Success)
 			assert.Equal(t, response.Code, operation.Status)
@@ -787,11 +768,7 @@ func verifyAPITokenAudit(t *testing.T) {
 			assert.NotEmpty(t, operation.RequestId)
 			assert.Empty(t, operation.TokenRef)
 			assert.Nil(t, operation.Other.AdminInfo)
-			authMethod := "session"
-			if tc.usePAT {
-				authMethod = "access_token"
-			}
-			assert.Equal(t, authMethod, operation.AuthMethod)
+			assert.Equal(t, "session", operation.AuthMethod)
 			require.NotNil(t, operation.Other.Op)
 			assert.Equal(t, tc.action, operation.Other.Op.Action)
 			params, err := common.Marshal(operation.Other.Op.Params)
@@ -808,7 +785,7 @@ func verifyAPITokenAudit(t *testing.T) {
 			}
 			encoded, err := common.Marshal(events)
 			require.NoError(t, err)
-			for _, secret := range []string{pat, jwt, owned.Key, foreign.Key, foreign.Name, "raw-body-secret", "raw-storage-error-secret", "private-model-configuration", "203.0.113.57", "Authorization"} {
+			for _, secret := range []string{jwt, owned.Key, foreign.Key, foreign.Name, "raw-body-secret", "raw-storage-error-secret", "private-model-configuration", "203.0.113.57", "Authorization"} {
 				assert.NotContains(t, string(encoded), secret)
 			}
 			if tc.action == "token.key_view" && tc.success {
