@@ -35,6 +35,25 @@ func filterPricingByUsableGroups(pricing []model.Pricing, usableGroup map[string
 	return filtered
 }
 
+// filterPricingByConfiguredPrice 剔除未配置计费规则的模型。
+//
+// 这类模型在 /v1/models 中本来就不会出现，调用也会被计费校验拒绝，因此不应该
+// 出现在价格页上——否则等于对用户展示一个买不到的价格（历史上会显示成自用模式
+// 遗留的 37.5 倍兜底值）。
+func filterPricingByConfiguredPrice(pricing []model.Pricing) []model.Pricing {
+	if len(pricing) == 0 {
+		return pricing
+	}
+
+	filtered := make([]model.Pricing, 0, len(pricing))
+	for _, item := range pricing {
+		if item.PriceConfigured {
+			filtered = append(filtered, item)
+		}
+	}
+	return filtered
+}
+
 func GetPricing(c *gin.Context) {
 	pricing := model.GetPricing()
 	userId, exists := c.Get("id")
@@ -56,6 +75,7 @@ func GetPricing(c *gin.Context) {
 	}
 
 	usableGroup = service.GetUserUsableGroups(group)
+	pricing = filterPricingByConfiguredPrice(pricing)
 	pricing = filterPricingByUsableGroups(pricing, usableGroup)
 	// check groupRatio contains usableGroup
 	for group := range ratio_setting.GetGroupRatioCopy() {

@@ -49,6 +49,11 @@ type Pricing struct {
 	BillingUsageSchema     map[string]usageschema.UsageFieldSchema `json:"billing_usage_schema,omitempty"`
 	BillingUsageExamples   []usageschema.UsageExample              `json:"billing_usage_examples,omitempty"`
 	PricingVersion         string                               `json:"pricing_version,omitempty"`
+
+	// PriceConfigured 表示该模型是否存在可用的计费配置（按次价格、模型倍率或
+	// 分级表达式三者之一）。未配置的模型无法通过计费校验，调用必然失败，因此
+	// 不应出现在公开价格页上。该字段只用于内部过滤，不参与序列化。
+	PriceConfigured bool `json:"-"`
 }
 
 type PricingVendor struct {
@@ -347,11 +352,13 @@ func updatePricing() {
 		if findPrice {
 			pricing.ModelPrice = modelPrice
 			pricing.QuotaType = 1
+			pricing.PriceConfigured = true
 		} else {
-			modelRatio, _, _ := ratio_setting.GetModelRatio(model)
+			modelRatio, ratioSuccess, _ := ratio_setting.GetModelRatio(model)
 			pricing.ModelRatio = modelRatio
 			pricing.CompletionRatio = ratio_setting.GetCompletionRatio(model)
 			pricing.QuotaType = 0
+			pricing.PriceConfigured = ratioSuccess
 		}
 		if cacheRatio, ok := ratio_setting.GetCacheRatio(model); ok {
 			pricing.CacheRatio = &cacheRatio
@@ -374,6 +381,8 @@ func updatePricing() {
 			if expr, ok := billing_setting.GetBillingExpr(model); ok && strings.TrimSpace(expr) != "" {
 				pricing.BillingMode = billingMode
 				pricing.BillingExpr = expr
+				// 分级计费模型可以没有模型倍率，表达式本身就是计费配置。
+				pricing.PriceConfigured = true
 			}
 		}
 		pricingMap = append(pricingMap, pricing)
