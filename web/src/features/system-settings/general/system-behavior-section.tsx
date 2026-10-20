@@ -42,7 +42,6 @@ import { useUpdateOption } from '../hooks/use-update-option'
 
 const behaviorSchema = z.object({
   DefaultCollapseSidebar: z.boolean(),
-  SelfUseModeEnabled: z.boolean(),
 })
 
 type BehaviorFormValues = z.infer<typeof behaviorSchema>
@@ -91,27 +90,6 @@ export function SystemBehaviorSection({
                   <FormLabel>{t('Default Collapse Sidebar')}</FormLabel>
                   <FormDescription>
                     {t('Sidebar collapsed by default for new users')}
-                  </FormDescription>
-                </SettingsSwitchContent>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </SettingsSwitchItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name='SelfUseModeEnabled'
-            render={({ field }) => (
-              <SettingsSwitchItem>
-                <SettingsSwitchContent>
-                  <FormLabel>{t('Self-Use Mode')}</FormLabel>
-                  <FormDescription>
-                    {t('Optimize system for self-hosted single-user usage')}
                   </FormDescription>
                 </SettingsSwitchContent>
                 <FormControl>

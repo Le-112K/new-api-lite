@@ -26,7 +26,6 @@ import {
 
 const defaultOperationsSettings: OperationsSettings = {
   DefaultCollapseSidebar: false,
-  SelfUseModeEnabled: false,
   QuotaRemindThreshold: '',
   SMTPServer: '',
   SMTPPort: '',

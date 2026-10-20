@@ -49,8 +49,7 @@ export function AuthFormPanel(props: AuthFormPanelProps) {
   const isDialog = props.variant === 'dialog'
   const isSignIn = props.mode === 'sign-in'
 
-  const canRegister =
-    !status?.self_use_mode_enabled && status?.register_enabled !== false
+  const canRegister = status?.register_enabled !== false
 
   return (
     <div

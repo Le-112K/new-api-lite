@@ -33,7 +33,6 @@ const OPERATIONS_SECTIONS = [
       <SystemBehaviorSection
         defaultValues={{
           DefaultCollapseSidebar: settings.DefaultCollapseSidebar,
-          SelfUseModeEnabled: settings.SelfUseModeEnabled,
         }}
       />
     ),

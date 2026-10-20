@@ -70,7 +70,6 @@ func GetStatus(c *gin.Context) {
 		"enable_data_export":            common.DataExportEnabled,
 		"data_export_default_time":      common.DataExportDefaultTime,
 		"default_collapse_sidebar":      common.DefaultCollapseSidebar,
-		"self_use_mode_enabled":         operation_setting.SelfUseModeEnabled,
 		"register_enabled":              common.RegisterEnabled,
 		"password_login_enabled":        common.PasswordLoginEnabled,
 		"password_register_enabled":     common.PasswordRegisterEnabled,

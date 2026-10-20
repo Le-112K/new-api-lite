@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/setting/operation_setting"
 	hostreasoning "github.com/QuantumNous/new-api/setting/reasoning"
 	"github.com/QuantumNous/new-api/types"
 )
@@ -368,7 +367,7 @@ func GetModelRatio(name string) (float64, bool, string) {
 
 	ratio, ok := modelRatioMap.Get(name)
 	if !ok {
-		return 37.5, operation_setting.SelfUseModeEnabled, name
+		return 37.5, false, name
 	}
 	return ratio, true, name
 }

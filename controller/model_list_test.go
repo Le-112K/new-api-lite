@@ -14,7 +14,6 @@ import (
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/config"
-	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -94,6 +93,29 @@ func initModelListColumnNames(t *testing.T) {
 	}
 }
 
+// withModelRatios pins explicit ratios for the given models. Since the
+// self-use fallback is gone, an unpriced model is filtered out of the list and
+// rejected at billing time, so tests that only care about other behaviour must
+// price their fixtures deliberately.
+func withModelRatios(t *testing.T, models ...string) {
+	t.Helper()
+
+	original := ratio_setting.ModelRatio2JSONString()
+	t.Cleanup(func() {
+		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(original))
+		model.InvalidatePricingCache()
+	})
+
+	ratios := ratio_setting.GetModelRatioCopy()
+	for _, name := range models {
+		ratios[name] = 1
+	}
+	payload, err := common.Marshal(ratios)
+	require.NoError(t, err)
+	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(payload)))
+	model.InvalidatePricingCache()
+}
+
 func withTieredBillingConfig(t *testing.T, modes map[string]string, exprs map[string]string) {
 	t.Helper()
 
@@ -119,26 +141,6 @@ func withTieredBillingConfig(t *testing.T, modes map[string]string, exprs map[st
 		"billing_setting.billing_expr": string(exprBytes),
 	}))
 	model.InvalidatePricingCache()
-}
-
-func withSelfUseModeDisabled(t *testing.T) {
-	t.Helper()
-
-	original := operation_setting.SelfUseModeEnabled
-	operation_setting.SelfUseModeEnabled = false
-	t.Cleanup(func() {
-		operation_setting.SelfUseModeEnabled = original
-	})
-}
-
-func withSelfUseModeEnabled(t *testing.T) {
-	t.Helper()
-
-	original := operation_setting.SelfUseModeEnabled
-	operation_setting.SelfUseModeEnabled = true
-	t.Cleanup(func() {
-		operation_setting.SelfUseModeEnabled = original
-	})
 }
 
 func decodeListModelsPayload(t *testing.T, recorder *httptest.ResponseRecorder) listModelsResponse {
@@ -266,7 +268,6 @@ func TestGetUserModelsExpandsAutoGroupsInConfiguredOrder(t *testing.T) {
 }
 
 func TestListModelsIncludesTieredBillingModel(t *testing.T) {
-	withSelfUseModeDisabled(t)
 	withTieredBillingConfig(t, map[string]string{
 		"zz-tiered-visible-model":      "tiered_expr",
 		"zz-tiered-empty-expr-model":   "tiered_expr",
@@ -322,8 +323,8 @@ func TestListModelsIncludesTieredBillingModel(t *testing.T) {
 }
 
 func TestListModelsUsesAdvancedCustomEndpointTypesFromPricingCache(t *testing.T) {
-	withSelfUseModeEnabled(t)
 	db := setupModelListControllerTestDB(t)
+	withModelRatios(t, "gemini-3.5-flash")
 
 	originalMemoryCacheEnabled := common.MemoryCacheEnabled
 	common.MemoryCacheEnabled = true
@@ -393,7 +394,6 @@ func TestListModelsUsesAdvancedCustomEndpointTypesFromPricingCache(t *testing.T)
 }
 
 func TestListModelsTokenLimitIncludesTieredBillingModel(t *testing.T) {
-	withSelfUseModeDisabled(t)
 	withTieredBillingConfig(t, map[string]string{
 		"zz-token-tiered-visible-model":      "tiered_expr",
 		"zz-token-tiered-empty-expr-model":   "tiered_expr",
@@ -432,7 +432,6 @@ func TestListModelsTokenLimitIncludesTieredBillingModel(t *testing.T) {
 }
 
 func TestListModelsTokenLimitUsesResolvedCustomAutoGroups(t *testing.T) {
-	withSelfUseModeEnabled(t)
 	originalMax := setting.GetMaxTokenAutoGroups()
 	originalUsableGroups := setting.UserUsableGroups2JSONString()
 	originalRatios := ratio_setting.GroupRatio2JSONString()
@@ -446,6 +445,7 @@ func TestListModelsTokenLimitUsesResolvedCustomAutoGroups(t *testing.T) {
 	})
 
 	db := setupModelListControllerTestDB(t)
+	withModelRatios(t, "zz-vip-allowed")
 	require.NoError(t, db.Create(&[]model.Ability{
 		{Group: "vip", Model: "zz-vip-allowed", ChannelId: 1, Enabled: true},
 		{Group: "vip", Model: "zz-vip-denied", ChannelId: 1, Enabled: true},

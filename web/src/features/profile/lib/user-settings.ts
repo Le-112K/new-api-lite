@@ -41,8 +41,6 @@ export function normalizeUserSettings(
     gotify_url: parsed.gotify_url ?? '',
     gotify_token: parsed.gotify_token ?? '',
     gotify_priority: parsed.gotify_priority ?? 5,
-    accept_unset_model_ratio_model:
-      parsed.accept_unset_model_ratio_model || false,
     record_ip_log: parsed.record_ip_log || false,
     upstream_model_update_notify_enabled:
       parsed.upstream_model_update_notify_enabled || false,

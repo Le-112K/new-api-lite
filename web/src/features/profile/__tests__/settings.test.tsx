@@ -50,7 +50,6 @@ const settings = {
   gotify_url: '',
   gotify_token: '',
   gotify_priority: 5,
-  accept_unset_model_ratio_model: true,
   record_ip_log: true,
   upstream_model_update_notify_enabled: true,
 }
@@ -94,7 +93,6 @@ describe('user settings saves across profile and security', () => {
       gotify_url: '',
       gotify_token: '',
       gotify_priority: 5,
-      accept_unset_model_ratio_model: false,
       record_ip_log: true,
       upstream_model_update_notify_enabled: false,
     })

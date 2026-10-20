@@ -251,7 +251,6 @@ export type BillingSettings = {
 
 export type OperationsSettings = {
   DefaultCollapseSidebar: boolean
-  SelfUseModeEnabled: boolean
   QuotaRemindThreshold: string
   SMTPServer: string
   SMTPPort: string

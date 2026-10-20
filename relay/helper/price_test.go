@@ -333,9 +333,6 @@ func TestModelPriceHelperUsesSuffixedOriginLikeMain(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(ratioJSON)))
 
-	oldSelfUse := operation_setting.SelfUseModeEnabled
-	operation_setting.SelfUseModeEnabled = true
-	t.Cleanup(func() { operation_setting.SelfUseModeEnabled = oldSelfUse })
 
 	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
 	ctx.Set("group", "default")
@@ -393,9 +390,6 @@ func TestModelPriceHelperHonorsCustomClaudeThinkingAlias(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(ratioJSON)))
 
-	oldSelfUse := operation_setting.SelfUseModeEnabled
-	operation_setting.SelfUseModeEnabled = false
-	t.Cleanup(func() { operation_setting.SelfUseModeEnabled = oldSelfUse })
 
 	claudeSettings := model_setting.GetClaudeSettings()
 	oldThinking := claudeSettings.ThinkingAdapterEnabled
@@ -423,9 +417,6 @@ func TestModelPriceHelperCanonicalBillingLadder(t *testing.T) {
 	t.Cleanup(func() {
 		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(savedRatios))
 	})
-	oldSelfUse := operation_setting.SelfUseModeEnabled
-	operation_setting.SelfUseModeEnabled = false
-	t.Cleanup(func() { operation_setting.SelfUseModeEnabled = oldSelfUse })
 
 	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
 	ctx.Set("group", "default")
@@ -524,9 +515,6 @@ func TestModelPriceHelperMigratesLegacyGeminiWildcardToCanonical(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(ratioJSON)))
 
-	oldSelfUse := operation_setting.SelfUseModeEnabled
-	operation_setting.SelfUseModeEnabled = false
-	t.Cleanup(func() { operation_setting.SelfUseModeEnabled = oldSelfUse })
 
 	geminiSettings := model_setting.GetGeminiSettings()
 	oldThinking := geminiSettings.ThinkingAdapterEnabled
@@ -559,9 +547,6 @@ func TestModelPriceHelperModifierNameFallsBackToBase(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(ratioJSON)))
 
-	oldSelfUse := operation_setting.SelfUseModeEnabled
-	operation_setting.SelfUseModeEnabled = false
-	t.Cleanup(func() { operation_setting.SelfUseModeEnabled = oldSelfUse })
 
 	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
 	ctx.Set("group", "default")
@@ -595,9 +580,6 @@ func TestModelPriceHelperExemptAtNameBillsVerbatim(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(ratioJSON)))
 
-	oldSelfUse := operation_setting.SelfUseModeEnabled
-	operation_setting.SelfUseModeEnabled = false
-	t.Cleanup(func() { operation_setting.SelfUseModeEnabled = oldSelfUse })
 
 	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
 	ctx.Set("group", "default")
@@ -627,9 +609,6 @@ func TestModelPriceHelperPreservesGpt51CodexMaxIdentity(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(ratioJSON)))
 
-	oldSelfUse := operation_setting.SelfUseModeEnabled
-	operation_setting.SelfUseModeEnabled = false
-	t.Cleanup(func() { operation_setting.SelfUseModeEnabled = oldSelfUse })
 
 	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
 	ctx.Set("group", "default")
@@ -658,9 +637,6 @@ func TestModelPriceHelperNativeGeminiNoThinkingDoesNotAliasBillingModel(t *testi
 	require.NoError(t, err)
 	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(ratioJSON)))
 
-	oldSelfUse := operation_setting.SelfUseModeEnabled
-	operation_setting.SelfUseModeEnabled = true
-	t.Cleanup(func() { operation_setting.SelfUseModeEnabled = oldSelfUse })
 
 	geminiSettings := model_setting.GetGeminiSettings()
 	oldThinking := geminiSettings.ThinkingAdapterEnabled

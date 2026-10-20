@@ -15,7 +15,6 @@ import (
 	"github.com/QuantumNous/new-api/pkg/billingexpr"
 	"github.com/QuantumNous/new-api/pkg/usageschema"
 	"github.com/QuantumNous/new-api/setting/billing_setting"
-	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -196,9 +195,6 @@ func effectiveModelPricing(values map[string]map[string]any, name string) Pricin
 	}
 	if _, exists := result["ModelPrice"]; exists {
 		return result
-	}
-	if _, exists := result["ModelRatio"]; !exists && operation_setting.SelfUseModeEnabled {
-		result["ModelRatio"] = float64(37.5)
 	}
 	// Completion ratios include engine-enforced model defaults. Expose their
 	// effective value without persisting them into the editable configuration.

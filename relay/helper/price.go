@@ -24,8 +24,8 @@ import (
 func modelPriceNotConfiguredError(modelName string, userId int) error {
 	if model.IsAdmin(userId) {
 		return fmt.Errorf(
-			"模型 %s 的价格未配置。请前往「系统设置 → 运营设置」开启自用模式，或在「系统设置 → 分组与模型定价设置」中为该模型配置价格；"+
-				"Model %s price not configured. Go to System Settings → Operation Settings to enable self-use mode, or configure the model price in System Settings → Group & Model Pricing.",
+			"模型 %s 的价格未配置。请前往「系统设置 → 分组与模型定价设置」为该模型配置价格；"+
+				"Model %s price not configured. Configure the model price in System Settings → Group & Model Pricing.",
 			modelName, modelName,
 		)
 	}
@@ -105,13 +105,7 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 		var matchName string
 		modelRatio, success, matchName = ratio_setting.GetModelRatio(billingModelName)
 		if !success {
-			acceptUnsetRatio := false
-			if info.UserSetting.AcceptUnsetRatioModel {
-				acceptUnsetRatio = true
-			}
-			if !acceptUnsetRatio {
-				return hosttypes.PriceData{}, modelPriceNotConfiguredError(matchName, info.UserId)
-			}
+			return hosttypes.PriceData{}, modelPriceNotConfiguredError(matchName, info.UserId)
 		}
 		completionRatio = ratio_setting.GetCompletionRatio(billingModelName)
 		cacheRatio, _ = ratio_setting.GetCacheRatio(billingModelName)
@@ -229,11 +223,7 @@ func ModelPriceHelperPerCall(c *gin.Context, info *relaycommon.RelayInfo) (hostt
 			var ratioSuccess bool
 			var matchName string
 			modelRatio, ratioSuccess, matchName = ratio_setting.GetModelRatio(info.OriginModelName)
-			acceptUnsetRatio := false
-			if info.UserSetting.AcceptUnsetRatioModel {
-				acceptUnsetRatio = true
-			}
-			if !ratioSuccess && !acceptUnsetRatio {
+			if !ratioSuccess {
 				return hosttypes.PriceData{}, modelPriceNotConfiguredError(matchName, info.UserId)
 			}
 		}
