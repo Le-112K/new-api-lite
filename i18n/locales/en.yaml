@@ -32,10 +32,6 @@ auth.user_id_format_error: "Unauthorized, New-Api-User header format error"
 auth.user_id_mismatch: "Unauthorized, New-Api-User does not match logged in user"
 auth.user_banned: "User has been banned"
 auth.insufficient_privilege: "Unauthorized, insufficient privileges"
-auth.access_token_expired: "Unauthorized, the access token has expired"
-auth.legacy_access_token_retired: "Legacy access tokens have been retired. Create a new access token in security settings"
-auth.access_token_scope_denied: "The access token lacks the required permission: {{.Scope}}"
-auth.access_token_limit: "You can create at most {{.Count}} access tokens"
 
 # Token messages
 token.name_too_long: "Token name is too long"
@@ -133,10 +129,6 @@ payment.callback_error: "Callback URL configuration error"
 payment.create_failed: "Failed to create order"
 payment.start_failed: "Failed to start payment"
 payment.amount_too_low: "Plan amount is too low"
-payment.stripe_not_configured: "Stripe is not configured or key is invalid"
-payment.webhook_not_configured: "Webhook is not configured"
-payment.price_id_not_configured: "StripePriceId is not configured for this plan"
-payment.creem_not_configured: "CreemProductId is not configured for this plan"
 payment.compliance_required: "Payment, redemption, subscription, and invitation reward features are disabled. The administrator must confirm compliance terms before enabling them."
 
 # Topup messages
@@ -182,23 +174,6 @@ checkin.disabled: "Check-in feature is not enabled"
 checkin.already_today: "Already checked in today"
 checkin.failed: "Check-in failed, please try again later"
 checkin.quota_failed: "Check-in failed: quota update error"
-
-# Passkey messages
-passkey.create_failed: "Unable to create Passkey credential"
-passkey.login_abnormal: "Passkey login status is abnormal"
-passkey.update_failed: "Passkey credential update failed"
-passkey.invalid_user_id: "Invalid user ID"
-passkey.verify_failed: "Passkey verification failed, please try again or contact administrator"
-passkey.rp_id_invalid: "Invalid Passkey domain. Enter a domain without a scheme, port, path or wildcard."
-passkey.rp_id_unavailable: "This Passkey domain is not available on this website. Use its original website or another verification method."
-passkey.rp_id_removal_confirmation: "Review the affected Passkeys and confirm the domain removal. If the settings or impact have changed, confirmation is required again."
-
-# 2FA messages
-twofa.not_enabled: "User has not enabled 2FA"
-twofa.user_id_empty: "User ID cannot be empty"
-twofa.already_exists: "User already has 2FA configured"
-twofa.record_id_empty: "2FA record ID cannot be empty"
-twofa.code_invalid: "Verification code or backup code is incorrect"
 
 # Rate limit messages
 rate_limit.reached: "You have reached the request limit: maximum {{.Max}} requests in {{.Minutes}} minutes"

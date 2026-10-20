@@ -29,7 +29,12 @@ For commercial licensing, please contact support@quantumnous.com
  * Usage:
  *   node scripts/drop-i18n-keys.mjs 'Some Key' 'Another Key'
  *   node scripts/drop-i18n-keys.mjs --prefix 'preset.' --prefix 'drawing.'
+ *   node scripts/drop-i18n-keys.mjs --from-file=keys.txt --write
  *   node scripts/drop-i18n-keys.mjs --write 'Some Key'
+ *
+ * `--from-file` reads one JSON-encoded key per line (the format produced by
+ * the orphan-analysis helper), which keeps large batches under the OS argument
+ * length limit.
  *
  * Without `--write` it only prints what would be removed.
  */
@@ -52,16 +57,19 @@ function parseArgs(argv) {
   const exact = []
   const prefixes = []
   let write = false
+  let fromFile = null
   for (const arg of argv) {
     if (arg === '--write') {
       write = true
     } else if (arg.startsWith('--prefix=')) {
       prefixes.push(arg.slice('--prefix='.length))
+    } else if (arg.startsWith('--from-file=')) {
+      fromFile = arg.slice('--from-file='.length)
     } else {
       exact.push(arg)
     }
   }
-  return { exact, prefixes, write }
+  return { exact, prefixes, write, fromFile }
 }
 
 function stableStringify(obj) {
@@ -72,7 +80,17 @@ function stableStringify(obj) {
   return `${text}\n`
 }
 
-const { exact, prefixes, write } = parseArgs(process.argv.slice(2))
+const { exact, prefixes, write, fromFile } = parseArgs(process.argv.slice(2))
+
+if (fromFile) {
+  const text = await fs.readFile(path.resolve(fromFile), 'utf8')
+  for (const line of text.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed) continue
+    exact.push(trimmed.startsWith('"') ? JSON.parse(trimmed) : trimmed)
+  }
+}
+
 if (exact.length === 0 && prefixes.length === 0) {
   console.error(
     'Nothing to drop. Pass key names, or --prefix=<prefix> for a family of keys.'

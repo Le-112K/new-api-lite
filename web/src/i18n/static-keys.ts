@@ -815,8 +815,6 @@ export const STATIC_I18N_KEYS = [
   'View balance, top-up records, subscriptions, and referral information.',
   'Top up, pay for subscriptions, check in, and transfer referral rewards.',
   'Account security',
-  'View sign-in binding status.',
-  'Includes changes that require security verification, such as password changes and account deletion.',
   'Users',
   'View users, their sign-in bindings, and permission settings.',
   'Create, edit, disable, and delete users, and reset their security settings.',

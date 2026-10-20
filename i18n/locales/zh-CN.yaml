@@ -33,10 +33,6 @@ auth.user_id_format_error: "无权进行此操作，New-Api-User 格式错误"
 auth.user_id_mismatch: "无权进行此操作，New-Api-User 与登录用户不匹配"
 auth.user_banned: "用户已被封禁"
 auth.insufficient_privilege: "无权进行此操作，权限不足"
-auth.access_token_expired: "访问令牌已过期"
-auth.legacy_access_token_retired: "旧版访问令牌已停用，请在安全设置中创建新的访问令牌"
-auth.access_token_scope_denied: "访问令牌缺少所需权限：{{.Scope}}"
-auth.access_token_limit: "最多可创建 {{.Count}} 个访问令牌"
 
 # Token messages
 token.name_too_long: "令牌名称过长"
@@ -134,10 +130,6 @@ payment.callback_error: "回调地址配置错误"
 payment.create_failed: "创建订单失败"
 payment.start_failed: "拉起支付失败"
 payment.amount_too_low: "套餐金额过低"
-payment.stripe_not_configured: "Stripe 未配置或密钥无效"
-payment.webhook_not_configured: "Webhook 未配置"
-payment.price_id_not_configured: "该套餐未配置 StripePriceId"
-payment.creem_not_configured: "该套餐未配置 CreemProductId"
 payment.compliance_required: "支付、兑换码、订阅计划和邀请返利功能已禁用。管理员需先确认合规声明后方可启用。"
 
 # Topup messages
@@ -183,23 +175,6 @@ checkin.disabled: "签到功能未启用"
 checkin.already_today: "今日已签到"
 checkin.failed: "签到失败，请稍后重试"
 checkin.quota_failed: "签到失败：更新额度出错"
-
-# Passkey messages
-passkey.create_failed: "无法创建 Passkey 凭证"
-passkey.login_abnormal: "Passkey 登录状态异常"
-passkey.update_failed: "Passkey 凭证更新失败"
-passkey.invalid_user_id: "无效的用户 ID"
-passkey.verify_failed: "Passkey 验证失败，请重试或联系管理员"
-passkey.rp_id_invalid: "通行密钥域名无效。请填写域名，不包含协议、端口、路径或通配符。"
-passkey.rp_id_unavailable: "此通行密钥域名无法在当前网站使用。请前往原网站或选择其他验证方式。"
-passkey.rp_id_removal_confirmation: "请核对受影响的通行密钥并确认删除域名。配置或影响范围发生变化后，需要重新确认。"
-
-# 2FA messages
-twofa.not_enabled: "用户未启用2FA"
-twofa.user_id_empty: "用户ID不能为空"
-twofa.already_exists: "用户已存在2FA设置"
-twofa.record_id_empty: "2FA记录ID不能为空"
-twofa.code_invalid: "验证码或备用码不正确"
 
 # Rate limit messages
 rate_limit.reached: "您已达到请求数限制：{{.Minutes}}分钟内最多请求{{.Max}}次"
