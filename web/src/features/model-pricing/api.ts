@@ -24,11 +24,6 @@ import {
 } from '@tanstack/react-query'
 import { t } from 'i18next'
 
-import { pluginExpressionsEqual } from '@/features/pricing/lib/plugin-pricing'
-import type {
-  BillingUsageSchema,
-  BillingUsageExample,
-} from '@/features/pricing/types'
 import { api } from '@/lib/api'
 import { ROLE } from '@/lib/roles'
 import { createServerError } from '@/lib/server-error-message'
@@ -49,24 +44,10 @@ export type ModelPricingDescription = {
   cache_write_mode?: CacheWriteMode
 }
 
-export type ModelPricingPluginVariant = {
-  plugin_key: string
-  plugin_name: string
-  icon?: string
-  usage_schema: BillingUsageSchema
-  usage_examples?: BillingUsageExample[]
-  configured: string
-  effective: string
-  compatible: boolean
-  stale?: boolean
-}
-
 export type ModelPricingEntry = ModelPricingDescription & {
-  plugin_variants?: ModelPricingPluginVariant[]
   model_name: string
   version: string
   configured: PricingValues
-  usage_schema?: BillingUsageSchema
 }
 
 export type ModelPricingConfig = {
@@ -79,25 +60,6 @@ export type ModelPricingChange = {
   expected_version: string
   pricing: PricingValues
   reset?: boolean
-}
-
-export type ModelPricingConversion = Partial<ModelPricingDescription> & {
-  expression?: string
-  unsupported_reason?: string
-}
-
-export async function previewModelPricingConversion(request: {
-  model_name: string
-  pricing: PricingValues
-}): Promise<ModelPricingConversion> {
-  const response = await api.post('/api/option/model_pricing/convert', request)
-  if (!response.data.success) {
-    throw createServerError(
-      response.data,
-      t('Failed to prepare pricing conversion')
-    )
-  }
-  return response.data.data
 }
 
 export async function previewModelPricing(request: {
@@ -187,11 +149,7 @@ export function buildPricingChanges(
   for (const name of new Set([...previous.keys(), ...next.keys()])) {
     const oldValues = previous.get(name) ?? {}
     const newValues = next.get(name) ?? {}
-    const dirty = PRICING_KEYS.filter((key) =>
-      key === 'billing_setting.plugin_billing_expr'
-        ? !pluginExpressionsEqual(oldValues[key], newValues[key])
-        : oldValues[key] !== newValues[key]
-    )
+    const dirty = PRICING_KEYS.filter((key) => oldValues[key] !== newValues[key])
     if (!dirty.length) continue
     const entry = entries.get(name)
     const pricing = { ...entry?.configured }
@@ -200,11 +158,6 @@ export function buildPricingChanges(
       if (newValues[key] !== undefined) {
         Object.assign(pricing, { [key]: newValues[key] })
       }
-    }
-    if (newValues['billing_setting.billing_mode'] === 'tiered_expr') {
-      pricing['billing_setting.billing_mode'] = 'tiered_expr'
-      pricing['billing_setting.billing_expr'] =
-        newValues['billing_setting.billing_expr']
     }
     changes.push({
       model_name: name,

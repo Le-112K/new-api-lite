@@ -271,6 +271,60 @@ it('updates the preview for explicit zero and disabled prices and explains depen
   expect(audio).not.toHaveAttribute('aria-disabled', 'true')
 })
 
+it('prices the image and audio lanes independently and previews them in USD', async () => {
+  renderEditor(true)
+  const user = userEvent.setup()
+  const preview = screen.getByRole('complementary', { name: 'Preview' })
+  await waitFor(() =>
+    expect(within(preview).getByText('Input price')).toBeVisible()
+  )
+
+  await user.click(screen.getByRole('switch', { name: 'Image input price' }))
+  await user.type(
+    screen.getByRole('textbox', { name: 'Image input price' }),
+    '13'
+  )
+  await waitFor(() =>
+    expect(
+      within(preview).getByText('Image input price').nextElementSibling
+    ).toHaveTextContent('$13')
+  )
+
+  await user.click(screen.getByRole('switch', { name: 'Audio input price' }))
+  await user.type(
+    screen.getByRole('textbox', { name: 'Audio input price' }),
+    '6.5'
+  )
+  await waitFor(() =>
+    expect(
+      within(preview).getByText('Audio input price').nextElementSibling
+    ).toHaveTextContent('$6.5')
+  )
+
+  const audioOutput = screen.getByRole('switch', {
+    name: 'Audio output price',
+  })
+  expect(audioOutput).not.toHaveAttribute('aria-disabled', 'true')
+  await user.click(audioOutput)
+  await user.type(
+    screen.getByRole('textbox', { name: 'Audio output price' }),
+    '13'
+  )
+  await waitFor(() =>
+    expect(
+      within(preview).getByText('Audio output price').nextElementSibling
+    ).toHaveTextContent('$13')
+  )
+
+  // Disabling a lane removes its preview row instead of keeping a stale price.
+  await user.click(screen.getByRole('switch', { name: 'Image input price' }))
+  await waitFor(() =>
+    expect(
+      within(preview).queryByText('Image input price')
+    ).not.toBeInTheDocument()
+  )
+})
+
 function PricingFormFixture(props: {
   variant: 'default' | 'unset'
   onSave: () => Promise<void>
@@ -284,9 +338,6 @@ function PricingFormFixture(props: {
     ImageRatio: '{}',
     AudioRatio: '{}',
     AudioCompletionRatio: '{}',
-    BillingMode: '{}',
-    BillingExpr: '{}',
-    PluginBillingExpr: '{}',
   }
   const [actionsContainer, setActionsContainer] =
     useState<HTMLDivElement | null>(null)

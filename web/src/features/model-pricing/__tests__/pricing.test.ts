@@ -38,7 +38,6 @@ describe('shared model pricing', () => {
         createCacheRatio: '1.25',
       })
     ).toEqual({
-      'billing_setting.billing_mode': 'ratio',
       ModelRatio: 0,
       CompletionRatio: 2,
       CacheRatio: 0,
@@ -60,25 +59,21 @@ describe('shared model pricing', () => {
     ).toHaveProperty('ModelPrice', 0)
   })
 
-  it('keeps token and task expressions intact through both editing and sync', () => {
-    for (const expression of [
-      'len <= 200000 ? tier("short", p * 2 + cr * 0.2 + cc * 2.5) : tier("long", p * 4)',
-      'tier("base", u("seconds") * 0.4)',
-    ]) {
-      const values = {
-        'billing_setting.billing_mode': 'tiered_expr',
-        'billing_setting.billing_expr': expression,
-        ModelRatio: 1,
-      }
-      expect(pricingFromDraft(pricingRow('example', values))).toEqual(values)
-    }
+  it('round-trips a fixed price without inventing token ratios', () => {
+    const values = pricingFromDraft(
+      pricingRow('example', { ModelPrice: 0.4, CompletionRatio: 3 })
+    )
+    expect(values).toEqual({ ModelPrice: 0.4 })
+    expect(pricingRow('example', values)).toMatchObject({
+      name: 'example',
+      price: '0.4',
+      billingMode: 'per-request',
+    })
   })
 
-  it('does not persist another model’s built-in display expression when editing one price', () => {
+  it('does not persist another model’s configured price when editing one model', () => {
     const options = pricingOptions({
-      ModelPrice: '{"edited":1}',
-      BillingMode: '{"builtin":"tiered_expr"}',
-      BillingExpr: '{"builtin":"tier(\\"base\\", p * 2)"}',
+      ModelPrice: '{"edited":1,"other":9}',
     })
     const snapshot: ModelPricingConfig = {
       options,
@@ -91,13 +86,10 @@ describe('shared model pricing', () => {
           effective: { ModelPrice: 1 },
         },
         {
-          model_name: 'builtin',
-          version: 'empty',
-          configured: {},
-          effective: {
-            'billing_setting.billing_mode': 'tiered_expr',
-            'billing_setting.billing_expr': 'tier("base", p * 2)',
-          },
+          model_name: 'other',
+          version: 'v1',
+          configured: { ModelPrice: 9 },
+          effective: { ModelPrice: 9 },
         },
       ],
     }
@@ -110,9 +102,25 @@ describe('shared model pricing', () => {
       {
         model_name: 'edited',
         expected_version: 'v1',
-        pricing: { ModelPrice: 2, 'billing_setting.billing_mode': 'ratio' },
+        pricing: { ModelPrice: 2 },
       },
     ])
+  })
+
+  it('applies one draft to several targets while keeping untouched prices', () => {
+    const options = pricingOptions({
+      ModelPrice: '{"source":1,"target":5,"untouched":7}',
+    })
+    const after = applyPricingDraft(
+      options,
+      { name: 'source', billingMode: 'per-request', price: '3' },
+      ['source', 'target']
+    )
+    expect(JSON.parse(after.ModelPrice)).toEqual({
+      source: 3,
+      target: 3,
+      untouched: 7,
+    })
   })
 
   it('rejects invalid prices instead of silently coercing them', () => {
@@ -121,86 +129,5 @@ describe('shared model pricing', () => {
         pricingFromDraft({ name: 'example', billingMode: 'per-request', price })
       ).toThrow()
     }
-  })
-})
-
-it('tracks nested provider prices by model, preserves :: in model names, and ignores key order', () => {
-  const key = 'billing_setting.plugin_billing_expr'
-  const before = pricingOptions({
-    [key]: JSON.stringify({
-      'alpha::shared::model': 'u("seconds")',
-      'beta::shared::model': 'u("credits")',
-      'alpha::other': '1',
-    }),
-  })
-  const snapshot: ModelPricingConfig = {
-    options: before,
-    empty_version: 'empty',
-    entries: [
-      {
-        model_name: 'shared::model',
-        version: 'v1',
-        configured: { [key]: { alpha: 'u("seconds")', beta: 'u("credits")' } },
-        effective: {},
-      },
-    ],
-  }
-  const reordered = {
-    ...before,
-    [key]: JSON.stringify({
-      'alpha::other': '1',
-      'beta::shared::model': 'u("credits")',
-      'alpha::shared::model': 'u("seconds")',
-    }),
-  }
-  expect(buildPricingChanges(snapshot, before, reordered)).toEqual([])
-  const after = {
-    ...before,
-    [key]: JSON.stringify({
-      'beta::shared::model': 'u("credits") * 2',
-      'alpha::other': '1',
-    }),
-  }
-  expect(buildPricingChanges(snapshot, before, after)).toEqual([
-    {
-      model_name: 'shared::model',
-      expected_version: 'v1',
-      pricing: { [key]: { beta: 'u("credits") * 2' } },
-    },
-  ])
-  const draft = pricingRow('shared::model', snapshot.entries[0].configured)
-  expect(pricingFromDraft(draft)[key]).toEqual(
-    snapshot.entries[0].configured[key]
-  )
-  expect(
-    pricingRow('alpha::model', {
-      ModelPrice: 0.25,
-      'billing_setting.plugin_billing_expr': { beta: 'u("images")' },
-    })
-  ).toMatchObject({
-    name: 'alpha::model',
-    price: '0.25',
-    billingMode: 'per-request',
-  })
-})
-
-it('commits source provider edits while preserving target providers during batch copy', () => {
-  const key = 'billing_setting.plugin_billing_expr'
-  const options = pricingOptions({
-    [key]: JSON.stringify({ 'alpha::source': '1', 'beta::target': '2' }),
-  })
-  const after = applyPricingDraft(
-    options,
-    {
-      name: 'source',
-      billingMode: 'tiered_expr',
-      billingExpr: 'tier("base", u("seconds"))',
-      pluginBillingExpr: { alpha: '3' },
-    },
-    ['source', 'target']
-  )
-  expect(JSON.parse(after[key])).toEqual({
-    'alpha::source': '3',
-    'beta::target': '2',
   })
 })

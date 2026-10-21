@@ -566,32 +566,6 @@ it.each([
     text: 'Input3Output15',
   },
   {
-    name: 'single-expression',
-    effective: {
-      'billing_setting.billing_mode': 'tiered_expr',
-      'billing_setting.billing_expr': 'tier("base", p * 3 + c * 15 + cr * 0.3)',
-    },
-    catalog: {
-      billing_mode: 'tiered_expr',
-      billing_expr: 'tier("base", p * 3 + c * 15 + cr * 0.3)',
-    },
-    text: 'Input3Output15',
-  },
-  {
-    name: 'tier-expression',
-    effective: {
-      'billing_setting.billing_mode': 'tiered_expr',
-      'billing_setting.billing_expr':
-        'len <= 200000 ? tier("standard", p * 3 + c * 15) : tier("long", p * 6 + c * 22.5)',
-    },
-    catalog: {
-      billing_mode: 'tiered_expr',
-      billing_expr:
-        'len <= 200000 ? tier("standard", p * 3 + c * 15) : tier("long", p * 6 + c * 22.5)',
-    },
-    text: 'Input3Output15',
-  },
-  {
     name: 'free-request',
     effective: { ModelPrice: 0 },
     catalog: { quota_type: 1, model_price: 0 },
@@ -601,18 +575,6 @@ it.each([
     name: 'free-tokens',
     effective: { ModelRatio: 0, CompletionRatio: 2 },
     catalog: { model_ratio: 0, completion_ratio: 2 },
-    text: 'Input0Output0',
-  },
-  {
-    name: 'free-expression',
-    effective: {
-      'billing_setting.billing_mode': 'tiered_expr',
-      'billing_setting.billing_expr': 'tier("free", p * 0 + c * 0)',
-    },
-    catalog: {
-      billing_mode: 'tiered_expr',
-      billing_expr: 'tier("free", p * 0 + c * 0)',
-    },
     text: 'Input0Output0',
   },
 ])(
@@ -646,99 +608,6 @@ it.each([
     )
   }
 )
-
-it('shows task tier ranges in the schema unit and converts site currency only once', async () => {
-  useSystemConfigStore.getState().setConfig({
-    currency: {
-      ...DEFAULT_CURRENCY_CONFIG,
-      quotaDisplayType: 'CNY',
-      usdExchangeRate: 7,
-    },
-  })
-  const expression =
-    'u("mode") == "pro" ? tier("pro", u("seconds") * 0.8) : tier("std", u("seconds") * 0.4)'
-  const schema = {
-    seconds: { type: 'number' as const, unit: 'second' as const },
-    mode: { enum: ['std', 'pro'] },
-  }
-  await renderList([channel], {
-    pricing: [
-      {
-        model_name: channel.model_name,
-        version: 'v1',
-        configured: {},
-        effective: {
-          'billing_setting.billing_mode': 'tiered_expr',
-          'billing_setting.billing_expr': expression,
-        },
-        usage_schema: schema,
-      },
-    ],
-  })
-  const button = screen.getByRole('button', {
-    name: 'View pricing for channel-only',
-  })
-  expect(button).toHaveTextContent(/2.8.*5.6/)
-  expect(button).toHaveTextContent('/s')
-  expect(button).toHaveTextContent('CNY')
-  expect(button).not.toHaveTextContent('¥')
-  expect(button).not.toHaveTextContent('1M tokens')
-})
-
-it('opens the effective expression breakdown from the price without creating metadata', async () => {
-  const expression =
-    '(len <= 200000 ? tier("standard", p * 3 + c * 15 + cr * 0.3) : tier("long", p * 6 + c * 22.5 + cr * 0.6)) * (header("x-priority") == "high" ? 2 : 1)'
-  await renderList([channel], {
-    pricing: [
-      {
-        model_name: channel.model_name,
-        version: 'v1',
-        configured: {},
-        effective: {
-          'billing_setting.billing_mode': 'tiered_expr',
-          'billing_setting.billing_expr': expression,
-        },
-      },
-    ],
-  })
-  const write = vi.spyOn(api, 'post')
-  await userEvent.click(
-    screen.getByRole('button', { name: 'View pricing for channel-only' })
-  )
-  const preview = await screen.findByRole('region', { name: 'Current Billing' })
-  expect(preview).toHaveTextContent('standard')
-  expect(preview).toHaveTextContent('long')
-  expect(preview).toHaveTextContent('0.3')
-  expect(preview).toHaveTextContent('0.6')
-  expect(preview).toHaveTextContent('x-priority')
-  expect(write).not.toHaveBeenCalled()
-})
-
-it('shows an unrecognized expression as special and retains its full source in pricing details', async () => {
-  const expression = 'tier("custom", max(p * 2 + c * 8, 100))'
-  await renderList([channel], {
-    pricing: [
-      {
-        model_name: channel.model_name,
-        version: 'v1',
-        configured: {},
-        effective: {
-          'billing_setting.billing_mode': 'tiered_expr',
-          'billing_setting.billing_expr': expression,
-        },
-      },
-    ],
-  })
-  const button = screen.getByRole('button', {
-    name: 'View pricing for channel-only',
-  })
-  expect(button).toHaveTextContent('Special billing expression')
-  expect(button).not.toHaveTextContent('$2')
-  expect(button).not.toHaveTextContent(expression)
-  await userEvent.click(button)
-  const preview = await screen.findByRole('region', { name: 'Current Billing' })
-  expect(preview).toHaveTextContent(expression)
-})
 
 it('distinguishes pending and failed pricing requests from an unset price', async () => {
   let rejectPricing: (reason: Error) => void = () => {}

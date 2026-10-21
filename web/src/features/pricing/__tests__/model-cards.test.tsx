@@ -17,14 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createJSONStorage } from 'zustand/middleware'
@@ -88,29 +81,19 @@ afterEach(() => {
 })
 
 describe('model cards', () => {
-  it('shows separate generic and image cache prices including a free image cache', () => {
+  it('renders the cached input price derived from the configured cache ratio', () => {
     render(
       <CachedPriceCell
-        model={pricingModel({
-          billing_mode: 'tiered_expr',
-          billing_expr:
-            'tier("standard", p * 5 + cr * 1.25 + img * 8 + img_cr * 0 + c * 30)',
-        })}
+        model={pricingModel({ cache_ratio: 0.25 })}
         options={{ tokenUnit: 'M' }}
       />
     )
-    expect(screen.getByText('Cache Read').parentElement).toHaveTextContent(
-      '$1.25'
-    )
-    expect(screen.getByText('Image Cache').parentElement).toHaveTextContent(
-      '$0'
-    )
+    expect(screen.getByText(/\$0\.5/)).toBeVisible()
+    expect(screen.getByText(/\/ 1M/)).toBeVisible()
   })
+
   it('shows fixed prices per request in both token display units', () => {
-    const model = pricingModel({
-      billing_mode: 'tiered_expr',
-      billing_expr: 'tier("request", fixed(0.01))',
-    })
+    const model = pricingModel({ quota_type: 1, model_price: 0.01 })
     const { rerender } = render(
       <ModelCard model={model} onClick={vi.fn()} tokenUnit='K' />
     )
@@ -120,25 +103,6 @@ describe('model cards', () => {
     expect(screen.getByText('$0.01')).toBeVisible()
     expect(screen.queryByText('/1M')).not.toBeInTheDocument()
   })
-  it('updates the current time tier at a minute boundary and after returning to the page', () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-09-07T08:59:59+08:00'))
-    const model = pricingModel({
-      billing_mode: 'tiered_expr',
-      billing_expr:
-        'hour("Asia/Shanghai") >= 9 && hour("Asia/Shanghai") < 12 ? tier("peak", p * 3 + c * 9) : tier("off_peak", p * 1.5 + c * 4.5)',
-    })
-    render(<ModelCard model={model} onClick={vi.fn()} tokenUnit='M' />)
-    expect(screen.getByText('Input').parentElement).toHaveTextContent('$1.5')
-    act(() => vi.advanceTimersByTime(1000))
-    expect(screen.getByText('Input').parentElement).toHaveTextContent('$3')
-    act(() => {
-      vi.setSystemTime(new Date('2026-09-07T12:00:00+08:00'))
-      fireEvent(document, new Event('visibilitychange'))
-    })
-    expect(screen.getByText('Input').parentElement).toHaveTextContent('$1.5')
-  })
-
   it('copies the complete long model name without opening details', async () => {
     const user = userEvent.setup()
     const onClick = vi.fn()
@@ -308,104 +272,6 @@ describe('model cards', () => {
     expect(screen.queryByText(/1K|1M/)).not.toBeInTheDocument()
     expect(screen.getAllByText('Per Request')).toHaveLength(1)
     expect(screen.queryByText('Per-request')).not.toBeInTheDocument()
-  })
-
-  it('preserves expression prices and makes the selected token unit explicit', () => {
-    render(
-      <ModelCard
-        model={pricingModel({
-          billing_mode: 'tiered_expr',
-          billing_expr: 'tier("base", p * 3 + c * 15)',
-        })}
-        onClick={vi.fn()}
-        tokenUnit='K'
-        selectedGroup='premium'
-        showRechargePrice
-        priceRate={3}
-        usdExchangeRate={6}
-      />
-    )
-    expect(screen.getByText('Input').parentElement).toHaveTextContent(
-      /\$0.0045\s*\/\s*1K/
-    )
-    expect(screen.getByText('Output').parentElement).toHaveTextContent(
-      /\$0.0225\s*\/\s*1K/
-    )
-  })
-
-  it('keeps task price ranges in their actual usage unit instead of the selected token unit', () => {
-    render(
-      <ModelCard
-        model={pricingModel({
-          billing_mode: 'tiered_expr',
-          billing_expr:
-            'u("mode") == "pro" ? tier("pro", u("seconds") * 0.8) : tier("std", u("seconds") * 0.4)',
-          billing_usage_schema: {
-            seconds: { type: 'number', unit: 'second' },
-            mode: { enum: ['std', 'pro'] },
-          },
-        })}
-        onClick={vi.fn()}
-        tokenUnit='K'
-      />
-    )
-    expect(screen.getByText(/0.4.*0.8/)).toHaveTextContent(/0.4 – \$0.8/)
-    expect(screen.getByText(/^\/\s*s$/)).toBeVisible()
-    expect(screen.queryByText(/1K|1M/)).not.toBeInTheDocument()
-  })
-
-  it('invents no price for a usage-based model without a configured price', () => {
-    render(
-      <ModelCard
-        model={pricingModel({
-          billing_usage_schema: { seconds: { type: 'number', unit: 'second' } },
-        })}
-        onClick={vi.fn()}
-      />
-    )
-    expect(screen.getByText('Input').parentElement).toHaveTextContent('—')
-    expect(screen.getByText('Output').parentElement).toHaveTextContent('—')
-    expect(screen.getByText('Cache').parentElement).toHaveTextContent('—')
-    expect(screen.queryByText(/\$/)).not.toBeInTheDocument()
-  })
-
-  it('keeps a task price range in its own usage unit instead of the selected token unit', () => {
-    render(
-      <ModelCard
-        model={pricingModel({
-          billing_mode: 'tiered_expr',
-          billing_expr:
-            'u("mode") == "pro" ? tier("pro", u("tokens") * 70 / 1000000) : tier("std", u("tokens") * 42 / 1000000)',
-          billing_usage_schema: {
-            tokens: { type: 'number', unit: 'token' },
-            mode: { enum: ['std', 'pro'] },
-          },
-        })}
-        onClick={vi.fn()}
-        tokenUnit='K'
-      />
-    )
-    expect(screen.getByText('Input').parentElement).toHaveTextContent(
-      '$42 – $70/1M token'
-    )
-    expect(screen.queryByText(/1K/)).not.toBeInTheDocument()
-  })
-
-  it('dashes the price row for an unparseable billing expression', () => {
-    const expression =
-      'u("seconds") > 30 ? tier("long", u("seconds") * 0.3) : tier("short", u("seconds") * 0.4)'
-    render(
-      <ModelCard
-        model={pricingModel({
-          billing_mode: 'tiered_expr',
-          billing_expr: expression,
-          billing_usage_schema: { seconds: { type: 'number', unit: 'second' } },
-        })}
-        onClick={vi.fn()}
-      />
-    )
-    expect(screen.getByText('Output').parentElement).toHaveTextContent('—')
-    expect(screen.queryByText(expression)).not.toBeInTheDocument()
   })
 
   it('keeps browsing available after the metrics request fails', async () => {

@@ -52,9 +52,6 @@ type ModelFormValues = {
   ImageRatio: string
   AudioRatio: string
   AudioCompletionRatio: string
-  BillingMode: string
-  BillingExpr: string
-  PluginBillingExpr: string
 }
 
 type ModelRatioFormProps = {
@@ -278,9 +275,6 @@ export const ModelRatioForm = memo(function ModelRatioForm({
               savedImageRatio={savedValues.ImageRatio}
               savedAudioRatio={savedValues.AudioRatio}
               savedAudioCompletionRatio={savedValues.AudioCompletionRatio}
-              savedBillingMode={savedValues.BillingMode}
-              savedBillingExpr={savedValues.BillingExpr}
-              savedPluginBillingExpr={savedValues.PluginBillingExpr}
               modelPrice={form.watch('ModelPrice')}
               modelRatio={form.watch('ModelRatio')}
               cacheRatio={form.watch('CacheRatio')}
@@ -289,9 +283,6 @@ export const ModelRatioForm = memo(function ModelRatioForm({
               imageRatio={form.watch('ImageRatio')}
               audioRatio={form.watch('AudioRatio')}
               audioCompletionRatio={form.watch('AudioCompletionRatio')}
-              billingMode={form.watch('BillingMode')}
-              billingExpr={form.watch('BillingExpr')}
-              pluginBillingExpr={form.watch('PluginBillingExpr')}
               candidateModelNames={
                 isUnsetVariant ? enabledModelsQuery.data?.data : undefined
               }
@@ -302,14 +293,7 @@ export const ModelRatioForm = memo(function ModelRatioForm({
               onSave={handleSave}
               isSaving={isSaving}
               onChange={(field, value) => {
-                const fieldMap: Record<string, keyof ModelFormValues> = {
-                  'billing_setting.billing_mode': 'BillingMode',
-                  'billing_setting.billing_expr': 'BillingExpr',
-                  'billing_setting.plugin_billing_expr': 'PluginBillingExpr',
-                }
-                const formField =
-                  fieldMap[field] || (field as keyof ModelFormValues)
-                handleFieldChange(formField, value)
+                handleFieldChange(field as keyof ModelFormValues, value)
               }}
             />
           </div>

@@ -56,10 +56,6 @@ import { Dialog } from '@/components/dialog'
 import { StatusBadge, type StatusBadgeProps } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { DynamicPricingBreakdown } from '@/features/pricing/components/dynamic-pricing-breakdown'
-import { usePricingData } from '@/features/pricing/hooks/use-pricing-data'
-import { BILLING_PRICING_VARS } from '@/features/pricing/lib/billing-expr'
-import { pluginUsageSchema } from '@/features/pricing/lib/plugin-pricing'
 import { PolicyDecisionRecord } from '@/features/system-settings/request-policies/decision-record'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { formatBillingCurrencyFromUSD } from '@/lib/currency'
@@ -72,8 +68,6 @@ import {
   parseLogOther,
   getParamOverrideActionLabel,
   parseAuditLine,
-  decodeBillingExprB64,
-  getTieredBillingSummary,
   hasAnyCacheTokens,
   getFirstResponseTimeColor,
   getResponseTimeColor,
@@ -169,39 +163,13 @@ function BillingBreakdown(props: {
   const { log, other, isAdmin } = props
   const isPerCall = isPerCallBilling(other.model_price)
   const isClaude = other.claude === true
-  const isTieredExpr = other.billing_mode === 'tiered_expr'
-  const tieredSummary = getTieredBillingSummary(other)
 
   const rows: Array<{ label: string; value: string }> = []
   const priceOpts = { digitsLarge: 4, digitsSmall: 6, abbreviate: false }
   const fmtPrice = (usd: number) => formatBillingCurrencyFromUSD(usd, priceOpts)
   const baseInputUSD = other.model_ratio != null ? other.model_ratio * 2.0 : 0
 
-  if (isTieredExpr) {
-    rows.push({
-      label: t('Billing Mode'),
-      value: t('Dynamic Pricing'),
-    })
-    if (tieredSummary) {
-      if (tieredSummary.tier.label) {
-        rows.push({
-          label: t('Matched Tier'),
-          value: tieredSummary.tier.label,
-        })
-      }
-      for (const entry of tieredSummary.priceEntries) {
-        rows.push({
-          label: t(entry.shortLabel),
-          value: `${fmtPrice(entry.price)}/${entry.unit ? t(entry.unit) : 'M'}`,
-        })
-      }
-    } else {
-      rows.push({
-        label: t('Matched Tier'),
-        value: other.matched_tier || t('No matching results'),
-      })
-    }
-  } else if (isPerCall) {
+  if (isPerCall) {
     rows.push({ label: t('Billing Mode'), value: t('Per-call') })
     if (other.model_price != null) {
       rows.push({
@@ -235,7 +203,7 @@ function BillingBreakdown(props: {
     })
   }
 
-  if (!isTieredExpr && isClaude && hasAnyCacheTokens(other)) {
+  if (isClaude && hasAnyCacheTokens(other)) {
     if (other.cache_ratio != null && other.cache_ratio !== 1) {
       rows.push({
         label: t('Cache Read'),
@@ -271,30 +239,28 @@ function BillingBreakdown(props: {
     }
   }
 
-  if (!isTieredExpr) {
-    if (other.audio_ratio != null && other.audio_ratio !== 1) {
-      rows.push({
-        label: t('Audio input'),
-        value: `${fmtPrice(baseInputUSD * other.audio_ratio)}/M`,
-      })
-    }
+  if (other.audio_ratio != null && other.audio_ratio !== 1) {
+    rows.push({
+      label: t('Audio input'),
+      value: `${fmtPrice(baseInputUSD * other.audio_ratio)}/M`,
+    })
+  }
 
-    if (
-      other.audio_completion_ratio != null &&
-      other.audio_completion_ratio !== 1
-    ) {
-      rows.push({
-        label: t('Audio output'),
-        value: `${fmtPrice(baseInputUSD * other.audio_completion_ratio)}/M`,
-      })
-    }
+  if (
+    other.audio_completion_ratio != null &&
+    other.audio_completion_ratio !== 1
+  ) {
+    rows.push({
+      label: t('Audio output'),
+      value: `${fmtPrice(baseInputUSD * other.audio_completion_ratio)}/M`,
+    })
+  }
 
-    if (other.image_ratio != null && other.image_ratio !== 1) {
-      rows.push({
-        label: t('Image input'),
-        value: `${fmtPrice(baseInputUSD * other.image_ratio)}/M`,
-      })
-    }
+  if (other.image_ratio != null && other.image_ratio !== 1) {
+    rows.push({
+      label: t('Image input'),
+      value: `${fmtPrice(baseInputUSD * other.image_ratio)}/M`,
+    })
   }
 
   if (other.web_search && other.web_search_call_count) {
@@ -332,33 +298,11 @@ function BillingBreakdown(props: {
     })
   }
 
-  const usageFacts =
-    other.usage_facts != null &&
-    typeof other.usage_facts === 'object' &&
-    !Array.isArray(other.usage_facts)
-      ? Object.entries(other.usage_facts)
-      : []
-
   return (
     <DetailSection label={t('Billing Details')}>
       {rows.map((row) => (
         <DetailRow key={row.label} label={row.label} value={row.value} mono />
       ))}
-      {usageFacts.length > 0 && (
-        <>
-          <Label className='text-xs font-semibold'>
-            {t('Usage parameters')}
-          </Label>
-          {usageFacts.map(([key, value]) => (
-            <DetailRow
-              key={`usage-fact-${key}`}
-              label={key}
-              value={String(value)}
-              mono
-            />
-          ))}
-        </>
-      )}
       <DetailRow
         label={t('Total Cost')}
         value={formatLogQuota(log.quota)}
@@ -437,29 +381,6 @@ function TokenBreakdown(props: { log: UsageLog; other: LogOtherData }) {
       {rows.map((row) => (
         <DetailRow key={row.label} label={row.label} value={row.value} mono />
       ))}
-      {other.billing_tokens && (
-        <div
-          role='group'
-          aria-label={t('Billable token breakdown')}
-          className='space-y-2'
-        >
-          <Label className='text-xs font-semibold'>
-            {t('Billable token breakdown')}
-          </Label>
-          {BILLING_PRICING_VARS.map((variable) => {
-            const count = other.billing_tokens?.[variable.key]
-            if (count === undefined || !Number.isFinite(count)) return null
-            return (
-              <DetailRow
-                key={variable.key}
-                label={t(variable.shortLabel)}
-                value={count.toLocaleString()}
-                mono
-              />
-            )
-          })}
-        </div>
-      )}
     </DetailSection>
   )
 }
@@ -483,14 +404,6 @@ export function DetailsDialog(props: DetailsDialogProps) {
   const isTopup = props.log.type === 1
   const isManage = props.log.type === 3
   const isSubscription = other?.billing_source === 'subscription'
-  const isTieredBilling =
-    isConsume &&
-    other?.billing_mode === 'tiered_expr' &&
-    !!other?.expr_b64
-  const pricingData = usePricingData(props.open && isTieredBilling)
-  const billingUsageSchema = pluginUsageSchema(
-    pricingData.models.find((model) => model.model_name === props.log.model_name)
-  )
   const hasAudioTokens = other?.ws || other?.audio
   const showTiming = isTimingLogType(props.log.type)
   const showAdminIp =
@@ -632,7 +545,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
       contentClassName={cn(
         'min-w-0 overflow-hidden',
         'max-sm:max-h-(--dialog-available-height) max-sm:w-[calc(100vw-1.5rem)] max-sm:max-w-[calc(100vw-1.5rem)] max-sm:p-4',
-        isTieredBilling ? 'sm:max-w-4xl lg:max-w-5xl' : 'sm:max-w-lg'
+        'sm:max-w-lg'
       )}
       headerClassName='max-sm:gap-1'
       titleClassName='flex items-center gap-2 text-base'
@@ -1085,29 +998,6 @@ export function DetailsDialog(props: DetailsDialogProps) {
             other={other}
             isAdmin={props.isAdmin}
           />
-        )}
-
-        {/* Tiered pricing breakdown (when billing_mode is tiered_expr) */}
-        {isTieredBilling && other?.expr_b64 && (
-          <DetailSection label={t('Dynamic Pricing')}>
-            {other.image_count !== undefined && (
-              <DetailRow
-                label={t('Billable image count')}
-                value={other.image_count}
-              />
-            )}
-            <DynamicPricingBreakdown
-              compact
-              billingExpr={decodeBillingExprB64(other.expr_b64)}
-              matchedTierLabel={other.matched_tier}
-              matchedBillingUnit={other.billing_unit}
-              matchedFixedPrice={other.fixed_price}
-              requestRules={other.request_rules}
-              hideCacheColumns={!hasAnyCacheTokens(other)}
-              usageSchema={billingUsageSchema}
-              usageFacts={other.usage_facts}
-            />
-          </DetailSection>
         )}
 
         {/* Admin billing mode indicator for non-consume */}

@@ -16,29 +16,19 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { memo, useMemo, type ReactNode } from 'react'
+import { memo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { CopyButton } from '@/components/copy-button'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { getLobeIcon } from '@/lib/lobe-icon'
-import { useSystemConfigStore } from '@/stores/system-config-store'
 
 import { DEFAULT_TOKEN_UNIT } from '../constants'
-import { useBillingTime } from '../hooks/use-billing-time'
-import {
-  getDynamicDisplayGroupRatio,
-  getDynamicPriceUnitLabelKey,
-  getDynamicPricingSummary,
-  isUnconfiguredTaskUsageModel,
-  type DynamicPriceEntry,
-} from '../lib/dynamic-price'
 import { parseTags } from '../lib/filters'
 import { formatModelDisplayName } from '../lib/model-display-name'
 import { isTokenBasedModel } from '../lib/model-helpers'
 import { formatPrice, formatRequestPrice } from '../lib/price'
-import { taskUsageUnitLabel } from '../lib/task-price-display'
 import type { PricingModel, PriceType, TokenUnit } from '../types'
 import { ModelBillingModeBadge } from './model-billing-mode-badge'
 import type { ModelPerfBadgeData } from './model-perf-badge'
@@ -74,7 +64,7 @@ function trimDecimal(value: number): string {
 }
 
 export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const tokenUnit = props.tokenUnit ?? DEFAULT_TOKEN_UNIT
   const priceRate = props.priceRate ?? 1
   const usdExchangeRate = props.usdExchangeRate ?? 1
@@ -87,37 +77,6 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
   const markName = props.model.vendor_name || props.model.model_name
   const initial = markName?.charAt(0).toUpperCase() || '?'
   const displayName = formatModelDisplayName(props.model.model_name)
-  const isUnconfiguredTaskUsage = isUnconfiguredTaskUsageModel(props.model)
-  const billingTime = useBillingTime(props.model.billing_expr)
-  const currency = useSystemConfigStore((state) => state.config.currency)
-  const dynamicPriceOptions = useMemo(
-    () => ({
-      now: billingTime === undefined ? undefined : new Date(billingTime),
-      tokenUnit,
-      showRechargePrice,
-      priceRate,
-      usdExchangeRate,
-      groupRatioMultiplier: getDynamicDisplayGroupRatio(
-        props.model,
-        props.selectedGroup
-      ),
-    }),
-    [
-      props.model,
-      props.selectedGroup,
-      billingTime,
-      tokenUnit,
-      showRechargePrice,
-      priceRate,
-      usdExchangeRate,
-    ]
-  )
-  const dynamicSummary = useMemo(
-    () => getDynamicPricingSummary(props.model, dynamicPriceOptions),
-    // Currency is read indirectly by the price formatter.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [props.model, dynamicPriceOptions, currency]
-  )
 
   // The unit rides with its price rather than being repeated under every column,
   // and it is set at 11px with no surrounding spaces. Measured at the real card
@@ -145,21 +104,6 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
       {unit(tokenUnitLabel)}
     </>
   )
-  const dynamicPrice = (entry: DynamicPriceEntry) => {
-    const unitLabelKey = getDynamicPriceUnitLabelKey(entry)
-    return (
-      <>
-        {entry.formattedRange ?? entry.formatted}
-        {unit(
-          taskUsageUnitLabel(
-            entry,
-            i18n.language,
-            unitLabelKey ? t(unitLabelKey) : tokenUnitLabel
-          )
-        )}
-      </>
-    )
-  }
 
   // The spec row keeps a fixed set of columns so the presence of a cache price
   // never shifts its neighbours: a model without one dashes that slot rather
@@ -170,19 +114,7 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
   let outputPrice: ReactNode = dash
   let cachePrice: ReactNode = dash
 
-  if (dynamicSummary) {
-    if (!dynamicSummary.isSpecialExpression) {
-      const primaryEntries = dynamicSummary.primaryEntries
-      const cacheEntry = dynamicSummary.entries.find(
-        (entry) => entry.variable?.key === 'cr'
-      )
-      if (primaryEntries[0]) inputPrice = dynamicPrice(primaryEntries[0])
-      if (primaryEntries[1]) outputPrice = dynamicPrice(primaryEntries[1])
-      if (cacheEntry) cachePrice = dynamicPrice(cacheEntry)
-    }
-  } else if (isUnconfiguredTaskUsage) {
-    // Usage-based billing without a configured price: show no invented number.
-  } else if (isTokenBased) {
+  if (isTokenBased) {
     inputPrice = tokenPrice('input')
     outputPrice = tokenPrice('output')
     if (props.model.cache_ratio != null) {

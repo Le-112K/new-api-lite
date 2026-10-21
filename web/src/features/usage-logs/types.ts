@@ -19,7 +19,6 @@ For commercial licensing, please contact support@quantumnous.com
 /**
  * Type definitions for usage logs
  */
-import type { RequestRuleTrace } from '@/features/pricing/lib/billing-expr'
 import type { PolicyEvent } from '@/features/system-settings/request-policies/api'
 
 import type { UsageLog } from './data/schema'
@@ -156,7 +155,6 @@ export interface LogOtherData {
   text_output?: number
   cache_tokens?: number
   image_cache_tokens?: number
-  billing_tokens?: Record<string, number>
   cache_creation_tokens?: number
   cache_creation_tokens_5m?: number
   cache_creation_tokens_1h?: number
@@ -182,18 +180,6 @@ export interface LogOtherData {
   audio_ratio?: number
   audio_completion_ratio?: number
   frt?: number
-  // Tiered (expression-based) billing fields, set by backend when
-  // billing_mode === 'tiered_expr'. expr_b64 is the base64-encoded billing
-  // expression; the matched tier and request-rule traces come from the actual
-  // settlement run.
-  billing_mode?: string
-  billing_unit?: 'token' | 'request'
-  fixed_price?: number
-  image_count?: number
-  expr_b64?: string
-  matched_tier?: string
-  request_rules?: RequestRuleTrace[]
-  usage_facts?: Record<string, string | number>
   reasoning_effort?: string
   image?: boolean
   image_ratio?: number

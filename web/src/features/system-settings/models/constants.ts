@@ -29,7 +29,6 @@ export const RATIO_TYPE_OPTIONS = [
   { label: 'Audio ratio', value: 'audio_ratio' },
   { label: 'Audio completion ratio', value: 'audio_completion_ratio' },
   { label: 'Fixed price', value: 'model_price' },
-  { label: 'Expression billing', value: 'billing_expr' },
 ] as const
 
 // Single source of truth: `features/channels/constants` owns the channel status

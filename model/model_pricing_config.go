@@ -11,7 +11,6 @@ import (
 	"sync"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/pkg/usageschema"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -30,10 +29,9 @@ type ModelPricingChange struct {
 
 type ModelPricingEntry struct {
 	ModelPricingDescription
-	ModelName      string                               `json:"model_name"`
-	Version        string                               `json:"version"`
-	Configured     PricingValues                        `json:"configured"`
-	UsageSchema    map[string]usageschema.UsageFieldSchema `json:"usage_schema,omitempty"`
+	ModelName  string        `json:"model_name"`
+	Version    string        `json:"version"`
+	Configured PricingValues `json:"configured"`
 }
 
 type ModelPricingSnapshot struct {

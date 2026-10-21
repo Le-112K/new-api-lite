@@ -50,10 +50,7 @@ it.each([200, 400])(
       .getState()
       .auth.setUser({ id: 1, username: 'administrator', role: 100 })
     usePricingPreferencesStore.setState({ currency: 'USD' })
-    const values = {
-      'billing_setting.billing_mode': 'tiered_expr',
-      'billing_setting.billing_expr': 'tier("standard", p * 1 + c * 2)',
-    }
+    const values = { ModelRatio: 1, CompletionRatio: 2 }
     const snapshot: ModelPricingConfig = {
       entries: [
         {
@@ -66,7 +63,7 @@ it.each([200, 400])(
       options: pricingOptions({}),
       empty_version: 'empty',
     }
-    const message = 'model_pricing: expression validation failed (1:18)'
+    const message = 'model_pricing: saved pricing value is out of range'
     const notify = vi.spyOn(toast, 'error').mockReturnValue('pricing-error')
     const requests: unknown[] = []
     const adapter: AxiosAdapter = async (config) => {
@@ -146,6 +143,7 @@ it.each([200, 400])(
       ])
     )
     expect(requests).toHaveLength(2)
-    expect(requests[0]).toContain('p * 3')
+    // The edited draft (3 USD per 1M input tokens) still reaches the backend.
+    expect(requests[0]).toContain('"ModelRatio":1.5')
   }
 )

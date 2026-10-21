@@ -17,19 +17,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import type { StatusBadgeProps } from '@/components/status-badge'
-import {
-  BILLING_PRICING_VARS,
-  normalizeTierLabel,
-  parseTiersFromExpr,
-  splitBillingExprAndRequestRules,
-  type ParsedTier,
-} from '@/features/pricing/lib/billing-expr'
-
 import type { UsageLog } from '../data/schema'
 import type { LogOtherData } from '../types'
 import { buildQuotaAuditOperation } from './quota-audit-operation'
-
-export { normalizeTierLabel }
 
 const PARAM_OVERRIDE_ACTION_MAP: Record<string, string> = {
   set: 'Set',
@@ -245,75 +235,9 @@ export function formatModelName(log: UsageLog): {
 }
 
 /**
- * Decode a base64-encoded billing expression. Safely returns an empty string
- * when the input is missing or malformed (e.g. legacy logs without expr_b64).
- */
-export function decodeBillingExprB64(exprB64: string | undefined): string {
-  if (!exprB64) return ''
-  try {
-    const binaryString =
-      typeof window !== 'undefined'
-        ? window.atob(exprB64)
-        : Buffer.from(exprB64, 'base64').toString('binary')
-    const bytes = new Uint8Array(binaryString.length)
-
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i)
-    }
-
-    if (typeof TextDecoder !== 'undefined') {
-      return new TextDecoder().decode(bytes)
-    }
-
-    return decodeURIComponent(
-      Array.prototype.map
-        .call(bytes, (byte: number) => `%${byte.toString(16).padStart(2, '0')}`)
-        .join('')
-    )
-  } catch {
-    return ''
-  }
-}
-
-/**
- * Resolve which parsed tier corresponds to the matched_tier label in a log
- * entry. Missing or unknown labels do not fall back to another tier because
- * that would display guessed unit prices.
- */
-export function resolveMatchedTier(
-  tiers: ParsedTier[],
-  matchedLabel: string | undefined
-): ParsedTier | null {
-  if (tiers.length === 0) return null
-  if (!matchedLabel) return null
-  const found = tiers.find((tier) => {
-    const l1 = normalizeTierLabel(tier.label)
-    const l2 = normalizeTierLabel(matchedLabel)
-    return l1 === l2 && l1 !== ''
-  })
-  return found || null
-}
-
-/**
- * Tiered pricing summary derived from an `other` log payload using the
- * billing-expression library. Returns null when the entry is not a tiered
- * billing log or the expression failed to parse.
- */
-export interface TieredBillingSummary {
-  tiers: ParsedTier[]
-  tier: ParsedTier
-  priceEntries: Array<{
-    field: string
-    shortLabel: string
-    price: number
-    unit?: 'request' | 'image'
-  }>
-}
-
-/**
  * Whether the request payload reports any cache-related token usage. Used to
- * suppress cache pricing rows from the tiered breakdown when the request did
- * not exercise the cache path.
+ * suppress cache pricing rows from the breakdown when the request did not
+ * exercise the cache path.
  */
 export function hasAnyCacheTokens(
   other: LogOtherData | null | undefined
@@ -326,84 +250,6 @@ export function hasAnyCacheTokens(
     (other.cache_creation_tokens_5m || 0) > 0 ||
     (other.cache_creation_tokens_1h || 0) > 0
   )
-}
-
-export function getTieredBillingSummary(
-  other: LogOtherData | null
-): TieredBillingSummary | null {
-  if (!other || other.billing_mode !== 'tiered_expr') return null
-  const exprStr = decodeBillingExprB64(other.expr_b64)
-  if (!exprStr) return null
-  const tiers = parseTiersFromExpr(
-    splitBillingExprAndRequestRules(exprStr).billingExpr
-  )
-  const tier = resolveMatchedTier(tiers, other.matched_tier)
-  if (
-    other.billing_unit === 'request' &&
-    typeof other.fixed_price === 'number' &&
-    Number.isFinite(other.fixed_price) &&
-    other.fixed_price >= 0
-  ) {
-    const fixedPrice = other.fixed_price
-    const actualTier = tiers.find(
-      (entry) =>
-        normalizeTierLabel(entry.label) ===
-          normalizeTierLabel(other.matched_tier) &&
-        entry.billingUnit === 'request' &&
-        entry.fixedPrice === fixedPrice
-    ) ?? {
-      label: other.matched_tier || '',
-      conditions: [],
-      billingUnit: 'request' as const,
-      fixedPrice,
-    }
-    return {
-      tiers,
-      tier: actualTier,
-      priceEntries: [
-        {
-          field: 'fixedPrice',
-          shortLabel:
-            other.image_count !== undefined ? 'Per image' : 'Per-call',
-          price: fixedPrice,
-          unit: other.image_count !== undefined ? 'image' : 'request',
-        },
-      ],
-    }
-  }
-  if (!tier) return null
-  if (tier.billingUnit === 'request' && typeof tier.fixedPrice === 'number') {
-    return {
-      tiers,
-      tier,
-      priceEntries: [
-        {
-          field: 'fixedPrice',
-          shortLabel: tier.imageCount ? 'Per image' : 'Per-call',
-          price: tier.fixedPrice,
-          unit: tier.imageCount ? 'image' : 'request',
-        },
-      ],
-    }
-  }
-
-  const cacheTokensPresent = hasAnyCacheTokens(other)
-
-  const priceEntries: TieredBillingSummary['priceEntries'] = []
-  for (const v of BILLING_PRICING_VARS) {
-    if (!v.field) continue
-    if (v.group === 'cache' && !cacheTokensPresent) continue
-    const raw = tier[v.field as keyof ParsedTier]
-    const price = Number(raw)
-    if (Number.isFinite(price) && price >= 0) {
-      priceEntries.push({
-        field: v.field,
-        shortLabel: v.shortLabel,
-        price,
-      })
-    }
-  }
-  return { tiers, tier, priceEntries }
 }
 
 /**

@@ -124,7 +124,7 @@ describe('model pricing entry', () => {
           {
             model_name: 'channel-only',
             expected_version: 'v1',
-            pricing: { ModelPrice: 0, 'billing_setting.billing_mode': 'ratio' },
+            pricing: { ModelPrice: 0 },
             reset: false,
           },
         ],
@@ -527,7 +527,7 @@ describe('metadata editing', () => {
           {
             model_name: 'example-model',
             expected_version: 'v1',
-            pricing: { ModelPrice: 0, 'billing_setting.billing_mode': 'ratio' },
+            pricing: { ModelPrice: 0 },
             reset: false,
           },
         ],
@@ -550,7 +550,7 @@ describe('metadata editing', () => {
           {
             model_name: 'example-model',
             expected_version: 'v2',
-            pricing: { ModelPrice: 0, 'billing_setting.billing_mode': 'ratio' },
+            pricing: { ModelPrice: 0 },
             reset: false,
           },
         ],

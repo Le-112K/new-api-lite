@@ -24,9 +24,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ErrorState } from '@/components/error-state'
 import { LoadingState } from '@/components/loading-state'
 import { Button } from '@/components/ui/button'
-import { DynamicPricingBreakdown } from '@/features/pricing/components/dynamic-pricing-breakdown'
 import { ModelPriceCell } from '@/features/pricing/components/model-price-cell'
-import { isDynamicPricingModel } from '@/features/pricing/lib/dynamic-price'
 import {
   buildPreviewRows,
   createInitialLaneState,
@@ -69,13 +67,7 @@ export function ModelPricingPanel(props: {
   const editor = useRef<ModelPricingEditorPanelHandle>(null)
   const editData = useMemo(() => {
     if (!entry) return null
-    const values = { ...entry.configured }
-    if (entry.effective['billing_setting.billing_mode'] === 'tiered_expr') {
-      values['billing_setting.billing_mode'] = 'tiered_expr'
-      values['billing_setting.billing_expr'] =
-        entry.effective['billing_setting.billing_expr']
-    }
-    return pricingRow(entry.model_name, values)
+    return pricingRow(entry.model_name, entry.configured)
   }, [entry])
 
   useEffect(() => {
@@ -140,8 +132,6 @@ export function ModelPricingPanel(props: {
   const details = buildPreviewRows(
     current,
     current.billingMode ?? 'per-token',
-    '',
-    '',
     currentLanes.promptPrice,
     currentLanes.prices,
     currentLanes.enabled,
@@ -163,8 +153,6 @@ export function ModelPricingPanel(props: {
         embedded
         ref={editor}
         editData={editData}
-        usageSchema={entry.usage_schema}
-        pluginVariants={entry.plugin_variants}
         onDirtyChange={props.onDirtyChange}
         onSave={() => persist()}
         isSaving={save.isPending}
@@ -199,17 +187,9 @@ export function ModelPricingPanel(props: {
                 <ModelPriceCell
                   model={effectivePricing}
                   options={{ tokenUnit: 'M' }}
-                  showExpression={false}
                 />
               </div>
-              {isDynamicPricingModel(effectivePricing) ? (
-                <DynamicPricingBreakdown
-                  compact
-                  billingExpr={effectivePricing.billing_expr}
-                  usageSchema={entry.usage_schema}
-                />
-              ) : (
-                effectivePricing.quota_type === 0 &&
+              {effectivePricing.quota_type === 0 &&
                 Number.isFinite(effectivePricing.model_ratio) && (
                   <dl className='grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3'>
                     {details.map((row) => (
@@ -222,8 +202,7 @@ export function ModelPricingPanel(props: {
                       </div>
                     ))}
                   </dl>
-                )
-              )}
+                )}
             </section>
             {save.isError && (
               <div>

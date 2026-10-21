@@ -27,8 +27,6 @@ import type {
   CacheWriteMode,
   LegacyBillingDetails,
 } from '@/features/model-pricing/pricing'
-import { combineBillingExpr } from '@/features/pricing/lib/billing-expr'
-import { formatBillingCondition } from '@/features/pricing/lib/billing-expression/condition-display'
 
 import { formatPricingNumber } from './pricing-format'
 
@@ -49,7 +47,7 @@ export type ModelPricingFormValues = z.infer<
   ReturnType<typeof createModelPricingSchema>
 >
 
-export type PricingMode = 'per-token' | 'per-request' | 'tiered_expr'
+export type PricingMode = 'per-token' | 'per-request'
 
 export type LaneKey =
   | 'completion'
@@ -60,7 +58,6 @@ export type LaneKey =
   | 'audioOutput'
 
 export type ModelRatioData = {
-  pluginBillingExpr?: Record<string, string>
   name: string
   price?: string
   ratio?: string
@@ -71,8 +68,6 @@ export type ModelRatioData = {
   audioRatio?: string
   audioCompletionRatio?: string
   billingMode?: PricingMode
-  billingExpr?: string
-  requestRuleExpr?: string
 }
 
 export type PreviewRow = {
@@ -220,8 +215,6 @@ export function createInitialLaneState(data?: ModelRatioData | null) {
 export function buildPreviewRows(
   values: ModelPricingFormValues,
   mode: PricingMode,
-  billingExpr: string,
-  requestRuleExpr: string,
   promptPrice: string,
   lanePrices: Record<LaneKey, string>,
   laneEnabled: Record<LaneKey, boolean>,
@@ -230,19 +223,6 @@ export function buildPreviewRows(
   cacheWriteMode?: CacheWriteMode,
   billingDetails?: LegacyBillingDetails
 ): PreviewRow[] {
-  if (mode === 'tiered_expr') {
-    const effectiveExpr = combineBillingExpr(billingExpr, requestRuleExpr)
-    return [
-      { key: 'mode', label: t('Pricing'), value: t('Expression') },
-      {
-        key: 'expr',
-        label: `${t('Expression')} (USD)`,
-        value: effectiveExpr || t('Empty'),
-        multiline: true,
-      },
-    ]
-  }
-
   if (mode === 'per-request') {
     return [
       {
@@ -387,7 +367,7 @@ export function pricingAdjustmentRows(
   for (const [index, rule] of (details?.request_rules ?? []).entries()) {
     rows.push({
       key: `adjustment-${index}`,
-      label: formatBillingCondition(rule.condition, t) || rule.condition,
+      label: rule.condition,
       value: `× ${rule.multiplier}`,
       unit: 'none',
     })
