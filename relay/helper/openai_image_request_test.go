@@ -12,8 +12,6 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/pkg/billingexpr"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/gin-gonic/gin"
@@ -99,11 +97,6 @@ func TestGetAndValidOpenAIImageRequestMultipartStream(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "true", url.Values(form.Value).Get("stream"))
 		require.Len(t, form.File["image"], 1)
-		billing, err := ResolveImageBillingRequestInput(c, &relaycommon.RelayInfo{Request: req}, billingexpr.RequestInput{})
-		require.NoError(t, err)
-		require.Equal(t, 1, *billing.ImageCount)
-		require.NotContains(t, string(billing.Body), "fake image")
-		require.NotContains(t, string(billing.Body), "edit this image")
 	})
 
 	t.Run("invalid stream value is rejected", func(t *testing.T) {
@@ -148,12 +141,11 @@ func TestImageBillingRequestValidatesProviderCountWithoutOverriding(t *testing.T
 			continue
 		}
 		require.NoError(t, err, tc.body)
-		input, err := ResolveImageBillingRequestInput(c, &relaycommon.RelayInfo{Request: request}, billingexpr.RequestInput{})
-		require.NoError(t, err)
-		require.Equal(t, tc.count, *input.ImageCount, tc.body)
-		cost, _, err := billingexpr.RunExprWithRequest(`tier("image", fixed(0.04)) * image_count`, billingexpr.TokenParams{}, input)
-		require.NoError(t, err)
-		require.Equal(t, float64(tc.count)*40000, cost)
+		count := 1
+		if request.N != nil {
+			count = int(*request.N)
+		}
+		require.Equal(t, tc.count, count, tc.body)
 	}
 }
 

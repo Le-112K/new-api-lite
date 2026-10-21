@@ -23,7 +23,6 @@ import type { UseFormReturn } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 
 import { JsonCodeEditor } from '@/components/json-code-editor'
-import { LearnMore } from '@/components/learn-more'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -34,17 +33,11 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { Switch } from '@/components/ui/switch'
 import { getEnabledModels } from '@/features/channels/api'
 import { handleServerError } from '@/lib/handle-server-error'
 import { requireServerSuccess } from '@/lib/server-error-message'
 
-import {
-  SettingsForm,
-  SettingsSwitchContent,
-  SettingsSwitchItem,
-} from '../components/settings-form-layout'
-import { SettingsPageActionsPortal } from '../components/settings-page-context'
+import { SettingsForm } from '../components/settings-form-layout'
 import {
   ModelRatioVisualEditor,
   type ModelRatioVisualEditorHandle,
@@ -59,7 +52,6 @@ type ModelFormValues = {
   ImageRatio: string
   AudioRatio: string
   AudioCompletionRatio: string
-  ExposeRatioEnabled: boolean
   BillingMode: string
   BillingExpr: string
   PluginBillingExpr: string
@@ -237,35 +229,6 @@ export const ModelRatioForm = memo(function ModelRatioForm({
       <div className='flex min-h-0 flex-1 flex-col gap-6'>
         {!isUnsetVariant && (
           <div className='flex shrink-0 flex-wrap items-center justify-end gap-2'>
-            <SettingsPageActionsPortal>
-              <FormField
-                control={form.control}
-                name='ExposeRatioEnabled'
-                render={({ field }) => (
-                  <SettingsSwitchItem className='gap-2 py-0'>
-                    <SettingsSwitchContent>
-                      <FormLabel>{t('Expose ratio API')}</FormLabel>
-                      <FormDescription className='sr-only'>
-                        {t(
-                          'Allow clients to query configured prices via `/api/ratio`.'
-                        )}
-                      </FormDescription>
-                    </SettingsSwitchContent>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <LearnMore contentProps={{ side: 'bottom', align: 'end' }}>
-                      {t(
-                        'Allow clients to query configured prices via `/api/ratio`.'
-                      )}
-                    </LearnMore>
-                  </SettingsSwitchItem>
-                )}
-              />
-            </SettingsPageActionsPortal>
             <Button
               type='button'
               variant='destructive'

@@ -10,23 +10,11 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/pkg/usageschema"
 	"github.com/QuantumNous/new-api/relaykit/dto"
-	"github.com/QuantumNous/new-api/setting/billing_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/QuantumNous/new-api/types"
 )
 
-type PricingPluginVariant struct {
-	PluginKey            string                               `json:"plugin_key"`
-	PluginName           string                               `json:"plugin_name"`
-	Icon                 string                               `json:"icon,omitempty"`
-	BillingExpr          string                               `json:"billing_expr"`
-	BillingMode          string                               `json:"billing_mode"`
-	BillingUsageSchema   map[string]usageschema.UsageFieldSchema `json:"billing_usage_schema"`
-	BillingUsageExamples []usageschema.UsageExample              `json:"billing_usage_examples,omitempty"`
-}
-
 type Pricing struct {
-	BillingPluginVariants  []PricingPluginVariant               `json:"billing_plugin_variants,omitempty"`
 	ModelName              string                               `json:"model_name"`
 	Description            string                               `json:"description,omitempty"`
 	Icon                   string                               `json:"icon,omitempty"`
@@ -44,14 +32,12 @@ type Pricing struct {
 	AudioCompletionRatio   *float64                             `json:"audio_completion_ratio,omitempty"`
 	EnableGroup            []string                             `json:"enable_groups"`
 	SupportedEndpointTypes []constant.EndpointType              `json:"supported_endpoint_types"`
-	BillingMode            string                               `json:"billing_mode,omitempty"`
-	BillingExpr            string                               `json:"billing_expr,omitempty"`
 	BillingUsageSchema     map[string]usageschema.UsageFieldSchema `json:"billing_usage_schema,omitempty"`
 	BillingUsageExamples   []usageschema.UsageExample              `json:"billing_usage_examples,omitempty"`
 	PricingVersion         string                               `json:"pricing_version,omitempty"`
 
-	// PriceConfigured 表示该模型是否存在可用的计费配置（按次价格、模型倍率或
-	// 分级表达式三者之一）。未配置的模型无法通过计费校验，调用必然失败，因此
+	// PriceConfigured 表示该模型是否存在可用的计费配置（按次价格或模型倍率）。
+	// 未配置的模型无法通过计费校验，调用必然失败，因此
 	// 不应出现在公开价格页上。该字段只用于内部过滤，不参与序列化。
 	PriceConfigured bool `json:"-"`
 }
@@ -376,14 +362,6 @@ func updatePricing() {
 		if ratio_setting.ContainsAudioCompletionRatio(model) {
 			audioCompletionRatio := ratio_setting.GetAudioCompletionRatio(model)
 			pricing.AudioCompletionRatio = &audioCompletionRatio
-		}
-		if billingMode := billing_setting.GetBillingMode(model); billingMode == "tiered_expr" {
-			if expr, ok := billing_setting.GetBillingExpr(model); ok && strings.TrimSpace(expr) != "" {
-				pricing.BillingMode = billingMode
-				pricing.BillingExpr = expr
-				// 分级计费模型可以没有模型倍率，表达式本身就是计费配置。
-				pricing.PriceConfigured = true
-			}
 		}
 		pricingMap = append(pricingMap, pricing)
 	}

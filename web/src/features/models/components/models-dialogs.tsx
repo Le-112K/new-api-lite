@@ -19,7 +19,6 @@ For commercial licensing, please contact support@quantumnous.com
 import { DescriptionDialog } from './dialogs/description-dialog'
 import { MissingModelsDialog } from './dialogs/missing-models-dialog'
 import { PrefillGroupManagement } from './dialogs/prefill-group-management'
-import { PriceSyncDialog } from './dialogs/price-sync-dialog'
 import { SyncWizardDialog } from './dialogs/sync-wizard-dialog'
 import { VendorMutateDialog } from './dialogs/vendor-mutate-dialog'
 import { ModelMutateDrawer } from './drawers/model-mutate-drawer'
@@ -37,10 +36,6 @@ export function ModelsDialogs() {
 
   return (
     <>
-      <PriceSyncDialog
-        open={open === 'price-sync'}
-        onOpenChange={(value) => !value && setOpen(null)}
-      />
       {/* Model Create/Update Drawer */}
       <ModelMutateDrawer
         open={

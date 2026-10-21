@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -9,7 +8,6 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
-	"github.com/QuantumNous/new-api/pkg/billingexpr"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
@@ -327,52 +325,4 @@ func GenerateMjOtherInfo(relayInfo *relaycommon.RelayInfo, priceData hosttypes.P
 	}
 	appendRequestPath(nil, relayInfo, other)
 	return other
-}
-
-// InjectTieredBillingInfo overlays tiered billing fields onto an existing
-// module-specific other map. Call this after GenerateTextOtherInfo /
-// GenerateClaudeOtherInfo / etc. when the request used tiered_expr billing.
-func InjectTieredBillingInfo(other *model.LogOther, relayInfo *relaycommon.RelayInfo, result *billingexpr.TieredResult) {
-	if relayInfo == nil || other == nil {
-		return
-	}
-	snap := relayInfo.TieredBillingSnapshot
-	if snap == nil {
-		return
-	}
-	other.SetPublic("billing_mode", "tiered_expr")
-	other.SetPublic("expr_b64", base64.StdEncoding.EncodeToString([]byte(snap.ExprString)))
-	if result != nil {
-		if tokens := result.BillingTokens; tokens != nil && result.BillingUnit == billingexpr.BillingUnitToken {
-			other.SetPublic("image_cache_tokens", tokens.ImgCR)
-			other.SetPublic("billing_tokens", map[string]float64{
-				"p": tokens.P, "c": tokens.C, "len": tokens.Len,
-				"cr": tokens.CR, "cc": tokens.CC, "cc1h": tokens.CC1h,
-				"img": tokens.Img, "img_cr": tokens.ImgCR, "img_o": tokens.ImgO,
-				"ai": tokens.AI, "ao": tokens.AO,
-			})
-		}
-		if result.ImageCount != nil {
-			other.SetPublic("image_count", *result.ImageCount)
-		}
-		other.SetPublic("matched_tier", result.MatchedTier)
-		if result.BillingUnit != "" {
-			other.SetPublic("billing_unit", result.BillingUnit)
-		}
-		if result.FixedPrice != nil {
-			other.SetPublic("fixed_price", *result.FixedPrice)
-		}
-		if len(result.RequestRules) > 0 {
-			other.SetPublic("request_rules", result.RequestRules)
-		}
-	} else if snap.EstimatedBillingUnit != "" {
-		if snap.EstimatedImageCount != nil {
-			other.SetPublic("image_count", *snap.EstimatedImageCount)
-		}
-		other.SetPublic("matched_tier", snap.EstimatedTier)
-		other.SetPublic("billing_unit", snap.EstimatedBillingUnit)
-		if snap.EstimatedFixedPrice != nil {
-			other.SetPublic("fixed_price", *snap.EstimatedFixedPrice)
-		}
-	}
 }

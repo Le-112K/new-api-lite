@@ -10,7 +10,6 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/pkg/billingexpr"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relay/helper"
@@ -46,13 +45,12 @@ func TestImageRequestReservesFinalQuantityBeforeUpstream(t *testing.T) {
 	service.InitHttpClient()
 	for _, tc := range []struct {
 		name, body                                    string
-		tiered, passThrough, insufficient, retryReset bool
+		passThrough, insufficient, retryReset bool
 		override                                      any
 		count, status                                 int
 	}{
 		{name: "top-level count", body: `{"model":"gpt-image-2","n":2,"parameters":{}}`, count: 2},
 		{name: "legacy channel quantity override", body: `{"model":"gpt-image-2","n":1}`, override: 4, count: 4},
-		{name: "expression channel quantity override", body: `{"model":"gpt-image-2","n":1}`, override: 4, count: 4, tiered: true},
 		{name: "pass-through quantity", body: `{"model":"gpt-image-2","n":2,"parameters":{}}`, count: 2, passThrough: true},
 		{name: "oversized override rejected", body: `{"model":"gpt-image-2","n":1}`, override: 129, status: http.StatusBadRequest},
 		{name: "insufficient reservation blocks upstream", body: `{"model":"gpt-image-2","n":1}`, override: 4, count: 4, insufficient: true, status: http.StatusForbidden},
@@ -89,16 +87,9 @@ func TestImageRequestReservesFinalQuantityBeforeUpstream(t *testing.T) {
 				RequestURLPath: c.Request.URL.Path, Billing: reservation,
 				PriceData: hosttypes.PriceData{UsePrice: true, ModelPrice: 0.04, GroupRatioInfo: hosttypes.GroupRatioInfo{GroupRatio: 1}},
 			}
-			if tc.tiered {
-				expr := `tier("image", fixed(0.04)) * image_count`
-				info.TieredBillingSnapshot = &billingexpr.BillingSnapshot{BillingMode: "tiered_expr", ExprString: expr, ExprHash: billingexpr.ExprHashString(expr), GroupRatio: 1, QuotaPerUnit: common.QuotaPerUnit, EstimatedImageCount: common.GetPointer(1)}
-				info.BillingRequestInput = &billingexpr.RequestInput{Body: []byte(tc.body), ImageCount: common.GetPointer(1)}
-				info.PriceData.UsePrice = false
-			}
 			if tc.retryReset {
 				reservation.held = 80000
 				info.PriceData.AddOtherRatio("n", 4)
-				info.BillingImageCount = common.GetPointer(3)
 			}
 			apiErr := ImageHelper(c, info)
 			require.NotNil(t, apiErr)
@@ -113,11 +104,6 @@ func TestImageRequestReservesFinalQuantityBeforeUpstream(t *testing.T) {
 			assert.Equal(t, int64(tc.count), gjson.GetBytes(body, "n").Int())
 			assert.Equal(t, tc.count*20000, info.PriceData.QuotaToPreConsume)
 			assert.GreaterOrEqual(t, reservation.held, info.PriceData.QuotaToPreConsume)
-			assert.Nil(t, info.BillingImageCount)
-			if tc.tiered {
-				assert.Equal(t, tc.body, string(info.BillingRequestInput.Body))
-				assert.Equal(t, 1, *info.BillingRequestInput.ImageCount)
-			}
 		})
 	}
 }

@@ -298,9 +298,6 @@ func (s *responsesWSSession) runCall(c *gin.Context, state *responsesWSCallState
 				billingPrepared = true
 			} else {
 				info.PriceData.GroupRatioInfo = helper.HandleGroupRatio(c, info)
-				if apiErr = service.PrepareTieredBillingForSelectedGroup(c, info); apiErr != nil {
-					return apiErr
-				}
 			}
 			info.RetryIndex = retry.GetRetry()
 			policy.BeginAttempt(channel, info.UsingGroup)

@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/pkg/billingexpr"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
@@ -23,50 +22,18 @@ func PrepareImageBillingForRequest(c *gin.Context, info *relaycommon.RelayInfo, 
 	info.ImageRequestCount = count
 	var quota int
 	var err error
-	if snap := info.TieredBillingSnapshot; snap != nil && snap.BillingMode == "tiered_expr" {
-		// Token-only image expressions must not acquire a quantity multiplier.
-		if snap.EstimatedImageCount == nil {
-			return nil
-		}
-		request := billingexpr.RequestInput{}
-		if info.BillingRequestInput != nil {
-			request = *info.BillingRequestInput
-		}
-		request.ImageCount = &count
-		cost, trace, runErr := billingexpr.RunExprByHashWithRequest(snap.ExprString, snap.ExprHash, billingexpr.TokenParams{
-			P: float64(snap.EstimatedPromptTokens), C: float64(snap.EstimatedCompletionTokens), Len: float64(snap.EstimatedPromptTokens),
-		}, request)
-		if runErr != nil {
-			return types.NewErrorWithStatusCode(runErr, types.ErrorCodeModelPriceError, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
-		}
-		beforeGroup := cost / 1_000_000 * snap.QuotaPerUnit
-		if trace.BillingUnit != billingexpr.BillingUnitRequest && snap.PreConsumeMultiplier != 0 {
-			beforeGroup *= snap.PreConsumeMultiplier
-		}
-		quota, err = billingexpr.QuotaRoundStrict(beforeGroup * info.PriceData.GroupRatioInfo.GroupRatio)
-		if err == nil {
-			snap.EstimatedImageCount = trace.ImageCount
-			snap.EstimatedQuotaBeforeGroup = beforeGroup
-			snap.EstimatedQuotaAfterGroup = quota
-			snap.EstimatedTier = trace.MatchedTier
-			snap.EstimatedBillingUnit = trace.BillingUnit
-			snap.EstimatedFixedPrice = trace.FixedPrice
-			snap.GroupRatio = info.PriceData.GroupRatioInfo.GroupRatio
-		}
-	} else {
-		quantity := 1
-		if info.PriceData.UsePrice {
-			quantity = count
-		}
-		// Overwrite the per-attempt ratio so a failed attempt cannot leak its
-		// quantity into another channel.
-		info.PriceData.AddOtherRatio("n", float64(quantity))
-		base := info.ImageQuotaBeforeGroup
-		if info.PriceData.UsePrice {
-			base = info.PriceData.ModelPrice * common.QuotaPerUnit
-		}
-		quota, err = common.QuotaFromFloatStrict(info.PriceData.ApplyOtherRatiosToFloat(base * info.PriceData.GroupRatioInfo.GroupRatio))
+	quantity := 1
+	if info.PriceData.UsePrice {
+		quantity = count
 	}
+	// Overwrite the per-attempt ratio so a failed attempt cannot leak its
+	// quantity into another channel.
+	info.PriceData.AddOtherRatio("n", float64(quantity))
+	base := info.ImageQuotaBeforeGroup
+	if info.PriceData.UsePrice {
+		base = info.PriceData.ModelPrice * common.QuotaPerUnit
+	}
+	quota, err = common.QuotaFromFloatStrict(info.PriceData.ApplyOtherRatiosToFloat(base * info.PriceData.GroupRatioInfo.GroupRatio))
 	if err != nil {
 		return types.NewErrorWithStatusCode(err, types.ErrorCodeModelPriceError, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 	}

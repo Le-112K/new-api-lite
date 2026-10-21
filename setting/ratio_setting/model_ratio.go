@@ -333,7 +333,7 @@ func ModelPrice2JSONString() string {
 }
 
 func UpdateModelPriceByJSONString(jsonStr string) error {
-	return types.LoadFromJsonStringWithCallback(modelPriceMap, jsonStr, InvalidateExposedDataCache)
+	return types.LoadFromJsonStringWithCallback(modelPriceMap, jsonStr, nil)
 }
 
 // GetModelPrice 返回模型的价格，如果模型不存在则返回-1，false
@@ -351,7 +351,7 @@ func GetModelPrice(name string, printErr bool) (float64, bool) {
 }
 
 func UpdateModelRatioByJSONString(jsonStr string) error {
-	return types.LoadFromJsonStringWithCallback(modelRatioMap, jsonStr, InvalidateExposedDataCache)
+	return types.LoadFromJsonStringWithCallback(modelRatioMap, jsonStr, nil)
 }
 
 // 处理带有思考预算的模型名称，方便统一定价
@@ -410,7 +410,7 @@ func CompletionRatio2JSONString() string {
 }
 
 func UpdateCompletionRatioByJSONString(jsonStr string) error {
-	return types.LoadFromJsonStringWithCallback(completionRatioMap, jsonStr, InvalidateExposedDataCache)
+	return types.LoadFromJsonStringWithCallback(completionRatioMap, jsonStr, nil)
 }
 
 func GetCompletionRatio(name string) float64 {
@@ -650,7 +650,7 @@ func AudioRatio2JSONString() string {
 }
 
 func UpdateAudioRatioByJSONString(jsonStr string) error {
-	return types.LoadFromJsonStringWithCallback(audioRatioMap, jsonStr, InvalidateExposedDataCache)
+	return types.LoadFromJsonStringWithCallback(audioRatioMap, jsonStr, nil)
 }
 
 func AudioCompletionRatio2JSONString() string {
@@ -658,7 +658,7 @@ func AudioCompletionRatio2JSONString() string {
 }
 
 func UpdateAudioCompletionRatioByJSONString(jsonStr string) error {
-	return types.LoadFromJsonStringWithCallback(audioCompletionRatioMap, jsonStr, InvalidateExposedDataCache)
+	return types.LoadFromJsonStringWithCallback(audioCompletionRatioMap, jsonStr, nil)
 }
 
 func GetModelRatioCopy() map[string]float64 {

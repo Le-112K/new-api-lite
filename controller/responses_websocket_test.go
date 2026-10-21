@@ -27,6 +27,7 @@ import (
 	"github.com/QuantumNous/new-api/relaykit/types"
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/config"
+	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
@@ -325,7 +326,11 @@ func waitPerfCounters(t *testing.T, wantRequests int64) (requests, successes int
 	return requests, successes
 }
 
-func newResponsesWSBillingTest(t *testing.T, expression string, handle func(*websocket.Conn, *http.Request), httpEvents ...string) *responsesWSBillingTest {
+// newResponsesWSBillingTest builds a gateway whose "ws-billing" model is priced
+// by a per-call fixed price. A fixed price keeps every accounting assertion
+// independent of tokenizer behaviour: one settled request costs exactly
+// price * QuotaPerUnit * group_ratio.
+func newResponsesWSBillingTest(t *testing.T, price float64, handle func(*websocket.Conn, *http.Request), httpEvents ...string) *responsesWSBillingTest {
 	t.Helper()
 	user, token := setupResponsesWSRequestTest(t)
 	previousTimeout := constant.StreamingTimeout
@@ -336,20 +341,21 @@ func newResponsesWSBillingTest(t *testing.T, expression string, handle func(*web
 	saved := map[string]string{}
 	require.NoError(t, config.GlobalConfig.SaveToDB(func(key, value string) error {
 		switch key {
-		case "billing_setting.billing_mode", "billing_setting.billing_expr", "group_ratio_setting.group_ratio", "perf_metrics_setting.enabled":
+		case "group_ratio_setting.group_ratio", "perf_metrics_setting.enabled":
 			saved[key] = value
 		}
 		return nil
 	}))
+	savedPrices := ratio_setting.ModelPrice2JSONString()
 	t.Cleanup(func() {
 		common.BatchUpdateEnabled, common.LogConsumeEnabled, constant.CountToken, common.QuotaPerUnit = previousBatch, previousLogs, previousCount, previousQuota
 		require.NoError(t, config.GlobalConfig.LoadFromDB(saved))
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(savedPrices))
 	})
-	expressions, err := common.Marshal(map[string]string{"ws-billing": expression})
+	prices, err := common.Marshal(map[string]float64{"ws-billing": price})
 	require.NoError(t, err)
+	require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(string(prices)))
 	require.NoError(t, config.GlobalConfig.LoadFromDB(map[string]string{
-		"billing_setting.billing_mode":    `{"ws-billing":"tiered_expr"}`,
-		"billing_setting.billing_expr":    string(expressions),
 		"group_ratio_setting.group_ratio": `{"default":1}`,
 		"perf_metrics_setting.enabled":    "true",
 	}))
@@ -426,7 +432,7 @@ func TestResponsesInterruptedStreamHealth(t *testing.T) {
 	for _, scenario := range []string{"websocket timeout", "sse timeout", "sse client cancel"} {
 		t.Run(scenario, func(t *testing.T) {
 			events := []string{`{"type":"response.created","response":{"id":"partial","status":"in_progress"}}`, `{"type":"response.output_text.delta","delta":"hello"}`}
-			fixture := newResponsesWSBillingTest(t, `tier("request", fixed(0.002))`, func(ws *websocket.Conn, _ *http.Request) {
+			fixture := newResponsesWSBillingTest(t, 0.002, func(ws *websocket.Conn, _ *http.Request) {
 				if _, _, err := ws.ReadMessage(); !assert.NoError(t, err) {
 					return
 				}
@@ -534,7 +540,7 @@ func TestResponsesWebSocketReusesConnectionAndSettlesEachRequest(t *testing.T) {
 		ServiceTier        string `json:"service_tier"`
 	}
 	received := make(chan upstreamRequest, 3)
-	fixture := newResponsesWSBillingTest(t, `param("service_tier") == "priority" ? tier("priority", p * 4) : tier("base", p * 2)`, func(ws *websocket.Conn, r *http.Request) {
+	fixture := newResponsesWSBillingTest(t, 0.003, func(ws *websocket.Conn, r *http.Request) {
 		for index := 1; ; index++ {
 			_, data, err := ws.ReadMessage()
 			if err != nil {
@@ -606,7 +612,7 @@ func TestResponsesWebSocketReusesConnectionAndSettlesEachRequest(t *testing.T) {
 	var logs []model.Log
 	require.NoError(t, model.LOG_DB.Where("type = ?", model.LogTypeConsume).Order("id").Find(&logs).Error)
 	require.Len(t, logs, 2)
-	for index, expectedQuota := range []int{1000, 2000} {
+	for index, expectedQuota := range []int{1500, 1500} {
 		assert.Equal(t, expectedQuota, logs[index].Quota)
 		assert.Equal(t, fmt.Sprintf("responses-ws-billing-ws-%d", index), logs[index].RequestId)
 		assert.Equal(t, 1000, logs[index].PromptTokens)
@@ -673,7 +679,7 @@ func TestResponsesWebSocketDialsNativeResponsesChannelTypes(t *testing.T) {
 			observe := func(r *http.Request) {
 				targets <- upstreamTarget{Path: r.URL.Path, Authorization: r.Header.Get("Authorization"), QueryKey: r.URL.Query().Get("api_key")}
 			}
-			fixture := newResponsesWSBillingTest(t, `tier("request", fixed(0.002))`, func(ws *websocket.Conn, r *http.Request) {
+			fixture := newResponsesWSBillingTest(t, 0.002, func(ws *websocket.Conn, r *http.Request) {
 				observe(r)
 				if _, _, err := ws.ReadMessage(); !assert.NoError(t, err) {
 					return
@@ -720,7 +726,7 @@ func TestResponsesWebSocketDialsNativeResponsesChannelTypes(t *testing.T) {
 }
 
 func TestResponsesWebSocketDisconnectSettlesDeliveredOutputOnce(t *testing.T) {
-	fixture := newResponsesWSBillingTest(t, `tier("output", c * 2)`, func(ws *websocket.Conn, _ *http.Request) {
+	fixture := newResponsesWSBillingTest(t, 0.000002, func(ws *websocket.Conn, _ *http.Request) {
 		if _, _, err := ws.ReadMessage(); !assert.NoError(t, err) {
 			return
 		}
@@ -752,7 +758,7 @@ func TestResponsesWebSocketCancelErrorDoesNotFinishActiveRequest(t *testing.T) {
 	allowCreated := make(chan struct{}, 1)
 	defer close(allowCreated)
 	receivedCreate := make(chan struct{}, 1)
-	fixture := newResponsesWSBillingTest(t, `tier("base", p * 2)`, func(ws *websocket.Conn, _ *http.Request) {
+	fixture := newResponsesWSBillingTest(t, 0.002, func(ws *websocket.Conn, _ *http.Request) {
 		_, create, err := ws.ReadMessage()
 		if !assert.NoError(t, err) || !assert.Contains(t, string(create), `"type":"response.create"`) {
 			return
@@ -815,8 +821,8 @@ func TestResponsesWebSocketInitialUpstreamRejectionRefundsReservation(t *testing
 		t.Run(tc.name, func(t *testing.T) {
 			preConsumed := make(chan int, 1)
 			tokenID := make(chan int, 1)
-			// Pre-consume no longer estimates completion tokens, so an output-priced expression reserves nothing to refund.
-			fixture := newResponsesWSBillingTest(t, `tier("request", fixed(0.002))`, func(ws *websocket.Conn, _ *http.Request) {
+			// A fixed price reserves the full per-call price before contacting upstream.
+			fixture := newResponsesWSBillingTest(t, 0.002, func(ws *websocket.Conn, _ *http.Request) {
 				if _, _, err := ws.ReadMessage(); !assert.NoError(t, err) {
 					return
 				}
@@ -849,7 +855,7 @@ func TestResponsesWebSocketInitialUpstreamRejectionRefundsReservation(t *testing
 			rejectionError, _ := rejection["error"].(map[string]any)
 			assert.Equal(t, tc.wantType, rejectionError["type"])
 			assert.Equal(t, tc.wantMessage, rejectionError["message"])
-			assert.Equal(t, 2000, <-preConsumed, "the rejected request reserved quota before contacting upstream")
+			assert.Equal(t, 2000, <-preConsumed, "the rejected request reserved the per-call price plus its pre-consume multiplier before contacting upstream")
 			deadline := time.NewTimer(3 * time.Second)
 			defer deadline.Stop()
 			for {
@@ -874,22 +880,25 @@ func TestResponsesWebSocketInitialUpstreamRejectionRefundsReservation(t *testing
 func TestResponsesStreamOutcomesPreserveAccounting(t *testing.T) {
 	for _, transport := range []string{"websocket", "http-sse"} {
 		for _, tc := range []struct {
-			name, expression, terminal string
+			name, terminal string
 			// sseTerminal is the flat error envelope used by the Responses SSE
 			// protocol; the WebSocket protocol nests the error instead.
 			sseTerminal string
 			delta       bool
 			failed      bool
 			ignored     bool
+			// quota is the charge of the first request: a per-call price bills
+			// nothing when the terminal carries no usage.
+			quota int
 		}{
-			{name: "failed-null-fixed", expression: `tier("request", fixed(0.002))`, terminal: `{"type":"response.failed","response":{"id":"first","status":"failed","usage":null,"error":{"code":"server_error","message":"sensitive upstream detail"}}}`, failed: true},
-			{name: "failed-missing-fixed", expression: `tier("request", fixed(0.002))`, terminal: `{"type":"response.failed","response":{"id":"first","status":"failed"}}`, failed: true},
-			{name: "failed-actual-usage", expression: `tier("input", p * 2)`, terminal: `{"type":"response.failed","response":{"id":"first","status":"failed","usage":{"input_tokens":1000,"output_tokens":10,"total_tokens":1010}}}`, failed: true},
-			{name: "failed-estimated-output", expression: `tier("output", c * 2000)`, terminal: `{"type":"response.failed","response":{"id":"first","status":"failed","usage":null}}`, delta: true, failed: true},
-			{name: "error-after-created", expression: `tier("request", fixed(0.002))`, terminal: `{"type":"error","status":500,"error":{"type":"server_error","code":"server_error","message":"Internal server error"}}`, sseTerminal: `{"type":"error","code":"server_error","message":"Internal server error","param":null,"sequence_number":2}`, failed: true},
-			{name: "business-error-after-created", expression: `tier("request", fixed(0.002))`, terminal: `{"type":"error","status":400,"error":{"type":"invalid_request_error","code":"context_length_exceeded","message":"Input too long"}}`, sseTerminal: `{"type":"error","code":"context_length_exceeded","message":"Input too long","param":null,"sequence_number":2}`, failed: true, ignored: true},
-			{name: "completed-at-output-limit", expression: `tier("request", fixed(0.002))`, terminal: `{"type":"response.incomplete","response":{"id":"first","status":"incomplete","incomplete_details":{"reason":"max_output_tokens"},"usage":{"input_tokens":1000,"output_tokens":1,"total_tokens":1001}}}`},
-			{name: "completed-zero-fixed", expression: `tier("request", fixed(0.002))`, terminal: `{"type":"response.completed","response":{"id":"first","status":"completed","usage":{"input_tokens":0,"output_tokens":0,"total_tokens":0}}}`},
+			{name: "failed-null-fixed", terminal: `{"type":"response.failed","response":{"id":"first","status":"failed","usage":null,"error":{"code":"server_error","message":"sensitive upstream detail"}}}`, failed: true},
+			{name: "failed-missing-fixed", terminal: `{"type":"response.failed","response":{"id":"first","status":"failed"}}`, failed: true},
+			{quota: 1000, name: "failed-actual-usage", terminal: `{"type":"response.failed","response":{"id":"first","status":"failed","usage":{"input_tokens":1000,"output_tokens":10,"total_tokens":1010}}}`, failed: true},
+			{quota: 1000, name: "failed-estimated-output", terminal: `{"type":"response.failed","response":{"id":"first","status":"failed","usage":null}}`, delta: true, failed: true},
+			{name: "error-after-created", terminal: `{"type":"error","status":500,"error":{"type":"server_error","code":"server_error","message":"Internal server error"}}`, sseTerminal: `{"type":"error","code":"server_error","message":"Internal server error","param":null,"sequence_number":2}`, failed: true},
+			{name: "business-error-after-created", terminal: `{"type":"error","status":400,"error":{"type":"invalid_request_error","code":"context_length_exceeded","message":"Input too long"}}`, sseTerminal: `{"type":"error","code":"context_length_exceeded","message":"Input too long","param":null,"sequence_number":2}`, failed: true, ignored: true},
+			{quota: 1000, name: "completed-at-output-limit", terminal: `{"type":"response.incomplete","response":{"id":"first","status":"incomplete","incomplete_details":{"reason":"max_output_tokens"},"usage":{"input_tokens":1000,"output_tokens":1,"total_tokens":1001}}}`},
+			{name: "completed-zero-fixed", terminal: `{"type":"response.completed","response":{"id":"first","status":"completed","usage":{"input_tokens":0,"output_tokens":0,"total_tokens":0}}}`},
 		} {
 			t.Run(transport+"/"+tc.name, func(t *testing.T) {
 				events := []string{`{"type":"response.created","response":{"id":"first","status":"in_progress"}}`}
@@ -901,7 +910,7 @@ func TestResponsesStreamOutcomesPreserveAccounting(t *testing.T) {
 					terminal = tc.sseTerminal
 				}
 				events = append(events, terminal)
-				fixture := newResponsesWSBillingTest(t, tc.expression, func(ws *websocket.Conn, _ *http.Request) {
+				fixture := newResponsesWSBillingTest(t, 0.002, func(ws *websocket.Conn, _ *http.Request) {
 					for turn := 0; ; turn++ {
 						_, request, err := ws.ReadMessage()
 						if err != nil {
@@ -948,7 +957,7 @@ func TestResponsesStreamOutcomesPreserveAccounting(t *testing.T) {
 						assert.JSONEq(t, expected, string(actual), "upstream frames must be delivered once and unchanged")
 					}
 				}
-				quotas := []int{1000}
+				quotas := []int{tc.quota}
 				if tc.failed {
 					// The first terminal must complete settlement and middleware before
 					// admitting this immediately following request.
@@ -1005,7 +1014,7 @@ func TestResponsesHTTPHealthCountsFinalResult(t *testing.T) {
 		{"retry succeeds", "server_error", 500, 2, true, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			fixture := newResponsesWSBillingTest(t, `tier("request", fixed(0.002))`, func(*websocket.Conn, *http.Request) {})
+			fixture := newResponsesWSBillingTest(t, 0.002, func(*websocket.Conn, *http.Request) {})
 			oldRetries := common.RetryTimes
 			common.RetryTimes = 1
 			t.Cleanup(func() { common.RetryTimes = oldRetries })
@@ -1060,7 +1069,7 @@ func TestResponsesHTTPHealthCountsFinalResult(t *testing.T) {
 }
 
 func TestResponsesWebSocketLocalErrorsKeepStreamIdentity(t *testing.T) {
-	fixture := newResponsesWSBillingTest(t, `tier("request", fixed(0.002))`, func(*websocket.Conn, *http.Request) {
+	fixture := newResponsesWSBillingTest(t, 0.002, func(*websocket.Conn, *http.Request) {
 		t.Error("local rejection reached upstream")
 	})
 	require.NoError(t, fixture.client.WriteMessage(websocket.TextMessage, []byte(`{"type":"response.create","event_id":"invalid","stream_id":"planner","model":"ws-billing","max_output_tokens":18446744073709551615}`)))
@@ -1081,7 +1090,7 @@ func TestResponsesWebSocketLocalErrorsKeepStreamIdentity(t *testing.T) {
 
 func TestResponsesWebSocketAmbiguousControlErrorClosesAndSettlesOnce(t *testing.T) {
 	const terminal = `{"type":"error","status":500,"error":{"type":"server_error","code":"server_error","message":"Internal server error"}}`
-	fixture := newResponsesWSBillingTest(t, `tier("request", fixed(0.002))`, func(ws *websocket.Conn, _ *http.Request) {
+	fixture := newResponsesWSBillingTest(t, 0.002, func(ws *websocket.Conn, _ *http.Request) {
 		if _, _, err := ws.ReadMessage(); !assert.NoError(t, err) {
 			return
 		}
@@ -1109,7 +1118,8 @@ func TestResponsesWebSocketAmbiguousControlErrorClosesAndSettlesOnce(t *testing.
 	var timeout net.Error
 	assert.False(t, errors.As(err, &timeout) && timeout.Timeout(), "the server must close before the read deadline")
 	fixture.closeAndWait(t)
-	assertResponsesWSAccounting(t, fixture, []int{1000})
+	// The terminal error carries no usage, so a per-call price settles zero.
+	assertResponsesWSAccounting(t, fixture, []int{0})
 }
 
 // A control event queued while another is still outstanding is rejected
@@ -1118,7 +1128,7 @@ func TestResponsesWebSocketRejectsSecondControlWhileOnePending(t *testing.T) {
 	receivedCancel := make(chan struct{}, 1)
 	release := make(chan struct{})
 	defer close(release)
-	fixture := newResponsesWSBillingTest(t, `tier("request", fixed(0.002))`, func(ws *websocket.Conn, _ *http.Request) {
+	fixture := newResponsesWSBillingTest(t, 0.002, func(ws *websocket.Conn, _ *http.Request) {
 		if _, _, err := ws.ReadMessage(); !assert.NoError(t, err) {
 			return
 		}
@@ -1160,7 +1170,7 @@ func TestResponsesWebSocketRejectsSecondControlWhileOnePending(t *testing.T) {
 // A control error resolves the outstanding control, so a corrected cancel is
 // forwarded instead of being rejected as still pending.
 func TestResponsesWebSocketAcceptsCancelAfterControlError(t *testing.T) {
-	fixture := newResponsesWSBillingTest(t, `tier("request", fixed(0.002))`, func(ws *websocket.Conn, _ *http.Request) {
+	fixture := newResponsesWSBillingTest(t, 0.002, func(ws *websocket.Conn, _ *http.Request) {
 		if _, _, err := ws.ReadMessage(); !assert.NoError(t, err) {
 			return
 		}
@@ -1201,12 +1211,14 @@ func TestResponsesWebSocketAcceptsCancelAfterControlError(t *testing.T) {
 func TestResponsesWebSocketIgnoresLateErrorForPreviousResponse(t *testing.T) {
 	for _, tc := range []struct {
 		name, firstTerminal, firstTerminalType string
+		// quotas are the per-request charges: a terminal without usage bills nothing.
+		quotas []int
 	}{
-		{name: "after completed", firstTerminalType: "response.completed", firstTerminal: `{"type":"response.completed","response":{"id":"first","status":"completed","usage":{"input_tokens":1000,"output_tokens":10,"total_tokens":1010}}}`},
-		{name: "after error", firstTerminalType: "error", firstTerminal: `{"type":"error","response_id":"first","status":500,"error":{"type":"server_error","code":"server_error","message":"Internal server error"}}`},
+		{name: "after completed", firstTerminalType: "response.completed", quotas: []int{1000, 1000}, firstTerminal: `{"type":"response.completed","response":{"id":"first","status":"completed","usage":{"input_tokens":1000,"output_tokens":10,"total_tokens":1010}}}`},
+		{name: "after error", firstTerminalType: "error", quotas: []int{0, 1000}, firstTerminal: `{"type":"error","response_id":"first","status":500,"error":{"type":"server_error","code":"server_error","message":"Internal server error"}}`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			fixture := newResponsesWSBillingTest(t, `tier("request", fixed(0.002))`, func(ws *websocket.Conn, _ *http.Request) {
+			fixture := newResponsesWSBillingTest(t, 0.002, func(ws *websocket.Conn, _ *http.Request) {
 				for _, turn := range [][]string{
 					{`{"type":"response.created","response":{"id":"first","status":"in_progress"}}`, tc.firstTerminal},
 					{
@@ -1234,7 +1246,7 @@ func TestResponsesWebSocketIgnoresLateErrorForPreviousResponse(t *testing.T) {
 			require.Equal(t, "response.created", created["type"], "the late error must not reach the client or end the request: %v", created)
 			assert.Equal(t, "response.completed", readResponsesWSTestEvent(t, fixture.client)["type"])
 			fixture.closeAndWait(t)
-			assertResponsesWSAccounting(t, fixture, []int{1000, 1000})
+			assertResponsesWSAccounting(t, fixture, tc.quotas)
 		})
 	}
 }
@@ -1243,7 +1255,7 @@ func TestResponsesWebSocketIgnoresLateErrorForPreviousResponse(t *testing.T) {
 // the client and leaves the active generation running.
 func TestResponsesWebSocketForwardsErrorForOtherResponseWithoutEndingRequest(t *testing.T) {
 	const strayError = `{"type":"error","response_id":"other","status":500,"error":{"type":"server_error","code":"server_error","message":"unrelated failure"}}`
-	fixture := newResponsesWSBillingTest(t, `tier("request", fixed(0.002))`, func(ws *websocket.Conn, _ *http.Request) {
+	fixture := newResponsesWSBillingTest(t, 0.002, func(ws *websocket.Conn, _ *http.Request) {
 		if _, _, err := ws.ReadMessage(); !assert.NoError(t, err) {
 			return
 		}
@@ -1298,7 +1310,7 @@ func TestResponsesWebSocketPreRoutingRejectionsFollowHealthClassification(t *tes
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			fixture := newResponsesWSBillingTest(t, `tier("request", fixed(0.002))`, func(*websocket.Conn, *http.Request) {
+			fixture := newResponsesWSBillingTest(t, 0.002, func(*websocket.Conn, *http.Request) {
 				t.Error("rejected request reached upstream")
 			})
 			tc.reject(t, fixture)

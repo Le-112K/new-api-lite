@@ -20,7 +20,6 @@ import { describe, expect, it } from 'vitest'
 
 import { buildPricingChanges, type ModelPricingConfig } from '../api'
 import {
-  applyPriceSyncSelections,
   applyPricingDraft,
   pricingFromDraft,
   pricingOptions,
@@ -116,25 +115,6 @@ describe('shared model pricing', () => {
     ])
   })
 
-  it('clears conflicting expression settings when a fixed price is selected for sync', () => {
-    const options = pricingOptions({
-      ModelRatio: '{"example":1}',
-      CreateCacheRatio: '{"example":1.25}',
-      BillingMode: '{"example":"tiered_expr"}',
-      BillingExpr: '{"example":"tier(\\"base\\", p * 2)"}',
-    })
-    const after = applyPriceSyncSelections(options, {
-      example: { model_price: 0 },
-    })
-    expect(JSON.parse(after.ModelPrice)).toEqual({ example: 0 })
-    expect(JSON.parse(after.ModelRatio)).toEqual({})
-    expect(JSON.parse(after.CreateCacheRatio)).toEqual({})
-    expect(JSON.parse(after['billing_setting.billing_expr'])).toEqual({})
-    expect(JSON.parse(after['billing_setting.billing_mode'])).toEqual({
-      example: 'ratio',
-    })
-  })
-
   it('rejects invalid prices instead of silently coercing them', () => {
     for (const price of ['-1', 'NaN', 'Infinity', 'invalid']) {
       expect(() =>
@@ -202,17 +182,6 @@ it('tracks nested provider prices by model, preserves :: in model names, and ign
     price: '0.25',
     billingMode: 'per-request',
   })
-})
-
-it('retains provider overrides during model-only price synchronization', () => {
-  const key = 'billing_setting.plugin_billing_expr'
-  const options = pricingOptions({
-    [key]: JSON.stringify({ 'alpha::example': 'u("seconds") * 2' }),
-  })
-  const after = applyPriceSyncSelections(options, {
-    example: { billing_expr: 'tier("base", u("seconds"))' },
-  })
-  expect(after[key]).toEqual(options[key])
 })
 
 it('commits source provider edits while preserving target providers during batch copy', () => {

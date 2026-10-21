@@ -9,7 +9,6 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/setting/billing_setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	hostreasoning "github.com/QuantumNous/new-api/setting/reasoning"
@@ -61,9 +60,6 @@ type LegacyBillingDetails struct {
 
 func ResolveLegacyBillingDetails(name string, effective, configured PricingValues) LegacyBillingDetails {
 	details := LegacyBillingDetails{}
-	if effective["billing_setting.billing_mode"] == billing_setting.BillingModeTieredExpr {
-		return details
-	}
 	if _, fixed := effective["ModelPrice"]; fixed {
 		details.ImageCount = common.IsImageGenerationModel(name)
 		details.RequestRules = legacyDallePricingRules(name)
@@ -147,14 +143,10 @@ func PreviewModelPricingConversion(name string, draft PricingValues) (*ModelPric
 	if err := ValidateModelPricing(name, draft); err != nil {
 		return nil, err
 	}
-	if draft["billing_setting.billing_mode"] == billing_setting.BillingModeTieredExpr {
-		return &ModelPricingConversion{UnsupportedReason: "This model already uses an expression."}, nil
-	}
 	// The draft is the complete editable configuration: omitted fields inherit
 	// relay defaults rather than silently retaining discarded saved values.
-	legacyDraft := make(PricingValues, len(draft)+1)
+	legacyDraft := make(PricingValues, len(draft))
 	maps.Copy(legacyDraft, draft)
-	legacyDraft["billing_setting.billing_mode"] = billing_setting.BillingModeRatio
 	effective, err := PreviewModelPricing(name, legacyDraft)
 	if err != nil {
 		return nil, err
@@ -348,9 +340,6 @@ func PreviewModelPricingConversion(name string, draft PricingValues) (*ModelPric
 			// participate in AST-based token normalization.
 			expression = `(ai > 0 || ao > 0) ? tier("audio", max(len - ai, 0) * ` + base.String() + ` + c * ` + completion.String() + ` + ai * ` + decimal.NewFromFloat(*preview.BillingDetails.AudioInputPrice).String() + ` + ao * ` + decimal.NewFromFloat(*preview.BillingDetails.AudioOutputPrice).String() + `) : ` + expression
 		}
-	}
-	if err := billing_setting.SmokeTestExpr(expression); err != nil {
-		return nil, err
 	}
 	preview.Expression = expression
 	return preview, nil

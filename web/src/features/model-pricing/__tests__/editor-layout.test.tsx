@@ -287,7 +287,6 @@ function PricingFormFixture(props: {
     BillingMode: '{}',
     BillingExpr: '{}',
     PluginBillingExpr: '{}',
-    ExposeRatioEnabled: false,
   }
   const [actionsContainer, setActionsContainer] =
     useState<HTMLDivElement | null>(null)
@@ -341,40 +340,6 @@ it.each(['default', 'unset'] as const)(
       'grid-rows-[minmax(0,1fr)]'
     )
     await waitFor(() => expect(client.isFetching()).toBe(0))
-    if (variant === 'default') {
-      const toggle = screen.getByRole('switch', { name: 'Expose ratio API' })
-      expect(screen.getByRole('banner')).toContainElement(toggle)
-      const help = within(screen.getByRole('banner')).getByRole('button', {
-        name: 'Learn more',
-      })
-      await user.click(help)
-      expect(screen.getByRole('dialog')).toHaveTextContent(
-        'Allow clients to query configured prices via `/api/ratio`.'
-      )
-      expect(toggle).not.toBeChecked()
-      await user.keyboard('{Escape}')
-      await waitFor(() =>
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-      )
-      expect(help).toHaveFocus()
-      expect(toggle).toHaveAccessibleDescription(
-        'Allow clients to query configured prices via `/api/ratio`.'
-      )
-      await user.click(toggle)
-      expect(toggle).toBeChecked()
-      await user.click(screen.getByRole('button', { name: 'Switch to JSON' }))
-      expect(
-        screen.getAllByRole('switch', { name: 'Expose ratio API' })
-      ).toHaveLength(1)
-      expect(
-        screen.getByRole('switch', { name: 'Expose ratio API' })
-      ).toBeChecked()
-      await user.click(screen.getByRole('button', { name: 'Switch to Visual' }))
-    } else {
-      expect(
-        screen.queryByRole('switch', { name: 'Expose ratio API' })
-      ).not.toBeInTheDocument()
-    }
     await user.click(await screen.findByRole('button', { name: 'Edit' }))
     await user.click(
       screen.getByRole('tab', { name: 'Per-request (deprecated)' })
@@ -388,9 +353,5 @@ it.each(['default', 'unset'] as const)(
     expect(button.parentElement?.parentElement).toHaveClass('shrink-0')
     await user.click(button)
     await waitFor(() => expect(save).toHaveBeenCalledOnce())
-    expect(save).toHaveBeenCalledWith(
-      expect.objectContaining({ ExposeRatioEnabled: variant === 'default' }),
-      undefined
-    )
   }
 )

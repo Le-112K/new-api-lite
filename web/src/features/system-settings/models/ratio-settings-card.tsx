@@ -45,7 +45,6 @@ import { positiveIntegerSchema } from '../utils/numeric-field'
 import { GroupRatioForm } from './group-ratio-form'
 import { ModelRatioForm } from './model-ratio-form'
 import { ToolPriceSettings } from './tool-price-settings'
-import { UpstreamRatioSync } from './upstream-ratio-sync'
 import {
   formatJsonForTextarea,
   type JsonValidationError,
@@ -124,7 +123,6 @@ const createModelSchema = (t: Translate) =>
     ImageRatio: createJsonStringField(t),
     AudioRatio: createJsonStringField(t),
     AudioCompletionRatio: createJsonStringField(t),
-    ExposeRatioEnabled: z.boolean(),
     BillingMode: createJsonStringField(t),
     BillingExpr: createJsonStringField(t),
     PluginBillingExpr: createJsonStringField(t),
@@ -149,12 +147,7 @@ const createGroupSchema = (t: Translate) =>
 
 type ModelFormValues = z.infer<ReturnType<typeof createModelSchema>>
 type GroupFormValues = z.infer<ReturnType<typeof createGroupSchema>>
-type RatioTabId =
-  | 'models'
-  | 'unset-models'
-  | 'groups'
-  | 'tool-prices'
-  | 'upstream-sync'
+type RatioTabId = 'models' | 'unset-models' | 'groups' | 'tool-prices'
 
 type RatioSettingsCardProps = {
   modelDefaults: ModelFormValues
@@ -169,7 +162,7 @@ export function RatioSettingsCard({
   groupDefaults,
   toolPricesDefault,
   titleKey = 'Pricing Ratios',
-  visibleTabs = ['models', 'groups', 'tool-prices', 'upstream-sync'],
+  visibleTabs = ['models', 'groups', 'tool-prices'],
 }: RatioSettingsCardProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
@@ -232,7 +225,6 @@ export function RatioSettingsCard({
     AudioCompletionRatio: normalizeJsonString(
       modelDefaults.AudioCompletionRatio
     ),
-    ExposeRatioEnabled: modelDefaults.ExposeRatioEnabled,
     BillingMode: normalizeJsonString(modelDefaults.BillingMode),
     BillingExpr: normalizeJsonString(modelDefaults.BillingExpr),
     PluginBillingExpr: normalizeJsonString(modelDefaults.PluginBillingExpr),
@@ -305,7 +297,6 @@ export function RatioSettingsCard({
       AudioCompletionRatio: normalizeJsonString(
         modelDefaults.AudioCompletionRatio
       ),
-      ExposeRatioEnabled: modelDefaults.ExposeRatioEnabled,
       BillingMode: normalizeJsonString(modelDefaults.BillingMode),
       BillingExpr: normalizeJsonString(modelDefaults.BillingExpr),
       PluginBillingExpr: normalizeJsonString(modelDefaults.PluginBillingExpr),
@@ -368,7 +359,6 @@ export function RatioSettingsCard({
         ImageRatio: normalizeJsonString(values.ImageRatio),
         AudioRatio: normalizeJsonString(values.AudioRatio),
         AudioCompletionRatio: normalizeJsonString(values.AudioCompletionRatio),
-        ExposeRatioEnabled: values.ExposeRatioEnabled,
         BillingMode: normalizeJsonString(values.BillingMode),
         BillingExpr: normalizeJsonString(values.BillingExpr),
         PluginBillingExpr: normalizeJsonString(values.PluginBillingExpr),
@@ -381,20 +371,11 @@ export function RatioSettingsCard({
           pricingOptions(modelNormalizedDefaults.current),
           pricingOptions(normalized)
         )
-        const visibilityChanged =
-          normalized.ExposeRatioEnabled !==
-          modelNormalizedDefaults.current.ExposeRatioEnabled
-        if (!changes.length && !visibilityChanged) {
+        if (!changes.length) {
           toast.info(t('No model price changes to save'))
           return
         }
         await savePricing.mutateAsync(changes)
-        if (visibilityChanged) {
-          await updateOption.mutateAsync({
-            key: 'ExposeRatioEnabled',
-            value: normalized.ExposeRatioEnabled,
-          })
-        }
         const refreshed = await pricingQuery.refetch()
         setPricingBaseline(refreshed.data ?? null)
         modelNormalizedDefaults.current = normalized
@@ -458,7 +439,6 @@ export function RatioSettingsCard({
     'unset-models': 'Unset price models',
     groups: 'Group ratios',
     'tool-prices': 'Tool prices',
-    'upstream-sync': 'Upstream price sync',
   }
   const tabsGridClass =
     {
@@ -520,7 +500,7 @@ export function RatioSettingsCard({
     if (tab === 'tool-prices') {
       return <ToolPriceSettings defaultValue={toolPricesDefault} />
     }
-    return <UpstreamRatioSync />
+    return null
   }
 
   const renderTabSwitcher = () => (

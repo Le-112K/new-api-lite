@@ -28,14 +28,12 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useCanEditModelPricing } from '@/features/model-pricing/api'
 
 import { useModels } from './models-provider'
 
 export function ModelsPrimaryButtons() {
   const { t } = useTranslation()
   const { setOpen, setCurrentRow } = useModels()
-  const canPrice = useCanEditModelPricing()
 
   const handleCreateModel = () => {
     setCurrentRow(null)
@@ -59,15 +57,6 @@ export function ModelsPrimaryButtons() {
       <Button onClick={handleSync} variant='outline' size='sm'>
         {t('Sync metadata')}
       </Button>
-      {canPrice && (
-        <Button
-          onClick={() => setOpen('price-sync')}
-          variant='outline'
-          size='sm'
-        >
-          {t('Sync pricing')}
-        </Button>
-      )}
       {/* Create Model */}
       <Button onClick={handleCreateModel} size='sm'>
         <Plus className='h-4 w-4' />

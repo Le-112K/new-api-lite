@@ -19,8 +19,8 @@ import (
 )
 
 // PrepareRequestBilling estimates and reserves one request's charge. Transports
-// provide the current request body through BodyStorage or BillingRequestInput;
-// channel retries retain the resulting billing session and pricing snapshot.
+// provide the current request body through BodyStorage; channel retries retain
+// the resulting billing session and pricing snapshot.
 func PrepareRequestBilling(c *gin.Context, info *relaycommon.RelayInfo) *types.NewAPIError {
 	needSensitiveCheck := setting.ShouldCheckPromptSensitive()
 	meta := &types.TokenCountMeta{TokenType: types.TokenTypeTokenizer}
