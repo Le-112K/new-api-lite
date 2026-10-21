@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"path/filepath"
 	"strings"
 	"unicode/utf8"
 
@@ -12,8 +11,6 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	constant2 "github.com/QuantumNous/new-api/relay/constant"
-	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
 
 	"github.com/gin-gonic/gin"
@@ -189,39 +186,6 @@ func CountRequestToken(c *gin.Context, meta *types.TokenCountMeta, info *relayco
 		return 0, errors.New("token count meta is nil")
 	}
 
-	if info.RelayFormat == types.RelayFormatOpenAIRealtime {
-		return 0, nil
-	}
-	if info.RelayMode == constant2.RelayModeAudioTranscription || info.RelayMode == constant2.RelayModeAudioTranslation {
-		multiForm, err := common.ParseMultipartFormReusable(c)
-		if err != nil {
-			return 0, fmt.Errorf("error parsing multipart form: %v", err)
-		}
-		fileHeaders := multiForm.File["file"]
-		totalAudioToken := 0
-		for _, fileHeader := range fileHeaders {
-			file, err := fileHeader.Open()
-			if err != nil {
-				return 0, fmt.Errorf("error opening audio file: %v", err)
-			}
-			defer file.Close()
-			// get ext and io.seeker
-			ext := filepath.Ext(fileHeader.Filename)
-			duration, err := common.GetAudioDuration(c.Request.Context(), file, ext)
-			if err != nil {
-				return 0, fmt.Errorf("error getting audio duration: %v", err)
-			}
-			// duration 来自用户上传文件的元数据，可被伪造成天文数字或负数。
-			// 负值会让 token 估算变成负数（低估预扣费），先钳到 0 再转换。
-			if duration < 0 {
-				duration = 0
-			}
-			// 一分钟 1000 token，与 $price / minute 对齐。
-			totalAudioToken += common.QuotaRound(math.Ceil(duration) / 60.0 * 1000)
-		}
-		return totalAudioToken, nil
-	}
-
 	model := common.GetContextKeyString(c, constant.ContextKeyOriginalModel)
 	tkm := 0
 
@@ -303,60 +267,6 @@ func CountRequestToken(c *gin.Context, meta *types.TokenCountMeta, info *relayco
 	return tkm, nil
 }
 
-func CountTokenRealtime(info *relaycommon.RelayInfo, request dto.RealtimeEvent, model string) (int, int, error) {
-	audioToken := 0
-	textToken := 0
-	switch request.Type {
-	case dto.RealtimeEventTypeSessionUpdate:
-		if request.Session != nil {
-			msgTokens := CountTextToken(request.Session.Instructions, model)
-			textToken += msgTokens
-		}
-	case dto.RealtimeEventResponseAudioDelta:
-		// count audio token
-		atk, err := CountAudioTokenOutput(request.Delta, info.OutputAudioFormat)
-		if err != nil {
-			return 0, 0, fmt.Errorf("error counting audio token: %v", err)
-		}
-		audioToken += atk
-	case dto.RealtimeEventResponseAudioTranscriptionDelta, dto.RealtimeEventResponseFunctionCallArgumentsDelta:
-		// count text token
-		tkm := CountTextToken(request.Delta, model)
-		textToken += tkm
-	case dto.RealtimeEventInputAudioBufferAppend:
-		// count audio token
-		atk, err := CountAudioTokenInput(request.Audio, info.InputAudioFormat)
-		if err != nil {
-			return 0, 0, fmt.Errorf("error counting audio token: %v", err)
-		}
-		audioToken += atk
-	case dto.RealtimeEventConversationItemCreated:
-		if request.Item != nil {
-			switch request.Item.Type {
-			case "message":
-				for _, content := range request.Item.Content {
-					if content.Type == "input_text" {
-						tokens := CountTextToken(content.Text, model)
-						textToken += tokens
-					}
-				}
-			}
-		}
-	case dto.RealtimeEventTypeResponseDone:
-		// count tools token
-		if !info.IsFirstRequest {
-			if info.RealtimeTools != nil && len(info.RealtimeTools) > 0 {
-				for _, tool := range info.RealtimeTools {
-					toolTokens := CountTokenInput(tool, model)
-					textToken += 8
-					textToken += toolTokens
-				}
-			}
-		}
-	}
-	return textToken, audioToken, nil
-}
-
 func CountTokenInput(input any, model string) int {
 	switch v := input.(type) {
 	case string:
@@ -375,30 +285,6 @@ func CountTokenInput(input any, model string) int {
 		return CountTextToken(text.String(), model)
 	}
 	return CountTokenInput(fmt.Sprintf("%v", input), model)
-}
-
-func CountAudioTokenInput(audioBase64 string, audioFormat string) (int, error) {
-	if audioBase64 == "" {
-		return 0, nil
-	}
-	duration, err := parseAudio(audioBase64, audioFormat)
-	if err != nil {
-		return 0, err
-	}
-	// duration 来自用户提供的音频元数据，饱和转换防止 int 回绕
-	return common.QuotaFromFloat(duration / 60 * 100 / 0.06), nil
-}
-
-func CountAudioTokenOutput(audioBase64 string, audioFormat string) (int, error) {
-	if audioBase64 == "" {
-		return 0, nil
-	}
-	duration, err := parseAudio(audioBase64, audioFormat)
-	if err != nil {
-		return 0, err
-	}
-	// duration 来自上游返回的音频元数据，饱和转换防止 int 回绕
-	return common.QuotaFromFloat(duration / 60 * 200 / 0.24), nil
 }
 
 // CountTextToken 统计文本的token数量，仅OpenAI模型使用tokenizer，其余模型使用估算

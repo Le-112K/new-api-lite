@@ -53,32 +53,6 @@ func (o *OpenAITextResponse) GetOpenAIError() *types.OpenAIError {
 	return GetOpenAIError(o.Error)
 }
 
-type OpenAIEmbeddingResponseItem struct {
-	Object    string    `json:"object"`
-	Index     int       `json:"index"`
-	Embedding []float64 `json:"embedding"`
-}
-
-type OpenAIEmbeddingResponse struct {
-	Object string                        `json:"object"`
-	Data   []OpenAIEmbeddingResponseItem `json:"data"`
-	Model  string                        `json:"model"`
-	Usage  `json:"usage"`
-}
-
-type FlexibleEmbeddingResponseItem struct {
-	Object    string `json:"object"`
-	Index     int    `json:"index"`
-	Embedding any    `json:"embedding"`
-}
-
-type FlexibleEmbeddingResponse struct {
-	Object string                          `json:"object"`
-	Data   []FlexibleEmbeddingResponseItem `json:"data"`
-	Model  string                          `json:"model"`
-	Usage  `json:"usage"`
-}
-
 type ChatCompletionsStreamResponseChoice struct {
 	Delta        ChatCompletionsStreamResponseChoiceDelta `json:"delta"`
 	Logprobs     *any                                     `json:"logprobs"`
@@ -216,13 +190,6 @@ func (c *ChatCompletionsStreamResponse) SetSystemFingerprint(s string) {
 type ChatCompletionsStreamResponseSimple struct {
 	Choices []ChatCompletionsStreamResponseChoice `json:"choices"`
 	Usage   *Usage                                `json:"usage"`
-}
-
-type CompletionsStreamResponse struct {
-	Choices []struct {
-		Text         string `json:"text"`
-		FinishReason string `json:"finish_reason"`
-	} `json:"choices"`
 }
 
 type Usage struct {

@@ -15,11 +15,9 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/relay/channel"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/relay/common_handler"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	kitreasoning "github.com/QuantumNous/new-api/relaykit/relayconvert/reasoning"
 	"github.com/QuantumNous/new-api/relaykit/types"
@@ -32,8 +30,7 @@ import (
 )
 
 type Adaptor struct {
-	ChannelType    int
-	ResponseFormat string
+	ChannelType int
 }
 
 func (a *Adaptor) ConvertGeminiRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.GeminiChatRequest) (any, error) {
@@ -108,17 +105,6 @@ func (a *Adaptor) Init(info *relaycommon.RelayInfo) {
 const volcengineAPIPrefix = "/api/v3"
 
 func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
-	if info.RelayMode == relayconstant.RelayModeRealtime {
-		if after, ok := strings.CutPrefix(info.ChannelBaseUrl, "https://"); ok {
-			baseUrl := after
-			baseUrl = "wss://" + baseUrl
-			info.ChannelBaseUrl = baseUrl
-		} else if after, ok := strings.CutPrefix(info.ChannelBaseUrl, "http://"); ok {
-			baseUrl := after
-			baseUrl = "ws://" + baseUrl
-			info.ChannelBaseUrl = baseUrl
-		}
-	}
 	switch info.ChannelType {
 	case constant.ChannelTypeAzure:
 		apiVersion := info.ApiVersion
@@ -165,9 +151,6 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 		}
 		// https://github.com/songquanpeng/one-api/issues/67
 		requestURL = fmt.Sprintf("/openai/deployments/%s/%s", model_, task)
-		if info.RelayMode == relayconstant.RelayModeRealtime {
-			requestURL = fmt.Sprintf("/openai/realtime?deployment=%s&api-version=%s", model_, apiVersion)
-		}
 		return relaycommon.GetFullRequestURL(info.ChannelBaseUrl, requestURL, info.ChannelType), nil
 	//case constant.ChannelTypeMiniMax:
 	//	return minimax.GetRequestURL(info)
@@ -239,35 +222,8 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, header *http.Header, info *
 			}
 		}
 	}
-	if info.RelayMode == relayconstant.RelayModeRealtime {
-		// OpenAI 已下线 Realtime Beta API,GA 模型收到 beta 标识会以 beta_api_shape_disabled 拒绝;
-		// 仅对遗留 preview 模型保留 beta 标识
-		legacyRealtimeBeta := strings.Contains(info.UpstreamModelName, "-realtime-preview")
-		swp := c.Request.Header.Get("Sec-WebSocket-Protocol")
-		if swp != "" {
-			items := []string{
-				"realtime",
-				"openai-insecure-api-key." + info.ApiKey,
-			}
-			if legacyRealtimeBeta {
-				items = append(items, "openai-beta.realtime-v1")
-			}
-			header.Set("Sec-WebSocket-Protocol", strings.Join(items, ","))
-			//req.Header.Set("Sec-WebSocket-Key", c.Request.Header.Get("Sec-WebSocket-Key"))
-			//req.Header.Set("Sec-Websocket-Extensions", c.Request.Header.Get("Sec-Websocket-Extensions"))
-			//req.Header.Set("Sec-Websocket-Version", c.Request.Header.Get("Sec-Websocket-Version"))
-		} else {
-			if legacyRealtimeBeta {
-				header.Set("openai-beta", "realtime=v1")
-			}
-			if !hasAuthOverride {
-				header.Set("Authorization", "Bearer "+info.ApiKey)
-			}
-		}
-	} else {
-		if !hasAuthOverride {
-			header.Set("Authorization", "Bearer "+info.ApiKey)
-		}
+	if !hasAuthOverride {
+		header.Set("Authorization", "Bearer "+info.ApiKey)
 	}
 	if info.ChannelType == constant.ChannelTypeOpenRouter {
 		if header.Get("HTTP-Referer") == "" {
@@ -471,80 +427,6 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 	}
 
 	return request, nil
-}
-
-func (a *Adaptor) ConvertRerankRequest(c *gin.Context, relayMode int, request dto.RerankRequest) (any, error) {
-	return request, nil
-}
-
-func (a *Adaptor) ConvertEmbeddingRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.EmbeddingRequest) (any, error) {
-	return request, nil
-}
-
-func (a *Adaptor) ConvertAudioRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.AudioRequest) (io.Reader, error) {
-	a.ResponseFormat = request.ResponseFormat
-	if info.RelayMode == relayconstant.RelayModeAudioSpeech {
-		jsonData, err := common.Marshal(request)
-		if err != nil {
-			return nil, fmt.Errorf("error marshalling object: %w", err)
-		}
-		return bytes.NewReader(jsonData), nil
-	} else {
-		var requestBody bytes.Buffer
-		writer := multipart.NewWriter(&requestBody)
-
-		writer.WriteField("model", request.Model)
-
-		formData, err2 := common.ParseMultipartFormReusable(c)
-		if err2 != nil {
-			return nil, fmt.Errorf("error parsing multipart form: %w", err2)
-		}
-
-		// 打印类似 curl 命令格式的信息
-		logger.LogDebug(c.Request.Context(), "--form 'model=\"%s\"'", request.Model)
-
-		// 遍历表单字段并打印输出
-		for key, values := range formData.Value {
-			if key == "model" {
-				continue
-			}
-			for _, value := range values {
-				writer.WriteField(key, value)
-				logger.LogDebug(c.Request.Context(), "--form '%s=\"%s\"'", key, value)
-			}
-		}
-
-		// 从 formData 中获取文件
-		fileHeaders := formData.File["file"]
-		if len(fileHeaders) == 0 {
-			return nil, errors.New("file is required")
-		}
-
-		// 使用 formData 中的第一个文件
-		fileHeader := fileHeaders[0]
-		logger.LogDebug(c.Request.Context(), "--form 'file=@\"%s\"' (size: %d bytes, content-type: %s)",
-			fileHeader.Filename, fileHeader.Size, fileHeader.Header.Get("Content-Type"))
-
-		file, err := fileHeader.Open()
-		if err != nil {
-			return nil, fmt.Errorf("error opening audio file: %v", err)
-		}
-		defer file.Close()
-
-		part, err := writer.CreateFormFile("file", fileHeader.Filename)
-		if err != nil {
-			return nil, errors.New("create form file failed")
-		}
-		if _, err := io.Copy(part, file); err != nil {
-			return nil, errors.New("copy file failed")
-		}
-
-		// 关闭 multipart 编写器以设置分界线
-		writer.Close()
-		c.Request.Header.Set("Content-Type", writer.FormDataContentType())
-		logger.LogDebug(c.Request.Context(), "--header 'Content-Type: %s'", writer.FormDataContentType())
-		return &requestBody, nil
-	}
 }
 
 func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.ImageRequest) (any, error) {
@@ -780,35 +662,20 @@ func (a *Adaptor) ConvertOpenAIResponsesRequest(c *gin.Context, info *relaycommo
 }
 
 func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, requestBody io.Reader) (any, error) {
-	if info.RelayMode == relayconstant.RelayModeAudioTranscription ||
-		info.RelayMode == relayconstant.RelayModeAudioTranslation ||
-		(info.RelayMode == relayconstant.RelayModeImagesEdits && !isJSONRequest(c)) {
+	if info.RelayMode == relayconstant.RelayModeImagesEdits && !isJSONRequest(c) {
 		return channel.DoFormRequest(a, c, info, requestBody)
-	} else if info.RelayMode == relayconstant.RelayModeRealtime {
-		return channel.DoWssRequest(a, c, info, requestBody)
-	} else {
-		return channel.DoApiRequest(a, c, info, requestBody)
 	}
+	return channel.DoApiRequest(a, c, info, requestBody)
 }
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *types.NewAPIError) {
 	switch info.RelayMode {
-	case relayconstant.RelayModeRealtime:
-		err, usage = OpenaiRealtimeHandler(c, info)
-	case relayconstant.RelayModeAudioSpeech:
-		usage = OpenaiTTSHandler(c, resp, info)
-	case relayconstant.RelayModeAudioTranslation:
-		fallthrough
-	case relayconstant.RelayModeAudioTranscription:
-		err, usage = OpenaiSTTHandler(c, resp, info, a.ResponseFormat)
 	case relayconstant.RelayModeImagesGenerations, relayconstant.RelayModeImagesEdits:
 		if info.IsStream {
 			usage, err = OpenaiImageStreamHandler(c, info, resp)
 		} else {
 			usage, err = OpenaiImageHandler(c, info, resp)
 		}
-	case relayconstant.RelayModeRerank:
-		usage, err = common_handler.RerankHandler(c, info, resp)
 	case relayconstant.RelayModeResponses:
 		if info.IsStream {
 			usage, err = OaiResponsesStreamHandler(c, info, resp)

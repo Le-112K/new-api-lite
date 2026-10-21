@@ -101,7 +101,6 @@ const CAPABILITY_LABEL_KEYS: Record<ModelCapability, string> = {
   web_search: 'Web search',
   code_interpreter: 'Code interpreter',
   caching: 'Prompt caching',
-  embeddings: 'Embeddings',
 }
 
 const MODALITY_LABEL_KEYS: Record<string, string> = {

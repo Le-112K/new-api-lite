@@ -124,28 +124,6 @@ func (a *Adaptor) ConvertOpenAIResponsesRequest(c *gin.Context, info *relaycommo
 	}
 }
 
-func (a *Adaptor) ConvertEmbeddingRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.EmbeddingRequest) (any, error) {
-	converter, err := a.resolveForConversion(c, info)
-	if err != nil {
-		return nil, err
-	}
-	if converter != relayconvert.ConverterNone {
-		return nil, fmt.Errorf("converter %q does not support embedding requests", converter)
-	}
-	return a.convertOpenAICompatibleEmbeddingRequest(c, info, request)
-}
-
-func (a *Adaptor) ConvertAudioRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.AudioRequest) (io.Reader, error) {
-	converter, err := a.resolveForConversion(c, info)
-	if err != nil {
-		return nil, err
-	}
-	if converter != relayconvert.ConverterNone {
-		return nil, fmt.Errorf("converter %q does not support audio requests", converter)
-	}
-	return a.convertOpenAICompatibleAudioRequest(c, info, request)
-}
-
 func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.ImageRequest) (any, error) {
 	converter, err := a.resolveForConversion(c, info)
 	if err != nil {
@@ -155,11 +133,6 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInf
 		return nil, fmt.Errorf("converter %q does not support image requests", converter)
 	}
 	return a.convertOpenAICompatibleImageRequest(c, info, request)
-}
-
-func (a *Adaptor) ConvertRerankRequest(c *gin.Context, relayMode int, request dto.RerankRequest) (any, error) {
-	a.converted = true
-	return a.openaiAdaptor.ConvertRerankRequest(c, relayMode, request)
 }
 
 func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
@@ -260,13 +233,8 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 		return nil, errors.New("advanced custom converter routes cannot be used with pass-through request body")
 	}
 
-	if info.RelayMode == relayconstant.RelayModeAudioTranscription ||
-		info.RelayMode == relayconstant.RelayModeAudioTranslation ||
-		(info.RelayMode == relayconstant.RelayModeImagesEdits && !isJSONRequest(c)) {
+	if info.RelayMode == relayconstant.RelayModeImagesEdits && !isJSONRequest(c) {
 		return channel.DoFormRequest(a, c, info, requestBody)
-	}
-	if info.RelayMode == relayconstant.RelayModeRealtime {
-		return channel.DoWssRequest(a, c, info, requestBody)
 	}
 	return channel.DoApiRequest(a, c, info, requestBody)
 }
@@ -277,8 +245,6 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycom
 	}
 
 	switch a.converter {
-	case dto.AdvancedCustomConverterSGLangRerank:
-		return a.doSGLangRerankResponse(c, resp, info)
 	case relayconvert.ConverterNone:
 		return a.doNativeResponse(c, resp, info)
 	case relayconvert.ConverterClaudeMessagesToOpenAIChat,
@@ -387,14 +353,6 @@ func buildRouteURL(route dto.AdvancedCustomRoute, converter string, info *relayc
 	}
 	if shouldUseGeminiStreamURL(converter, info) {
 		useGeminiStreamGenerateContentURL(parsedURL)
-	}
-	if info != nil && info.RelayMode == relayconstant.RelayModeRealtime {
-		switch parsedURL.Scheme {
-		case "https":
-			parsedURL.Scheme = "wss"
-		case "http":
-			parsedURL.Scheme = "ws"
-		}
 	}
 	if route.Auth != nil && strings.TrimSpace(route.Auth.Type) == dto.AdvancedCustomAuthTypeQuery {
 		query := parsedURL.Query()
@@ -537,22 +495,6 @@ func (a *Adaptor) convertOpenAICompatibleResponsesRequest(c *gin.Context, info *
 	old := info.ChannelType
 	info.ChannelType = constant.ChannelTypeOpenAI
 	converted, err := a.openaiAdaptor.ConvertOpenAIResponsesRequest(c, info, request)
-	info.ChannelType = old
-	return converted, err
-}
-
-func (a *Adaptor) convertOpenAICompatibleEmbeddingRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.EmbeddingRequest) (any, error) {
-	old := info.ChannelType
-	info.ChannelType = constant.ChannelTypeOpenAI
-	converted, err := a.openaiAdaptor.ConvertEmbeddingRequest(c, info, request)
-	info.ChannelType = old
-	return converted, err
-}
-
-func (a *Adaptor) convertOpenAICompatibleAudioRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.AudioRequest) (io.Reader, error) {
-	old := info.ChannelType
-	info.ChannelType = constant.ChannelTypeOpenAI
-	converted, err := a.openaiAdaptor.ConvertAudioRequest(c, info, request)
 	info.ChannelType = old
 	return converted, err
 }

@@ -115,7 +115,7 @@ func TestConvertResponseRejectsNilAndUnsupportedRoute(t *testing.T) {
 	_, err := ConvertResponse(nil, nil, types.RelayFormatOpenAI, (*dto.OpenAITextResponse)(nil))
 	require.Error(t, err)
 
-	_, err = ConvertResponse(nil, nil, types.RelayFormatEmbedding, &dto.OpenAITextResponse{})
+	_, err = ConvertResponse(nil, nil, types.RelayFormatMjProxy, &dto.OpenAITextResponse{})
 	require.Error(t, err)
 }
 

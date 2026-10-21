@@ -271,18 +271,6 @@ func appendFinalRequestFormat(relayInfo *relaycommon.RelayInfo, other *model.Log
 	}
 }
 
-func GenerateWssOtherInfo(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usage *dto.RealtimeUsage, modelRatio, groupRatio, completionRatio, audioRatio, audioCompletionRatio, modelPrice, userGroupRatio float64) *model.LogOther {
-	info := GenerateTextOtherInfo(ctx, relayInfo, modelRatio, groupRatio, completionRatio, 0, 0.0, modelPrice, userGroupRatio)
-	info.SetPublic("ws", true)
-	info.SetPublic("audio_input", usage.InputTokenDetails.AudioTokens)
-	info.SetPublic("audio_output", usage.OutputTokenDetails.AudioTokens)
-	info.SetPublic("text_input", usage.InputTokenDetails.TextTokens)
-	info.SetPublic("text_output", usage.OutputTokenDetails.TextTokens)
-	info.SetPublic("audio_ratio", audioRatio)
-	info.SetPublic("audio_completion_ratio", audioCompletionRatio)
-	return info
-}
-
 func GenerateAudioOtherInfo(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usage *dto.Usage, modelRatio, groupRatio, completionRatio, audioRatio, audioCompletionRatio, modelPrice, userGroupRatio float64) *model.LogOther {
 	info := GenerateTextOtherInfo(ctx, relayInfo, modelRatio, groupRatio, completionRatio, 0, 0.0, modelPrice, userGroupRatio)
 	info.SetPublic("audio", true)

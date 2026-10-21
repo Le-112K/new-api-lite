@@ -19,7 +19,6 @@ import (
 	hosttypes "github.com/QuantumNous/new-api/types"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	"github.com/tidwall/gjson"
 )
 
@@ -39,11 +38,6 @@ const (
 // ClaudeConvertInfo now lives with the converters (convmeta); the alias keeps
 // host code and adaptors compiling unchanged.
 type ClaudeConvertInfo = convmeta.ClaudeConvertInfo
-
-type RerankerInfo struct {
-	Documents       []any
-	ReturnDocuments bool
-}
 
 type ChannelMeta struct {
 	ChannelType          int
@@ -82,9 +76,8 @@ type RelayInfo struct {
 	FirstResponseTime time.Time
 	isFirstResponse   bool
 	//SendLastReasoningResponse bool
-	IsStream               bool
-	IsGeminiBatchEmbedding bool
-	UsePrice               bool
+	IsStream bool
+	UsePrice  bool
 	RelayMode              int
 	OriginModelName        string
 	ResponseModel          *ResponseModel
@@ -97,15 +90,8 @@ type RelayInfo struct {
 	RequestURLPath     string
 	RequestHeaders     map[string]string
 	ShouldIncludeUsage bool
-	DisablePing        bool // 是否禁止向下游发送自定义 Ping
-	ClientWs           *websocket.Conn
-	TargetWs           *websocket.Conn
-	InputAudioFormat   string
-	OutputAudioFormat  string
-	RealtimeTools      []dto.RealTimeTool
-	IsFirstRequest     bool
-	AudioUsage         bool
-	ReasoningEffort    string
+	DisablePing     bool // 是否禁止向下游发送自定义 Ping
+	ReasoningEffort string
 	// ReasoningConversion is the suffix-derived reasoning intent attached
 	// after model mapping. Converters read it via ReasoningState().
 	ReasoningConversion *dto.ReasoningConversionState
@@ -193,7 +179,6 @@ type RelayInfo struct {
 	ThinkingContentInfo
 	TokenCountMeta
 	*ClaudeConvertInfo
-	*RerankerInfo
 	*ChannelMeta
 	*TaskRelayInfo
 }
@@ -333,12 +318,6 @@ func (info *RelayInfo) ToString() string {
 	fmt.Fprintf(b, "Timing{ Start: %s, FirstResponse: %s, LatencyMs: %d }, ",
 		info.StartTime.Format(time.RFC3339Nano), info.FirstResponseTime.Format(time.RFC3339Nano), latencyMs)
 
-	// Audio / realtime
-	if info.InputAudioFormat != "" || info.OutputAudioFormat != "" || len(info.RealtimeTools) > 0 || info.AudioUsage {
-		fmt.Fprintf(b, "Realtime{ AudioUsage: %t, InFmt: %q, OutFmt: %q, Tools: %d }, ",
-			info.AudioUsage, info.InputAudioFormat, info.OutputAudioFormat, len(info.RealtimeTools))
-	}
-
 	// Reasoning
 	if info.ReasoningEffort != "" {
 		fmt.Fprintf(b, "ReasoningEffort: %q, ", info.ReasoningEffort)
@@ -389,16 +368,6 @@ var streamSupportedChannels = map[int]bool{
 	constant.ChannelTypeTencent:        true,
 }
 
-func GenRelayInfoWs(c *gin.Context, ws *websocket.Conn) *RelayInfo {
-	info := genBaseRelayInfo(c, nil)
-	info.RelayFormat = types.RelayFormatOpenAIRealtime
-	info.ClientWs = ws
-	info.InputAudioFormat = "pcm16"
-	info.OutputAudioFormat = "pcm16"
-	info.IsFirstRequest = true
-	return info
-}
-
 func GenRelayInfoClaude(c *gin.Context, request dto.Request) *RelayInfo {
 	info := genBaseRelayInfo(c, request)
 	info.RelayFormat = types.RelayFormatClaude
@@ -407,29 +376,6 @@ func GenRelayInfoClaude(c *gin.Context, request dto.Request) *RelayInfo {
 		LastMessagesType: LastMessageTypeNone,
 	}
 	info.IsClaudeBetaQuery = c.Query("beta") == "true"
-	return info
-}
-
-func GenRelayInfoRerank(c *gin.Context, request *dto.RerankRequest) *RelayInfo {
-	info := genBaseRelayInfo(c, request)
-	info.RelayMode = relayconstant.RelayModeRerank
-	info.RelayFormat = types.RelayFormatRerank
-	info.RerankerInfo = &RerankerInfo{
-		Documents:       request.Documents,
-		ReturnDocuments: request.GetReturnDocuments(),
-	}
-	return info
-}
-
-func GenRelayInfoOpenAIAudio(c *gin.Context, request dto.Request) *RelayInfo {
-	info := genBaseRelayInfo(c, request)
-	info.RelayFormat = types.RelayFormatOpenAIAudio
-	return info
-}
-
-func GenRelayInfoEmbedding(c *gin.Context, request dto.Request) *RelayInfo {
-	info := genBaseRelayInfo(c, request)
-	info.RelayFormat = types.RelayFormatEmbedding
 	return info
 }
 
@@ -598,30 +544,18 @@ func cloneRequestHeaders(c *gin.Context) map[string]string {
 	return headers
 }
 
-func GenRelayInfo(c *gin.Context, relayFormat types.RelayFormat, request dto.Request, ws *websocket.Conn) (*RelayInfo, error) {
+func GenRelayInfo(c *gin.Context, relayFormat types.RelayFormat, request dto.Request) (*RelayInfo, error) {
 	var info *RelayInfo
 	var err error
 	switch relayFormat {
 	case types.RelayFormatOpenAI:
 		info = GenRelayInfoOpenAI(c, request)
-	case types.RelayFormatOpenAIAudio:
-		info = GenRelayInfoOpenAIAudio(c, request)
 	case types.RelayFormatOpenAIImage:
 		info = GenRelayInfoImage(c, request)
-	case types.RelayFormatOpenAIRealtime:
-		info = GenRelayInfoWs(c, ws)
 	case types.RelayFormatClaude:
 		info = GenRelayInfoClaude(c, request)
-	case types.RelayFormatRerank:
-		if request, ok := request.(*dto.RerankRequest); ok {
-			info = GenRelayInfoRerank(c, request)
-			break
-		}
-		err = errors.New("request is not a RerankRequest")
 	case types.RelayFormatGemini:
 		info = GenRelayInfoGemini(c, request)
-	case types.RelayFormatEmbedding:
-		info = GenRelayInfoEmbedding(c, request)
 	case types.RelayFormatOpenAIResponses:
 		if request, ok := request.(*dto.OpenAIResponsesRequest); ok {
 			info = GenRelayInfoResponses(c, request)

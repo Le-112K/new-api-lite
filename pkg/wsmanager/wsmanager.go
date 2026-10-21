@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	KindRealtime  = "realtime"
 	KindResponses = "responses"
 
 	defaultCloseReason = "channel disabled or deleted"

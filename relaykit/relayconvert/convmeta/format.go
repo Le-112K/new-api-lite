@@ -17,14 +17,8 @@ func GuessRelayFormatFromRequest(req any) (types.RelayFormat, bool) {
 		return types.RelayFormatClaude, true
 	case *dto.GeminiChatRequest, dto.GeminiChatRequest:
 		return types.RelayFormatGemini, true
-	case *dto.EmbeddingRequest, dto.EmbeddingRequest:
-		return types.RelayFormatEmbedding, true
-	case *dto.RerankRequest, dto.RerankRequest:
-		return types.RelayFormatRerank, true
 	case *dto.ImageRequest, dto.ImageRequest:
 		return types.RelayFormatOpenAIImage, true
-	case *dto.AudioRequest, dto.AudioRequest:
-		return types.RelayFormatOpenAIAudio, true
 	default:
 		return "", false
 	}

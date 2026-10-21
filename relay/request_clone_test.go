@@ -225,33 +225,6 @@ func TestRequestDeepCopyOtherProtocols(t *testing.T) {
 		})
 	})
 
-	t.Run("audio raw parameters and speed remain isolated", func(t *testing.T) {
-		assertRequestCloneIsolation(t, `{
-			"model":"tts-1","input":"hello","voice":"alloy","speed":1,"metadata":{"tag":"test"},"ref_audio":"sample"
-		}`, func(clone *dto.AudioRequest) {
-			clone.Metadata[0] = '!'
-			clone.RefAudio[1] = '!'
-			*clone.Speed = 2
-		})
-	})
-
-	t.Run("embedding dynamic input and dimensions remain isolated", func(t *testing.T) {
-		assertRequestCloneIsolation(t, `{"model":"text-embedding-3-small","input":[[1,2],[3]],"dimensions":256}`,
-			func(clone *dto.EmbeddingRequest) {
-				clone.Input.([]any)[0].([]any)[0] = float64(9)
-				*clone.Dimensions = 512
-			})
-	})
-
-	t.Run("rerank documents and options remain isolated", func(t *testing.T) {
-		assertRequestCloneIsolation(t, `{
-			"model":"rerank-v3.5","query":"hello","documents":["first","second"],"top_n":1,"return_documents":false
-		}`, func(clone *dto.RerankRequest) {
-			clone.Documents[0] = "changed"
-			*clone.TopN = 2
-			*clone.ReturnDocuments = true
-		})
-	})
 }
 
 // A channel attempt may mutate its clone without changing the request used by

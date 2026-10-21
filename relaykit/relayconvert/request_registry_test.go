@@ -862,12 +862,12 @@ func TestConvertRequestRejectsUnregisteredExplicitPath(t *testing.T) {
 	_, err := ConvertRequest(
 		nil,
 		&convmeta.Values{},
-		types.RelayFormatEmbedding,
+		types.RelayFormatMjProxy,
 		&dto.ClaudeRequest{Model: "claude-test"},
 	)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "from claude to embedding is not registered")
+	assert.Contains(t, err.Error(), "from claude to mj_proxy is not registered")
 }
 
 func mustRawMessage(t *testing.T, value any) []byte {

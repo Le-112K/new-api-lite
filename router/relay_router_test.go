@@ -107,27 +107,59 @@ func TestRelayRouterRegistersEveryHostProtocolEndpoint(t *testing.T) {
 
 	wanted := []struct{ method, path string }{
 		{http.MethodPost, "/v1/chat/completions"},
-		{http.MethodPost, "/v1/completions"},
-		{http.MethodPost, "/v1/embeddings"},
-		{http.MethodPost, "/v1/rerank"},
 		{http.MethodPost, "/v1/messages"},
 		{http.MethodPost, "/v1/responses"},
+		{http.MethodGet, "/v1/responses"},
 		{http.MethodPost, "/v1/responses/compact"},
 		{http.MethodPost, "/v1/alpha/search"},
 		{http.MethodPost, "/v1/images/generations"},
 		{http.MethodPost, "/v1/images/edits"},
-		{http.MethodPost, "/v1/audio/transcriptions"},
-		{http.MethodPost, "/v1/audio/translations"},
-		{http.MethodPost, "/v1/audio/speech"},
 		{http.MethodPost, "/v1/moderations"},
 		{http.MethodGet, "/v1/models"},
-		{http.MethodGet, "/v1/realtime"},
+		{http.MethodPost, "/v1/models/*path"},
+		{http.MethodGet, "/v1beta/models"},
+		{http.MethodPost, "/v1beta/models/*path"},
 	}
 
 	for _, want := range wanted {
 		key := want.method + " " + want.path
 		if !registered[key] {
 			t.Errorf("relay route %q is not registered; clients would receive 404", key)
+		}
+	}
+}
+
+// TestRelayRouterRetiredProtocolEndpointsStayUnregistered is the mirror image
+// of TestRelayRouterRegistersEveryHostProtocolEndpoint. These protocols were
+// removed from the product on purpose (see relay/constant/relay_mode.go). If a
+// future change re-registers one of them the route silently comes back to
+// life — this list turns that into a failing test instead of a code review
+// catch.
+func TestRelayRouterRetiredProtocolEndpointsStayUnregistered(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	SetRelayRouter(engine)
+
+	registered := make(map[string]bool, len(engine.Routes()))
+	for _, route := range engine.Routes() {
+		registered[route.Method+" "+route.Path] = true
+	}
+
+	retired := []struct{ method, path string }{
+		{http.MethodPost, "/v1/completions"},
+		{http.MethodPost, "/v1/embeddings"},
+		{http.MethodPost, "/v1/rerank"},
+		{http.MethodPost, "/v1/audio/transcriptions"},
+		{http.MethodPost, "/v1/audio/translations"},
+		{http.MethodPost, "/v1/audio/speech"},
+		{http.MethodGet, "/v1/realtime"},
+		{http.MethodPost, "/engines/:model/embeddings"},
+	}
+
+	for _, gone := range retired {
+		key := gone.method + " " + gone.path
+		if registered[key] {
+			t.Errorf("retired relay route %q is still registered; it must answer 404", key)
 		}
 	}
 }

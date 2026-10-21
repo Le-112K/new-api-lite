@@ -189,7 +189,7 @@ func TestGenRelayInfoCapturesRequestReasoningEffort(t *testing.T) {
 			ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
 			ctx.Request = httptest.NewRequest("POST", tt.path, nil)
 
-			info, err := GenRelayInfo(ctx, tt.relayFormat, tt.request, nil)
+			info, err := GenRelayInfo(ctx, tt.relayFormat, tt.request)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expected, info.ReasoningEffort)
 		})
@@ -203,7 +203,7 @@ func TestGenRelayInfoKeepsOriginAndLeavesBillingUnset(t *testing.T) {
 	const model = "qwen3.8-max@thinking:on@temperature:0.2"
 	ctx.Set("original_model", model)
 
-	info, err := GenRelayInfo(ctx, types.RelayFormatOpenAI, &dto.GeneralOpenAIRequest{Model: model}, nil)
+	info, err := GenRelayInfo(ctx, types.RelayFormatOpenAI, &dto.GeneralOpenAIRequest{Model: model})
 	require.NoError(t, err)
 	assert.Equal(t, model, info.OriginModelName)
 	assert.Empty(t, info.BillingModelName)
@@ -218,7 +218,7 @@ func TestInitChannelMetaRestoresRequestReasoningEffortForRetry(t *testing.T) {
 		Model:     "gpt-5.6-sol",
 		Reasoning: &dto.Reasoning{Effort: "max"},
 	}
-	info, err := GenRelayInfo(ctx, types.RelayFormatOpenAIResponses, request, nil)
+	info, err := GenRelayInfo(ctx, types.RelayFormatOpenAIResponses, request)
 	require.NoError(t, err)
 
 	info.SetReasoningEffort("high")
@@ -297,7 +297,7 @@ func TestInitChannelMetaAppliesAdvancedCustomRoutePassThrough(t *testing.T) {
 			common.SetContextKey(ctx, constant.ContextKeyChannelSetting, tt.channelSetting)
 			common.SetContextKey(ctx, constant.ContextKeyChannelOtherSetting, dto.ChannelOtherSettings{AdvancedCustom: advancedCustom})
 
-			info, err := GenRelayInfo(ctx, types.RelayFormatOpenAI, &dto.GeneralOpenAIRequest{Model: tt.model, ReasoningEffort: "high"}, nil)
+			info, err := GenRelayInfo(ctx, types.RelayFormatOpenAI, &dto.GeneralOpenAIRequest{Model: tt.model, ReasoningEffort: "high"})
 			require.NoError(t, err)
 
 			info.InitChannelMeta(ctx)
@@ -313,7 +313,7 @@ func TestInitChannelMetaResetsPerAttemptStreamStateAndPreservesRequestState(t *t
 	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
 	ctx.Request = httptest.NewRequest("POST", "/v1/chat/completions", nil)
 
-	info, err := GenRelayInfo(ctx, types.RelayFormatOpenAI, &dto.GeneralOpenAIRequest{Model: "gpt-test"}, nil)
+	info, err := GenRelayInfo(ctx, types.RelayFormatOpenAI, &dto.GeneralOpenAIRequest{Model: "gpt-test"})
 	require.NoError(t, err)
 
 	claudeState := relayconvert.NewClaudeToChatStreamState()

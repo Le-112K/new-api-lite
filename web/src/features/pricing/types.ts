@@ -82,7 +82,6 @@ export type ModelCapability =
   | 'web_search'
   | 'code_interpreter'
   | 'caching'
-  | 'embeddings'
 
 export type PricingData = {
   success: boolean

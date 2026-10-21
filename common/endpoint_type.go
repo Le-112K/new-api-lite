@@ -7,7 +7,9 @@ func GetEndpointTypesByChannelType(channelType int, modelName string) []constant
 	var endpointTypes []constant.EndpointType
 	switch channelType {
 	case constant.ChannelTypeJina:
-		endpointTypes = []constant.EndpointType{constant.EndpointTypeJinaRerank}
+		// Jina 渠道原本只提供 /v1/rerank；该端点已随协议精简下线，
+		// 渠道类型保留仅为兼容存量数据，因此不再声明任何端点。
+		endpointTypes = []constant.EndpointType{}
 	//case constant.ChannelTypeSunoAPI:
 	//	endpointTypes = []constant.EndpointType{constant.EndpointTypeSuno}
 	//case constant.ChannelTypeKling:

@@ -14,7 +14,6 @@ import (
 	common2 "github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relay/helper"
 	"github.com/QuantumNous/new-api/relaykit/types"
 	"github.com/QuantumNous/new-api/service"
@@ -49,16 +48,10 @@ func ApplyUpstreamBodyMetadata(req *http.Request, body io.Reader) {
 }
 
 func SetupApiRequestHeader(info *common.RelayInfo, c *gin.Context, req *http.Header) {
-	if info.RelayMode == constant.RelayModeAudioTranscription || info.RelayMode == constant.RelayModeAudioTranslation {
-		// multipart/form-data
-	} else if info.RelayMode == constant.RelayModeRealtime {
-		// websocket
-	} else {
-		req.Set("Content-Type", c.Request.Header.Get("Content-Type"))
-		req.Set("Accept", c.Request.Header.Get("Accept"))
-		if info.IsStream && c.Request.Header.Get("Accept") == "" {
-			req.Set("Accept", "text/event-stream")
-		}
+	req.Set("Content-Type", c.Request.Header.Get("Content-Type"))
+	req.Set("Accept", c.Request.Header.Get("Accept"))
+	if info.IsStream && c.Request.Header.Get("Accept") == "" {
+		req.Set("Accept", "text/event-stream")
 	}
 }
 

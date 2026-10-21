@@ -531,12 +531,6 @@ func TestAdvancedCustomValidateRoutePassThroughBody(t *testing.T) {
 				PassThroughBodyEnabled: true,
 			},
 			{
-				IncomingPath:           "/v1/rerank",
-				UpstreamPath:           "/v1/rerank",
-				Converter:              AdvancedCustomConverterSGLangRerank,
-				PassThroughBodyEnabled: true,
-			},
-			{
 				IncomingPath: "/v1/messages",
 				UpstreamPath: "/v1/chat/completions",
 				Converter:    advancedCustomConverterClaudeMessagesToOpenAIChat,
@@ -552,7 +546,7 @@ func TestAdvancedCustomValidateRoutePassThroughBody(t *testing.T) {
 	require.True(t, ok)
 	assert.False(t, route.PassThroughBodyEnabled)
 
-	encoded, err := json.Marshal(valid.Routes[2])
+	encoded, err := json.Marshal(valid.Routes[1])
 	require.NoError(t, err)
 	assert.NotContains(t, string(encoded), "pass_through_body_enabled")
 

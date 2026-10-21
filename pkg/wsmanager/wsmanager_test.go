@@ -22,12 +22,16 @@ func resetRegistryForTest() {
 	nextID = 0
 }
 
+// kindOtherTest stands in for a second WebSocket transport when a test needs
+// two distinct kinds on one channel.
+const kindOtherTest = "test-kind"
+
 func TestCloseChannelClosesRegisteredConnectionsOnce(t *testing.T) {
 	resetRegistryForTest()
 
 	var mu sync.Mutex
 	calls := 0
-	Register(10, KindRealtime, func(reason string) {
+	Register(10, kindOtherTest, func(reason string) {
 		mu.Lock()
 		defer mu.Unlock()
 		require.Equal(t, "test reason", reason, "close callback should receive the provided reason")
@@ -51,10 +55,10 @@ func TestCloseChannelDoesNotCloseOtherChannels(t *testing.T) {
 	resetRegistryForTest()
 
 	calls := map[int]int{}
-	Register(10, KindRealtime, func(reason string) {
+	Register(10, kindOtherTest, func(reason string) {
 		calls[10]++
 	})
-	Register(20, KindRealtime, func(reason string) {
+	Register(20, kindOtherTest, func(reason string) {
 		calls[20]++
 	})
 
@@ -67,7 +71,7 @@ func TestUnregisterPreventsClose(t *testing.T) {
 	resetRegistryForTest()
 
 	calls := 0
-	unregister := Register(10, KindRealtime, func(reason string) {
+	unregister := Register(10, kindOtherTest, func(reason string) {
 		calls++
 	})
 	unregister()
@@ -80,7 +84,7 @@ func TestRegisteredCloseIsIdempotent(t *testing.T) {
 	resetRegistryForTest()
 
 	calls := 0
-	Register(10, KindRealtime, func(reason string) {
+	Register(10, kindOtherTest, func(reason string) {
 		calls++
 	})
 
@@ -151,7 +155,7 @@ func TestRedisChannelCloseEventsStayWithinDatabase(t *testing.T) {
 	require.NoError(t, err)
 
 	closed := make(chan int, 2)
-	Register(10, KindRealtime, func(string) { closed <- 10 })
+	Register(10, kindOtherTest, func(string) { closed <- 10 })
 	Register(20, KindResponses, func(string) { closed <- 20 })
 	done := make(chan struct{})
 	go func() {

@@ -421,51 +421,6 @@ func GeminiChatHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.R
 	return &usage, nil
 }
 
-func GeminiEmbeddingHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.NewAPIError) {
-	defer service.CloseResponseBodyGracefully(resp)
-
-	responseBody, readErr := io.ReadAll(resp.Body)
-	if readErr != nil {
-		return nil, types.NewOpenAIError(readErr, types.ErrorCodeBadResponseBody, http.StatusInternalServerError)
-	}
-
-	var geminiResponse dto.GeminiBatchEmbeddingResponse
-	if jsonErr := common.Unmarshal(responseBody, &geminiResponse); jsonErr != nil {
-		return nil, types.NewOpenAIError(jsonErr, types.ErrorCodeBadResponseBody, http.StatusInternalServerError)
-	}
-
-	// convert to openai format response
-	openAIResponse := dto.OpenAIEmbeddingResponse{
-		Object: "list",
-		Data:   make([]dto.OpenAIEmbeddingResponseItem, 0, len(geminiResponse.Embeddings)),
-		Model:  info.UpstreamModelName,
-	}
-
-	for i, embedding := range geminiResponse.Embeddings {
-		openAIResponse.Data = append(openAIResponse.Data, dto.OpenAIEmbeddingResponseItem{
-			Object:    "embedding",
-			Embedding: embedding.Values,
-			Index:     i,
-		})
-	}
-
-	// calculate usage
-	// https://ai.google.dev/gemini-api/docs/pricing?hl=zh-cn#text-embedding-004
-	// Google has not yet clarified how embedding models will be billed
-	// refer to openai billing method to use input tokens billing
-	// https://platform.openai.com/docs/guides/embeddings#what-are-embeddings
-	usage := service.ResponseText2Usage(c, "", info.UpstreamModelName, info.GetEstimatePromptTokens())
-	openAIResponse.Usage = *usage
-
-	jsonResponse, jsonErr := common.Marshal(openAIResponse)
-	if jsonErr != nil {
-		return nil, types.NewOpenAIError(jsonErr, types.ErrorCodeBadResponseBody, http.StatusInternalServerError)
-	}
-
-	service.IOCopyBytesGracefully(c, resp, jsonResponse)
-	return usage, nil
-}
-
 func GeminiImageHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.NewAPIError) {
 	responseBody, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {

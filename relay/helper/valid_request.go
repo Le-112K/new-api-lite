@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/logger"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
@@ -26,13 +25,7 @@ func GetAndValidateRequest(c *gin.Context, format types.RelayFormat) (request dt
 	case types.RelayFormatOpenAI:
 		request, err = GetAndValidateTextRequest(c, relayMode)
 	case types.RelayFormatGemini:
-		if strings.Contains(c.Request.URL.Path, ":embedContent") {
-			request, err = GetAndValidateGeminiEmbeddingRequest(c)
-		} else if strings.Contains(c.Request.URL.Path, ":batchEmbedContents") {
-			request, err = GetAndValidateGeminiBatchEmbeddingRequest(c)
-		} else {
-			request, err = GetAndValidateGeminiRequest(c)
-		}
+		request, err = GetAndValidateGeminiRequest(c)
 	case types.RelayFormatClaude:
 		request, err = GetAndValidateClaudeRequest(c)
 	case types.RelayFormatOpenAIResponses:
@@ -44,77 +37,10 @@ func GetAndValidateRequest(c *gin.Context, format types.RelayFormat) (request dt
 
 	case types.RelayFormatOpenAIImage:
 		request, err = GetAndValidOpenAIImageRequest(c, relayMode)
-	case types.RelayFormatEmbedding:
-		request, err = GetAndValidateEmbeddingRequest(c, relayMode)
-	case types.RelayFormatRerank:
-		request, err = GetAndValidateRerankRequest(c)
-	case types.RelayFormatOpenAIAudio:
-		request, err = GetAndValidAudioRequest(c, relayMode)
-	case types.RelayFormatOpenAIRealtime:
-		request = &dto.BaseRequest{}
 	default:
 		return nil, fmt.Errorf("unsupported relay format: %s", format)
 	}
 	return request, err
-}
-
-func GetAndValidAudioRequest(c *gin.Context, relayMode int) (*dto.AudioRequest, error) {
-	audioRequest := &dto.AudioRequest{}
-	err := common.UnmarshalBodyReusable(c, audioRequest)
-	if err != nil {
-		return nil, err
-	}
-	switch relayMode {
-	case relayconstant.RelayModeAudioSpeech:
-		if audioRequest.Model == "" {
-			return nil, errors.New("model is required")
-		}
-	default:
-		if audioRequest.Model == "" {
-			return nil, errors.New("model is required")
-		}
-		if audioRequest.ResponseFormat == "" {
-			audioRequest.ResponseFormat = "json"
-		}
-	}
-	return audioRequest, nil
-}
-
-func GetAndValidateRerankRequest(c *gin.Context) (*dto.RerankRequest, error) {
-	var rerankRequest *dto.RerankRequest
-	err := common.UnmarshalBodyReusable(c, &rerankRequest)
-	if err != nil {
-		logger.LogError(c, fmt.Sprintf("getAndValidateTextRequest failed: %s", err.Error()))
-		return nil, types.NewError(err, types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
-	}
-
-	if rerankRequest.Query == "" {
-		return nil, types.NewError(fmt.Errorf("query is empty"), types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
-	}
-	if len(rerankRequest.Documents) == 0 {
-		return nil, types.NewError(fmt.Errorf("documents is empty"), types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
-	}
-	return rerankRequest, nil
-}
-
-func GetAndValidateEmbeddingRequest(c *gin.Context, relayMode int) (*dto.EmbeddingRequest, error) {
-	var embeddingRequest *dto.EmbeddingRequest
-	err := common.UnmarshalBodyReusable(c, &embeddingRequest)
-	if err != nil {
-		logger.LogError(c, fmt.Sprintf("getAndValidateTextRequest failed: %s", err.Error()))
-		return nil, types.NewError(err, types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
-	}
-
-	if embeddingRequest.Input == nil {
-		return nil, fmt.Errorf("input is empty")
-	}
-	if relayMode == relayconstant.RelayModeModerations && embeddingRequest.Model == "" {
-		embeddingRequest.Model = "omni-moderation-latest"
-	}
-	if relayMode == relayconstant.RelayModeEmbeddings && embeddingRequest.Model == "" {
-		embeddingRequest.Model = c.Param("model")
-	}
-	return embeddingRequest, nil
 }
 
 // maxTokensLimit bounds user-supplied max token fields. These values feed
@@ -321,10 +247,6 @@ func GetAndValidateTextRequest(c *gin.Context, relayMode int) (*dto.GeneralOpenA
 	if relayMode == relayconstant.RelayModeModerations && textRequest.Model == "" {
 		textRequest.Model = "text-moderation-latest"
 	}
-	if relayMode == relayconstant.RelayModeEmbeddings && textRequest.Model == "" {
-		textRequest.Model = c.Param("model")
-	}
-
 	if ExceedsMaxTokensLimit(textRequest.MaxTokens, textRequest.MaxCompletionTokens) {
 		return nil, errors.New("max_tokens is invalid")
 	}
@@ -349,17 +271,12 @@ func GetAndValidateTextRequest(c *gin.Context, relayMode int) (*dto.GeneralOpenA
 		}
 	}
 	switch relayMode {
-	case relayconstant.RelayModeCompletions:
-		if textRequest.Prompt == "" {
-			return nil, errors.New("field prompt is required")
-		}
 	case relayconstant.RelayModeChatCompletions:
 		// For FIM (Fill-in-the-middle) requests with prefix/suffix, messages is optional
 		// It will be filled by provider-specific adaptors if needed (e.g., SiliconFlow)。Or it is allowed by model vendor(s) (e.g., DeepSeek)
 		if len(textRequest.Messages) == 0 && textRequest.Prefix == nil && textRequest.Suffix == nil {
 			return nil, errors.New("field messages is required")
 		}
-	case relayconstant.RelayModeEmbeddings:
 	case relayconstant.RelayModeModerations:
 		if textRequest.Input == nil || textRequest.Input == "" {
 			return nil, errors.New("field input is required")
@@ -389,23 +306,5 @@ func GetAndValidateGeminiRequest(c *gin.Context) (*dto.GeminiChatRequest, error)
 	//	relayInfo.IsStream = true
 	//}
 
-	return request, nil
-}
-
-func GetAndValidateGeminiEmbeddingRequest(c *gin.Context) (*dto.GeminiEmbeddingRequest, error) {
-	request := &dto.GeminiEmbeddingRequest{}
-	err := common.UnmarshalBodyReusable(c, request)
-	if err != nil {
-		return nil, err
-	}
-	return request, nil
-}
-
-func GetAndValidateGeminiBatchEmbeddingRequest(c *gin.Context) (*dto.GeminiBatchEmbeddingRequest, error) {
-	request := &dto.GeminiBatchEmbeddingRequest{}
-	err := common.UnmarshalBodyReusable(c, request)
-	if err != nil {
-		return nil, err
-	}
 	return request, nil
 }

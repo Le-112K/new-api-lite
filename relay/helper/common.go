@@ -159,13 +159,21 @@ func WssObject(c *gin.Context, ws *websocket.Conn, object any) error {
 	return ws.WriteMessage(1, jsonData)
 }
 
+// wssErrorEvent is the OpenAI-compatible WebSocket error envelope. The
+// Responses WebSocket is the remaining transport that emits it.
+type wssErrorEvent struct {
+	Type    string             `json:"type"`
+	EventId string             `json:"event_id"`
+	Error   *types.OpenAIError `json:"error,omitempty"`
+}
+
 func WssError(c *gin.Context, ws *websocket.Conn, openaiError types.OpenAIError) {
 	if ws == nil {
 		return
 	}
-	errorObj := &dto.RealtimeEvent{
+	errorObj := &wssErrorEvent{
 		Type:    "error",
-		EventId: GetLocalRealtimeID(c),
+		EventId: GetLocalEventID(c),
 		Error:   &openaiError,
 	}
 	_ = WssObject(c, ws, errorObj)
@@ -176,7 +184,7 @@ func GetResponseID(c *gin.Context) string {
 	return fmt.Sprintf("chatcmpl-%s", logID)
 }
 
-func GetLocalRealtimeID(c *gin.Context) string {
+func GetLocalEventID(c *gin.Context) string {
 	logID := c.GetString(common.RequestIdKey)
 	return fmt.Sprintf("evt_%s", logID)
 }

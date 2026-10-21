@@ -112,10 +112,6 @@ export const ADVANCED_CUSTOM_INCOMING_PATH_OPTIONS: AdvancedCustomIncomingPathOp
       label: 'Codex Alpha Search',
     },
     {
-      value: '/v1/embeddings',
-      label: 'OpenAI Embeddings',
-    },
-    {
       value: '/v1/images/generations',
       label: 'OpenAI Image Generations',
     },
@@ -124,44 +120,12 @@ export const ADVANCED_CUSTOM_INCOMING_PATH_OPTIONS: AdvancedCustomIncomingPathOp
       label: 'OpenAI Image Edits',
     },
     {
-      value: '/v1/completions',
-      label: 'OpenAI Completions',
-    },
-    {
-      value: '/v1/audio/speech',
-      label: 'OpenAI Audio Speech',
-    },
-    {
-      value: '/v1/audio/transcriptions',
-      label: 'OpenAI Audio Transcriptions',
-    },
-    {
-      value: '/v1/audio/translations',
-      label: 'OpenAI Audio Translations',
-    },
-    {
-      value: '/v1/rerank',
-      label: 'Rerank',
-    },
-    {
-      value: '/v1/realtime',
-      label: 'OpenAI Realtime',
-    },
-    {
       value: '/v1/messages',
       label: 'Claude Messages',
     },
     {
       value: '/v1beta/models/{model}:generateContent',
       label: 'Gemini Generate Content',
-    },
-    {
-      value: '/v1beta/models/{model}:embedContent',
-      label: 'Gemini Embed Content',
-    },
-    {
-      value: '/v1beta/models/{model}:batchEmbedContents',
-      label: 'Gemini Batch Embed Contents',
     },
   ]
 
@@ -216,16 +180,10 @@ const geminiQueryAuth = (): AdvancedCustomRouteAuth => ({
 function createOpenAINativeRoutes(): AdvancedCustomRoute[] {
   return [
     '/v1/chat/completions',
-    '/v1/completions',
     '/v1/responses',
     '/v1/responses/compact',
-    '/v1/embeddings',
     '/v1/images/generations',
     '/v1/images/edits',
-    '/v1/audio/speech',
-    '/v1/audio/transcriptions',
-    '/v1/audio/translations',
-    '/v1/realtime',
   ].map((path) => ({
     incoming_path: path,
     upstream_path: path,
@@ -248,8 +206,6 @@ function createClaudeNativeRoutes(): AdvancedCustomRoute[] {
 function createGeminiNativeRoutes(): AdvancedCustomRoute[] {
   return [
     '/v1beta/models/{model}:generateContent',
-    '/v1beta/models/{model}:embedContent',
-    '/v1beta/models/{model}:batchEmbedContents',
   ].map((path) => ({
     incoming_path: path,
     upstream_path: path,
@@ -259,7 +215,7 @@ function createGeminiNativeRoutes(): AdvancedCustomRoute[] {
 }
 
 function createGatewayNativeRoutes(): AdvancedCustomRoute[] {
-  return ['/v1/alpha/search', '/v1/rerank'].map((path) => ({
+  return ['/v1/alpha/search'].map((path) => ({
     incoming_path: path,
     upstream_path: path,
     converter: 'none',

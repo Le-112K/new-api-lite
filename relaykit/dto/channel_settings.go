@@ -151,7 +151,6 @@ func (s *ChannelOtherSettings) ValidateToolLossPolicy() error {
 }
 
 const (
-	AdvancedCustomConverterSGLangRerank                = "jina_rerank_to_sglang"
 	advancedCustomConverterNone                        = "none"
 	advancedCustomConverterClaudeMessagesToOpenAIChat  = "anthropic_messages_to_openai_chat_completions"
 	advancedCustomConverterOpenAIChatToClaudeMessages  = "openai_chat_completions_to_anthropic_messages"
@@ -184,7 +183,7 @@ type AdvancedCustomRoute struct {
 // SupportsPassThroughBody reports whether the route converter leaves the request body untouched.
 func (r AdvancedCustomRoute) SupportsPassThroughBody() bool {
 	switch strings.TrimSpace(r.Converter) {
-	case "", advancedCustomConverterNone, AdvancedCustomConverterSGLangRerank:
+	case "", advancedCustomConverterNone:
 		return true
 	default:
 		return false
@@ -208,9 +207,7 @@ const (
 	advancedCustomEndpointPathOpenAIResponsesCompact = "/v1/responses/compact"
 	advancedCustomEndpointPathOpenAIAlphaSearch      = "/v1/alpha/search"
 	advancedCustomEndpointPathClaudeMessages         = "/v1/messages"
-	advancedCustomEndpointPathJinaRerank             = "/v1/rerank"
 	advancedCustomEndpointPathImageGeneration        = "/v1/images/generations"
-	advancedCustomEndpointPathEmbeddings             = "/v1/embeddings"
 )
 
 const (
@@ -319,12 +316,8 @@ func advancedCustomEndpointTypeFromIncomingPath(incomingPath string) (types.Endp
 		return types.EndpointTypeOpenAIAlphaSearch, true
 	case advancedCustomEndpointPathClaudeMessages:
 		return types.EndpointTypeAnthropic, true
-	case advancedCustomEndpointPathJinaRerank:
-		return types.EndpointTypeJinaRerank, true
 	case advancedCustomEndpointPathImageGeneration:
 		return types.EndpointTypeImageGeneration, true
-	case advancedCustomEndpointPathEmbeddings:
-		return types.EndpointTypeEmbeddings, true
 	default:
 		if isAdvancedCustomGeminiIncomingPath(incomingPath) {
 			return types.EndpointTypeGemini, true
@@ -415,7 +408,6 @@ func matchAdvancedCustomIncomingPathTemplate(configuredPath string, requestPath 
 func IsAdvancedCustomConverterAllowed(converter string) bool {
 	switch converter {
 	case advancedCustomConverterNone,
-		AdvancedCustomConverterSGLangRerank,
 		advancedCustomConverterClaudeMessagesToOpenAIChat,
 		advancedCustomConverterOpenAIChatToClaudeMessages,
 		advancedCustomConverterOpenAIChatToOpenAIResponses,
@@ -596,9 +588,6 @@ func validateAdvancedCustomUpstreamTarget(index int, upstreamPath string) error 
 }
 
 func validateAdvancedCustomConverterPath(index int, incomingPath string, converter string) error {
-	if converter == AdvancedCustomConverterSGLangRerank && (incomingPath == "/v1/rerank" || incomingPath == "/rerank") {
-		return nil
-	}
 	if incomingPath == advancedCustomEndpointPathOpenAIAlphaSearch {
 		if converter == advancedCustomConverterNone {
 			return nil
