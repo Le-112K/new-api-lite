@@ -98,7 +98,13 @@ func SetRelayRouter(router *gin.Engine) {
 			controller.Relay(c, types.RelayFormatOpenAI)
 		})
 
-		// response related routes
+		// response related routes. The HTTP create call used to be registered
+		// by the task-plugin protocol router (openai_responses.create); after
+		// that framework was removed only the WebSocket entry and /compact were
+		// left, so plain POST /v1/responses answered 404.
+		httpRouter.POST("/responses", func(c *gin.Context) {
+			controller.Relay(c, types.RelayFormatOpenAIResponses)
+		})
 		httpRouter.POST("/responses/compact", func(c *gin.Context) {
 			controller.Relay(c, types.RelayFormatOpenAIResponsesCompaction)
 		})
@@ -110,7 +116,13 @@ func SetRelayRouter(router *gin.Engine) {
 
 		// image related routes. /images/generations and /images/edits are
 		// host protocol endpoints (openai_image); unclaimed models fall back to Relay.
-		httpRouter.POST("/edits", func(c *gin.Context) {
+		// They used to be registered by the task-plugin protocol router; that
+		// framework is gone, so both paths silently returned 404 until these
+		// explicit registrations were restored.
+		httpRouter.POST("/images/generations", func(c *gin.Context) {
+			controller.Relay(c, types.RelayFormatOpenAIImage)
+		})
+		httpRouter.POST("/images/edits", func(c *gin.Context) {
 			controller.Relay(c, types.RelayFormatOpenAIImage)
 		})
 
