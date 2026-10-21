@@ -15,13 +15,11 @@ import (
 // Finish's usage through the normal text billing path, including interrupted
 // streams. Observe and Finish must be called by the same stream owner.
 type ResponsesUsageAccumulator struct {
-	info           *relaycommon.RelayInfo
-	usage          *dto.Usage
-	outputText     strings.Builder
-	imageCounter   relaycommon.ImageGenerationCallCounter
-	imageCommitted bool
-	started        bool
-	finished       bool
+	info       *relaycommon.RelayInfo
+	usage      *dto.Usage
+	outputText strings.Builder
+	started    bool
+	finished   bool
 }
 
 func NewResponsesUsageAccumulator(info *relaycommon.RelayInfo) *ResponsesUsageAccumulator {
@@ -46,36 +44,11 @@ func (a *ResponsesUsageAccumulator) Observe(event *dto.ResponsesStreamResponse) 
 				a.outputText.WriteString(relayconvert.ExtractOutputTextFromResponses(event.Response))
 			}
 		}
-		if a.imageCommitted {
-			return
-		}
-		failed := event.Type != "response.completed" && event.Type != "response.done"
-		if failed || (event.Response != nil && relaycommon.IsNonBillableResponsesStatus(event.Response.Status)) {
-			a.imageCounter.Reset()
-		} else if event.Response != nil {
-			for i := range event.Response.Output {
-				a.imageCounter.Observe(&event.Response.Output[i], &i)
-			}
-		}
-		a.imageCounter.Commit(a.info)
-		a.imageCommitted = true
 	case "response.output_text.delta", "response.function_call_arguments.delta",
 		"response.reasoning_summary_text.delta", "response.reasoning_text.delta", "response.refusal.delta":
 		// Every delta kind here is generated output that upstream bills as
 		// output tokens, so all of them feed the missing-usage estimate.
 		a.outputText.WriteString(event.Delta)
-	case dto.ResponsesOutputTypeItemDone:
-		if event.Item == nil {
-			return
-		}
-		switch event.Item.Type {
-		case dto.BuildInCallWebSearchCall, dto.BuildInCallFileSearchCall, dto.BuildInCallFunctionCall:
-			a.info.CountBillableToolCall(event.Item.Type, event.Item.Name)
-		case dto.ResponsesOutputTypeImageGenerationCall:
-			if !a.imageCommitted {
-				a.imageCounter.Observe(event.Item, event.OutputIndex)
-			}
-		}
 	}
 }
 
@@ -84,13 +57,6 @@ func (a *ResponsesUsageAccumulator) Finish() *dto.Usage {
 		return a.usage
 	}
 	a.finished = true
-	// A final image item can already have reached the client before the stream
-	// disconnects. Explicit failed/incomplete terminals reset and commit zero in
-	// Observe; otherwise retain completed tool usage even without a terminal.
-	if !a.imageCommitted {
-		a.imageCounter.Commit(a.info)
-		a.imageCommitted = true
-	}
 	if a.usage.CompletionTokens == 0 {
 		if output := a.outputText.String(); output != "" {
 			a.usage.CompletionTokens = CountTextToken(output, a.info.GetUpstreamModelName())

@@ -6,70 +6,9 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relaykit/dto"
-	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestResponsesUsageAccumulatorTerminalAccounting(t *testing.T) {
-	operation_setting.SetToolPriceForTest("responses_priced_fn", 5)
-	t.Cleanup(func() { operation_setting.DeleteToolPriceForTest("responses_priced_fn") })
-	for _, tc := range []struct {
-		eventType  string
-		wantImages int
-	}{
-		{eventType: "response.completed", wantImages: 1},
-		{eventType: "response.done", wantImages: 1},
-		{eventType: "response.incomplete"},
-		{eventType: "response.failed"},
-		{eventType: "response.cancelled"},
-		{eventType: "response.canceled"},
-	} {
-		t.Run(tc.eventType, func(t *testing.T) {
-			info := &relaycommon.RelayInfo{OriginModelName: "gpt-5.1", StreamStatus: relaycommon.NewStreamStatus()}
-			accumulator := NewResponsesUsageAccumulator(info)
-			for _, item := range []dto.ResponsesOutput{
-				{Type: dto.BuildInCallWebSearchCall},
-				{Type: dto.BuildInCallFileSearchCall},
-				{Type: dto.BuildInCallFunctionCall, Name: "responses_priced_fn"},
-				{Type: dto.BuildInCallFunctionCall, Name: "responses_unpriced_fn"},
-			} {
-				accumulator.Observe(&dto.ResponsesStreamResponse{Type: dto.ResponsesOutputTypeItemDone, Item: &item})
-			}
-			image := dto.ResponsesOutput{ID: "image-1", Type: dto.ResponsesOutputTypeImageGenerationCall, Status: "completed", Result: "image-data"}
-			accumulator.Observe(&dto.ResponsesStreamResponse{Type: dto.ResponsesOutputTypeItemDone, Item: &image})
-			upstream := &dto.Usage{InputTokens: 20, OutputTokens: 5, TotalTokens: 25, InputTokensDetails: &dto.InputTokenDetails{CachedTokens: 4}}
-			upstream.BillingUsage = dto.NewOpenAIResponsesBillingUsage(upstream)
-			terminal := &dto.ResponsesStreamResponse{
-				Type: tc.eventType,
-				Response: &dto.OpenAIResponsesResponse{
-					Usage: upstream, Output: []dto.ResponsesOutput{image},
-				},
-			}
-			accumulator.Observe(terminal)
-			accumulator.Observe(terminal)
-			usage := accumulator.Finish()
-			assert.Equal(t, tc.eventType == "response.failed", info.StreamStatus.ResponseFailed())
-			assert.NotEmpty(t, info.StreamStatus.ResponseOutcome())
-
-			assert.Equal(t, 20, usage.PromptTokens)
-			assert.Equal(t, 5, usage.CompletionTokens)
-			assert.Equal(t, 25, usage.TotalTokens)
-			assert.Equal(t, 4, usage.PromptTokensDetails.CachedTokens)
-			require.NotNil(t, usage.BillingUsage)
-			assert.Equal(t, upstream.BillingUsage, usage.BillingUsage)
-			assert.NotSame(t, upstream.BillingUsage, usage.BillingUsage)
-			tools := info.ResponsesUsageInfo.BuiltInTools
-			for _, name := range []string{dto.BuildInToolWebSearchPreview, dto.BuildInToolFileSearch, "responses_priced_fn"} {
-				require.Contains(t, tools, name)
-				assert.Equal(t, 1, tools[name].CallCount)
-			}
-			assert.NotContains(t, tools, "responses_unpriced_fn")
-			require.Contains(t, tools, dto.BuildInToolImageGeneration)
-			assert.Equal(t, tc.wantImages, tools[dto.BuildInToolImageGeneration].CallCount)
-		})
-	}
-}
 
 func TestResponsesUsageAccumulatorInterruptedTextFallback(t *testing.T) {
 	for _, withUsage := range []bool{false, true} {
@@ -136,25 +75,6 @@ func TestObserveResponsesOutcomeRecordsProtocolFacts(t *testing.T) {
 			assert.Equal(t, tc.wantIncompl, outcome.IncompleteReason)
 		})
 	}
-}
-
-func TestResponsesUsageAccumulatorDisconnectBillsCompletedImage(t *testing.T) {
-	info := &relaycommon.RelayInfo{OriginModelName: "gpt-5.1", StreamStatus: relaycommon.NewStreamStatus()}
-	accumulator := NewResponsesUsageAccumulator(info)
-	accumulator.Observe(&dto.ResponsesStreamResponse{
-		Type: dto.ResponsesOutputTypeItemDone,
-		Item: &dto.ResponsesOutput{ID: "complete-image", Type: dto.ResponsesOutputTypeImageGenerationCall, Status: "completed", Result: "final-image-data"},
-	})
-	accumulator.Observe(&dto.ResponsesStreamResponse{
-		Type: dto.ResponsesOutputTypeItemDone,
-		Item: &dto.ResponsesOutput{ID: "partial-image", Type: dto.ResponsesOutputTypeImageGenerationCall, Status: "partial", Result: "partial-image-data"},
-	})
-	usage := accumulator.Finish()
-	assert.Zero(t, usage.TotalTokens)
-	require.Contains(t, info.ResponsesUsageInfo.BuiltInTools, dto.BuildInToolImageGeneration)
-	assert.Equal(t, 1, info.ResponsesUsageInfo.BuiltInTools[dto.BuildInToolImageGeneration].CallCount)
-	accumulator.Finish()
-	assert.Equal(t, 1, info.ResponsesUsageInfo.BuiltInTools[dto.BuildInToolImageGeneration].CallCount)
 }
 
 func TestApplyResponsesUsageCopiesTokenDetails(t *testing.T) {
@@ -269,7 +189,7 @@ func TestResponsesUsageAccumulatorMissingUsageEstimation(t *testing.T) {
 				{Type: "response.created", Response: inProgress},
 				{Type: "response.reasoning_summary_text.delta", Delta: summary},
 				{Type: "response.function_call_arguments.delta", Delta: arguments},
-				{Type: dto.ResponsesOutputTypeItemDone, Item: &dto.ResponsesOutput{Type: dto.BuildInCallFunctionCall, Name: "shell"}},
+				{Type: "response.output_item.done", Item: &dto.ResponsesOutput{Type: "function_call"}},
 			},
 			wantPrompt:     100,
 			wantCompletion: CountTextToken(summary+arguments, model),

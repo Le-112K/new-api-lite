@@ -104,8 +104,7 @@ const BILLING_SECTIONS = [
         titleKey='Model Pricing'
         modelDefaults={getModelDefaults(settings)}
         groupDefaults={getGroupDefaults(settings)}
-        toolPricesDefault={settings['tool_price_setting.prices']}
-        visibleTabs={['models', 'unset-models', 'tool-prices']}
+        visibleTabs={['models', 'unset-models']}
       />
     ),
   },
@@ -117,7 +116,6 @@ const BILLING_SECTIONS = [
         titleKey='Group Pricing'
         modelDefaults={getModelDefaults(settings)}
         groupDefaults={getGroupDefaults(settings)}
-        toolPricesDefault={settings['tool_price_setting.prices']}
         visibleTabs={['groups']}
       />
     ),

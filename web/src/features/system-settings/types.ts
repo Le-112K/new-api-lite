@@ -182,7 +182,6 @@ export type BillingSettings = {
   ImageRatio: string
   AudioRatio: string
   AudioCompletionRatio: string
-  'tool_price_setting.prices': string
   TopupGroupRatio: string
   GroupRatio: string
   UserUsableGroups: string

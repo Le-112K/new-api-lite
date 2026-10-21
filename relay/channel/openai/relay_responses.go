@@ -45,26 +45,6 @@ func OaiResponsesHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http
 	// compute usage
 	usage := &dto.Usage{}
 	service.ApplyResponsesUsage(usage, responsesResponse.Usage)
-	// Count actual tool invocations from Output (not tool declarations).
-	for _, output := range responsesResponse.Output {
-		switch output.Type {
-		case dto.BuildInCallWebSearchCall:
-			info.CountBillableToolCall(dto.BuildInCallWebSearchCall, "")
-		case dto.BuildInCallFileSearchCall:
-			info.CountBillableToolCall(dto.BuildInCallFileSearchCall, "")
-		case dto.BuildInCallFunctionCall:
-			info.CountBillableToolCall(dto.BuildInCallFunctionCall, output.Name)
-		}
-	}
-
-	imageCounter := &relaycommon.ImageGenerationCallCounter{}
-	if !relaycommon.IsNonBillableResponsesStatus(responsesResponse.Status) {
-		for i := range responsesResponse.Output {
-			idx := i
-			imageCounter.Observe(&responsesResponse.Output[i], &idx)
-		}
-	}
-	imageCounter.Commit(info)
 
 	return usage, nil
 }

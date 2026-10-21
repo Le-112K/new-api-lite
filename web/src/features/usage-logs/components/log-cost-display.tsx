@@ -16,16 +16,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import {
-  CrownIcon,
-  Wallet01Icon,
-  Wrench01Icon,
-} from '@hugeicons/core-free-icons'
+import { CrownIcon, Wallet01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useTranslation } from 'react-i18next'
 
 import { StatusBadge } from '@/components/status-badge'
-import { Badge } from '@/components/ui/badge'
 import {
   Tooltip,
   TooltipContent,
@@ -34,7 +29,6 @@ import {
 } from '@/components/ui/tooltip'
 import { formatLogQuota } from '@/lib/format'
 
-import { hasToolSurcharge } from '../lib/format'
 import type { LogOtherData } from '../types'
 
 interface LogCostDisplayProps {
@@ -43,45 +37,9 @@ interface LogCostDisplayProps {
   showBillingSource?: boolean
 }
 
-function ToolSurchargeMarker() {
-  const { t } = useTranslation()
-  const label = t('Includes tool-call surcharge')
-
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Badge
-            variant='warning'
-            className='h-5 min-w-5 cursor-help gap-0 rounded-full px-1'
-            role='img'
-            aria-label={label}
-            tabIndex={0}
-            data-tool-surcharge-indicator='true'
-          >
-            <HugeiconsIcon
-              icon={Wrench01Icon}
-              strokeWidth={2}
-              aria-hidden='true'
-            />
-            <span
-              className='text-[9px] leading-none font-bold'
-              aria-hidden='true'
-            >
-              +
-            </span>
-          </Badge>
-        }
-      />
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
-  )
-}
-
 export function LogCostDisplay(props: LogCostDisplayProps) {
   const { t } = useTranslation()
   const isSubscription = props.other?.billing_source === 'subscription'
-  const showToolSurcharge = hasToolSurcharge(props.other)
   const quota = isSubscription
     ? (props.other?.subscription_consumed ?? props.quota)
     : props.quota
@@ -134,7 +92,6 @@ export function LogCostDisplay(props: LogCostDisplayProps) {
           ) : null}
           <span className='whitespace-nowrap'>{formatLogQuota(quota)}</span>
         </StatusBadge>
-        {showToolSurcharge ? <ToolSurchargeMarker /> : null}
       </div>
     </TooltipProvider>
   )

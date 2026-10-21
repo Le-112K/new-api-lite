@@ -84,12 +84,6 @@ export const USAGE_BILLING_PATH = {
 export type UsageBillingPath =
   (typeof USAGE_BILLING_PATH)[keyof typeof USAGE_BILLING_PATH]
 
-export interface ToolSurchargeItem {
-  name: string
-  count: number
-  price: number
-}
-
 export interface LogOtherData {
   admin_info?: {
     request_policy?: PolicyEvent[]
@@ -184,19 +178,9 @@ export interface LogOtherData {
   image?: boolean
   image_ratio?: number
   image_output?: number
-  web_search?: boolean
-  web_search_call_count?: number
-  web_search_price?: number
-  file_search?: boolean
-  file_search_call_count?: number
-  file_search_price?: number
-  tool_surcharges?: ToolSurchargeItem[]
   audio_input_seperate_price?: boolean
   audio_input_token_count?: number
   audio_input_price?: number
-  image_generation_call?: boolean
-  image_generation_call_price?: number
-  image_generation_call_count?: number
   is_system_prompt_overwritten?: boolean
   po?: string[]
   billing_source?: string

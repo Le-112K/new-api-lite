@@ -155,9 +155,6 @@ func validateOptionValue(key string, value string) error {
 	if err := operation_setting.ValidateQuotaOption(key, value); err != nil {
 		return err
 	}
-	if key == operation_setting.ToolPriceOptionKey {
-		return operation_setting.ValidateToolPricesJSON(value)
-	}
 	if key == operation_setting.ChannelTestConcurrencyOptionKey {
 		return operation_setting.ValidateChannelTestConcurrency(value)
 	}
@@ -454,11 +451,6 @@ func updateOptionMap(key string, value string) (err error) {
 
 // handleConfigUpdate 处理分层配置更新，返回是否已处理
 func handleConfigUpdate(key, value string) bool {
-	if key == operation_setting.ToolPriceOptionKey {
-		operation_setting.LoadToolPricesFromJSONString(value)
-		return true
-	}
-
 	parts := strings.SplitN(key, ".", 2)
 	if len(parts) != 2 {
 		return false // 不是分层配置

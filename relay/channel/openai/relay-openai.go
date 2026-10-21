@@ -117,8 +117,6 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 	var usage = &dto.Usage{}
 	var lastStreamData string
 	var secondLastStreamData string // 保留倒数第二个stream data；部分兼容网关把完整usage放在倒数第二个事件
-	seenStreamToolCalls := make(map[string]struct{})
-	var streamFunctionCallNames []string
 
 	helper.StreamScannerHandler(c, resp, info, func(data string, sr *helper.StreamResult) {
 		if lastStreamData != "" {
@@ -133,7 +131,7 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 			}
 
 			lastStreamData = data
-			observeStreamChoices(info, data, seenStreamToolCalls, &streamFunctionCallNames)
+			observeStreamChoices(info, data)
 			if err := processTokenData(info, data, &responseTextBuilder, &toolCount); err != nil {
 				logger.LogError(c, "error processing stream token data: "+err.Error())
 				sr.Error(err)
@@ -186,18 +184,14 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 
 	applyUsagePostProcessing(info, usage, common.StringToByteSlice(usageFrame))
 
-	for _, name := range streamFunctionCallNames {
-		info.CountBillableToolCall(dto.BuildInCallFunctionCall, name)
-	}
-
 	HandleFinalResponse(c, info, lastStreamData, responseId, createAt, model, systemFingerprint, usage, containStreamUsage)
 
 	return usage, nil
 }
 
-// observeStreamChoices collects billable function call names and records the
-// finish reason facts used by health sampling from one parsed chunk.
-func observeStreamChoices(info *relaycommon.RelayInfo, data string, seen map[string]struct{}, names *[]string) {
+// observeStreamChoices records the finish reason facts used by health sampling
+// from one parsed chunk.
+func observeStreamChoices(info *relaycommon.RelayInfo, data string) {
 	var streamResponse dto.ChatCompletionsStreamResponse
 	if err := common.UnmarshalJsonStr(data, &streamResponse); err != nil {
 		return
@@ -208,41 +202,6 @@ func observeStreamChoices(info *relaycommon.RelayInfo, data string, seen map[str
 				info.PerformanceBusinessRejection = true
 			}
 			info.StreamStatus.MarkCompleted()
-		}
-		for i, tc := range choice.Delta.ToolCalls {
-			name := strings.TrimSpace(tc.Function.Name)
-			if name == "" {
-				continue
-			}
-			toolIdx := i
-			if tc.Index != nil {
-				toolIdx = *tc.Index
-			}
-			fallbackKey := fmt.Sprintf("index\x00%d\x00%d\x00%s", choice.Index, toolIdx, name)
-			activeKey := fmt.Sprintf("active\x00%d\x00%d\x00%s", choice.Index, toolIdx, name)
-			callID := strings.TrimSpace(tc.ID)
-			if callID != "" {
-				idKey := fmt.Sprintf("id\x00%d\x00%s", choice.Index, callID)
-				if _, ok := seen[idKey]; ok {
-					continue
-				}
-				seen[idKey] = struct{}{}
-				seen[activeKey] = struct{}{}
-				if _, delayedID := seen[fallbackKey]; delayedID {
-					delete(seen, fallbackKey)
-					continue
-				}
-			} else {
-				if _, ok := seen[fallbackKey]; ok {
-					continue
-				}
-				if _, ok := seen[activeKey]; ok {
-					continue
-				}
-				seen[fallbackKey] = struct{}{}
-				seen[activeKey] = struct{}{}
-			}
-			*names = append(*names, name)
 		}
 	}
 }
@@ -272,12 +231,6 @@ func OpenaiHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Respo
 			info.PerformanceBusinessRejection = true
 			common.SetContextKey(c, constant.ContextKeyAdminRejectReason, "openai_finish_reason=content_filter")
 			break
-		}
-	}
-
-	for _, choice := range simpleResponse.Choices {
-		for _, tc := range choice.Message.ParseToolCalls() {
-			info.CountBillableToolCall(dto.BuildInCallFunctionCall, tc.Function.Name)
 		}
 	}
 

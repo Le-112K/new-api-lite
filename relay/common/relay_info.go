@@ -45,16 +45,6 @@ type RerankerInfo struct {
 	ReturnDocuments bool
 }
 
-type BuildInToolInfo struct {
-	ToolName          string
-	CallCount         int
-	SearchContextSize string
-}
-
-type ResponsesUsageInfo struct {
-	BuiltInTools map[string]*BuildInToolInfo
-}
-
 type ChannelMeta struct {
 	ChannelType          int
 	ChannelId            int
@@ -204,7 +194,6 @@ type RelayInfo struct {
 	TokenCountMeta
 	*ClaudeConvertInfo
 	*RerankerInfo
-	*ResponsesUsageInfo
 	*ChannelMeta
 	*TaskRelayInfo
 }
@@ -368,23 +357,6 @@ func (info *RelayInfo) ToString() string {
 	}
 
 	// Responses usage info (non-sensitive)
-	if info.ResponsesUsageInfo != nil && len(info.ResponsesUsageInfo.BuiltInTools) > 0 {
-		fmt.Fprintf(b, "ResponsesTools{ ")
-		first := true
-		for name, tool := range info.ResponsesUsageInfo.BuiltInTools {
-			if !first {
-				fmt.Fprintf(b, ", ")
-			}
-			first = false
-			if tool != nil {
-				fmt.Fprintf(b, "%s: calls=%d", name, tool.CallCount)
-			} else {
-				fmt.Fprintf(b, "%s: calls=0", name)
-			}
-		}
-		fmt.Fprintf(b, " }, ")
-	}
-
 	fmt.Fprintf(b, "}")
 	return b.String()
 }
@@ -465,27 +437,6 @@ func GenRelayInfoResponses(c *gin.Context, request *dto.OpenAIResponsesRequest) 
 	info := genBaseRelayInfo(c, request)
 	info.RelayMode = relayconstant.RelayModeResponses
 	info.RelayFormat = types.RelayFormatOpenAIResponses
-
-	info.ResponsesUsageInfo = &ResponsesUsageInfo{
-		BuiltInTools: make(map[string]*BuildInToolInfo),
-	}
-	if len(request.Tools) > 0 {
-		for _, tool := range request.GetToolsMap() {
-			toolType := common.Interface2String(tool["type"])
-			info.ResponsesUsageInfo.BuiltInTools[toolType] = &BuildInToolInfo{
-				ToolName:  toolType,
-				CallCount: 0,
-			}
-			switch toolType {
-			case dto.BuildInToolWebSearchPreview:
-				searchContextSize := common.Interface2String(tool["search_context_size"])
-				if searchContextSize == "" {
-					searchContextSize = "medium"
-				}
-				info.ResponsesUsageInfo.BuiltInTools[toolType].SearchContextSize = searchContextSize
-			}
-		}
-	}
 	return info
 }
 
@@ -767,14 +718,6 @@ func GenRelayInfoAlphaSearch(c *gin.Context, request *dto.AlphaSearchRequest) *R
 		info.RelayMode = relayconstant.RelayModeAlphaSearch
 	}
 	info.RelayFormat = types.RelayFormatOpenAIAlphaSearch
-	info.ResponsesUsageInfo = &ResponsesUsageInfo{
-		BuiltInTools: map[string]*BuildInToolInfo{
-			dto.BuildInToolWebSearchPreview: {
-				ToolName:  dto.BuildInToolWebSearchPreview,
-				CallCount: 0,
-			},
-		},
-	}
 	return info
 }
 
@@ -1055,16 +998,16 @@ func (t *TaskSubmitReq) UnmarshalMetadata(v any) error {
 }
 
 type TaskInfo struct {
-	Code             int             `json:"code"`
-	TaskID           string          `json:"task_id"`
-	Status           string          `json:"status"`
-	Reason           string          `json:"reason,omitempty"`
-	Url              string          `json:"url,omitempty"`
-	RemoteUrl        string          `json:"remote_url,omitempty"`
-	Progress         string          `json:"progress,omitempty"`
-	CompletionTokens int             `json:"completion_tokens,omitempty"` // 用于按倍率计费
-	TotalTokens      int             `json:"total_tokens,omitempty"`      // 用于按倍率计费
-	UsageFacts       map[string]any  `json:"usage_facts,omitempty"`
+	Code             int            `json:"code"`
+	TaskID           string         `json:"task_id"`
+	Status           string         `json:"status"`
+	Reason           string         `json:"reason,omitempty"`
+	Url              string         `json:"url,omitempty"`
+	RemoteUrl        string         `json:"remote_url,omitempty"`
+	Progress         string         `json:"progress,omitempty"`
+	CompletionTokens int            `json:"completion_tokens,omitempty"` // 用于按倍率计费
+	TotalTokens      int            `json:"total_tokens,omitempty"`      // 用于按倍率计费
+	UsageFacts       map[string]any `json:"usage_facts,omitempty"`
 }
 
 func FailTaskInfo(reason string) *TaskInfo {

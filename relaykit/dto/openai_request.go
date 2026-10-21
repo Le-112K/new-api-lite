@@ -1147,14 +1147,6 @@ func (r *OpenAIResponsesRequest) SetModelName(modelName string) {
 	}
 }
 
-func (r *OpenAIResponsesRequest) GetToolsMap() []map[string]any {
-	var toolsMap []map[string]any
-	if len(r.Tools) > 0 {
-		_ = kitutil.Unmarshal(r.Tools, &toolsMap)
-	}
-	return toolsMap
-}
-
 type Reasoning struct {
 	Effort  string          `json:"effort,omitempty"`
 	Summary string          `json:"summary,omitempty"`

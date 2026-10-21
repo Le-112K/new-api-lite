@@ -45,7 +45,6 @@ const defaultBillingSettings: BillingSettings = {
   ImageRatio: '',
   AudioRatio: '',
   AudioCompletionRatio: '',
-  'tool_price_setting.prices': '{}',
   TopupGroupRatio: '',
   GroupRatio: '',
   UserUsableGroups: '',

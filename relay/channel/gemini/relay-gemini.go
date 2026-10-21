@@ -80,35 +80,6 @@ func geminiResponseUsageText(response *dto.GeminiChatResponse) string {
 	return text.String()
 }
 
-func markGeminiGoogleSearchCall(c *gin.Context, response *dto.GeminiChatResponse) {
-	if c == nil || response == nil {
-		return
-	}
-	for _, candidate := range response.Candidates {
-		if candidate.GroundingMetadata != nil && len(candidate.GroundingMetadata.WebSearchQueries) > 0 {
-			c.Set("gemini_google_search_call", true)
-			return
-		}
-	}
-}
-
-func countGeminiBillableFunctionCalls(info *relaycommon.RelayInfo, response *dto.GeminiChatResponse) {
-	if info == nil || response == nil {
-		return
-	}
-	for _, candidate := range response.Candidates {
-		for _, part := range candidate.Content.Parts {
-			if part.FunctionCall == nil {
-				continue
-			}
-			if part.FunctionCall.WillContinue != nil && *part.FunctionCall.WillContinue {
-				continue
-			}
-			info.CountBillableToolCall(dto.BuildInCallFunctionCall, part.FunctionCall.FunctionName)
-		}
-	}
-}
-
 func buildUsageFromGeminiResponse(c *gin.Context, info *relaycommon.RelayInfo, response *dto.GeminiChatResponse) dto.Usage {
 	metadata := response.GetUsageMetadata()
 	if dto.HasGeminiUsageMetadataTokens(metadata) {
@@ -197,8 +168,6 @@ func geminiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http
 			info.StreamStatus.MarkCompleted()
 		}
 
-		markGeminiGoogleSearchCall(c, &geminiResponse)
-		countGeminiBillableFunctionCalls(info, &geminiResponse)
 
 		// 统计图片数量
 		for _, candidate := range geminiResponse.Candidates {
@@ -385,8 +354,6 @@ func GeminiChatHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.R
 		return nil, types.NewOpenAIError(err, types.ErrorCodeBadResponseBody, http.StatusInternalServerError)
 	}
 	info.ObserveResponseModel(gjson.GetBytes(responseBody, "modelVersion").Str)
-	markGeminiGoogleSearchCall(c, &geminiResponse)
-	countGeminiBillableFunctionCalls(info, &geminiResponse)
 	if len(geminiResponse.Candidates) == 0 {
 		usage := buildUsageFromGeminiResponse(c, info, &geminiResponse)
 

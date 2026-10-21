@@ -44,7 +44,6 @@ import { useUpdateOption } from '../hooks/use-update-option'
 import { positiveIntegerSchema } from '../utils/numeric-field'
 import { GroupRatioForm } from './group-ratio-form'
 import { ModelRatioForm } from './model-ratio-form'
-import { ToolPriceSettings } from './tool-price-settings'
 import {
   formatJsonForTextarea,
   type JsonValidationError,
@@ -144,12 +143,11 @@ const createGroupSchema = (t: Translate) =>
 
 type ModelFormValues = z.infer<ReturnType<typeof createModelSchema>>
 type GroupFormValues = z.infer<ReturnType<typeof createGroupSchema>>
-type RatioTabId = 'models' | 'unset-models' | 'groups' | 'tool-prices'
+type RatioTabId = 'models' | 'unset-models' | 'groups'
 
 type RatioSettingsCardProps = {
   modelDefaults: ModelFormValues
   groupDefaults: GroupFormValues
-  toolPricesDefault: string
   titleKey?: string
   visibleTabs?: RatioTabId[]
 }
@@ -157,9 +155,8 @@ type RatioSettingsCardProps = {
 export function RatioSettingsCard({
   modelDefaults: initialModelDefaults,
   groupDefaults,
-  toolPricesDefault,
   titleKey = 'Pricing Ratios',
-  visibleTabs = ['models', 'groups', 'tool-prices'],
+  visibleTabs = ['models', 'groups'],
 }: RatioSettingsCardProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
@@ -411,7 +408,6 @@ export function RatioSettingsCard({
     models: 'Model prices',
     'unset-models': 'Unset price models',
     groups: 'Group ratios',
-    'tool-prices': 'Tool prices',
   }
   const tabsGridClass =
     {
@@ -469,9 +465,6 @@ export function RatioSettingsCard({
           isSaving={updateOption.isPending}
         />
       )
-    }
-    if (tab === 'tool-prices') {
-      return <ToolPriceSettings defaultValue={toolPricesDefault} />
     }
     return null
   }

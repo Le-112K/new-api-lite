@@ -44,7 +44,6 @@ describe('log cost display', () => {
     i18next.addResourceBundle('en', 'translation', {
       Subscription: 'Subscription',
       Wallet: 'Wallet',
-      'Includes tool-call surcharge': 'Includes tool-call surcharge',
     })
   })
 
@@ -174,39 +173,4 @@ describe('log cost display', () => {
       expect(await screen.findByText(label)).toBeVisible()
     }
   )
-
-  test('keeps the regular cost visible and adds an accessible surcharge marker', () => {
-    renderCost({
-      quota: 12500,
-      other: {
-        tool_surcharges: [{ name: 'lookup_customer', count: 1, price: 5 }],
-      },
-    })
-
-    expect(screen.getByText('$0.025')).toBeVisible()
-    const marker = screen.getByRole('img', {
-      name: 'Includes tool-call surcharge',
-    })
-    expect(marker).toHaveAttribute('data-tool-surcharge-indicator', 'true')
-    expect(marker).toHaveAttribute('tabindex', '0')
-  })
-
-  test('shows subscription cost and source alongside the legacy surcharge marker', () => {
-    renderCost({
-      quota: 5000,
-      other: {
-        billing_source: 'subscription',
-        web_search: true,
-        web_search_call_count: 1,
-        web_search_price: 10,
-      },
-      showBillingSource: true,
-    })
-
-    expect(screen.getByText('$0.01')).toBeVisible()
-    expect(screen.getByRole('img', { name: 'Subscription' })).toBeVisible()
-    expect(
-      screen.getByRole('img', { name: 'Includes tool-call surcharge' })
-    ).toHaveAttribute('data-tool-surcharge-indicator', 'true')
-  })
 })
