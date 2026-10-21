@@ -18,7 +18,6 @@ var MaxRequestBodyMB int
 var AnonymousRequestBodyLimitKB int
 var AzureDefaultAPIVersion string
 var NotifyLimitCount int
-var NotificationLimitDurationMinute int
 var GenerateDefaultToken bool
 var ErrorLogEnabled bool
 var TaskQueryLimit int

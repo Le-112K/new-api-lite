@@ -301,7 +301,6 @@ export const STATIC_I18N_KEYS = [
   'Pass-Through',
   'requests served',
   'AI models supported',
-  'uptime',
   'active users',
   'Lightning Fast',
   'Optimized network architecture ensures millisecond response times',
@@ -827,8 +826,6 @@ export const STATIC_I18N_KEYS = [
   'View installed task plugins and their settings.',
   'Install, configure, test, and remove task plugins.',
   'Operations',
-  'View performance, system tasks, and system information.',
-  'Run and manage maintenance tasks and performance settings.',
   // Access token groups, expiry presets, form messages and audit templates.
   'Personal',
   'Administration',

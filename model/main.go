@@ -354,7 +354,6 @@ func migrateDB() error {
 		&SubscriptionOrder{},
 		&UserSubscription{},
 		&SubscriptionPreConsumeRecord{},
-		&PerfMetric{},
 		&SystemTask{},
 		&SystemTaskLock{},
 		&CasbinRule{},

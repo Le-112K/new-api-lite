@@ -66,34 +66,11 @@ export interface UserProfile {
 }
 
 /**
- * Notification type
- */
-export type NotifyType = 'email' | 'webhook' | 'bark' | 'gotify'
-
-/**
  * Parsed user settings
  */
 export interface UserSettings {
-  /** Notification type */
-  notify_type?: NotifyType
-  /** Webhook URL */
-  webhook_url?: string
-  /** Webhook secret */
-  webhook_secret?: string
-  /** Notification email */
-  notification_email?: string
-  /** Bark URL */
-  bark_url?: string
-  /** Gotify server URL */
-  gotify_url?: string
-  /** Gotify application token */
-  gotify_token?: string
-  /** Gotify message priority (0-10) */
-  gotify_priority?: number
   /** Record IP log */
   record_ip_log?: boolean
-  /** Receive upstream model update notifications (admin only) */
-  upstream_model_update_notify_enabled?: boolean
   /** Preferred interface/API response language */
   language?: string
 }
@@ -124,16 +101,7 @@ export interface EmailBindingFlow extends AccountSecurityResult {
  * User settings update request
  */
 export interface UpdateUserSettingsRequest {
-  notify_type?: string
-  webhook_url?: string
-  webhook_secret?: string
-  notification_email?: string
-  bark_url?: string
-  gotify_url?: string
-  gotify_token?: string
-  gotify_priority?: number
   record_ip_log?: boolean
-  upstream_model_update_notify_enabled?: boolean
 }
 
 /**

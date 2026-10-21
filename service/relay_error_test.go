@@ -2,8 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,7 +11,6 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/model"
-	kitdto "github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
 	"github.com/QuantumNous/new-api/setting/system_setting"
 
@@ -57,11 +54,10 @@ func TestShouldRetryRelayErrorHonorsChannelPinOnChannelError(t *testing.T) {
 	}
 }
 
-func TestProcessChannelErrorMasksDisableReasonAndNotification(t *testing.T) {
+func TestProcessChannelErrorMasksDisableReason(t *testing.T) {
 	previousDB, previousType := model.DB, common.MainDatabaseType()
 	previousCache, previousRedis := common.MemoryCacheEnabled, common.RedisEnabled
 	previousAutoDisable, previousErrorLog := common.AutomaticDisableChannelEnabled, constant.ErrorLogEnabled
-	previousNotifyLimit := constant.NotifyLimitCount
 	previousClient := httpClient
 	fetch := system_setting.GetFetchSetting()
 	previousFetch := *fetch
@@ -70,7 +66,6 @@ func TestProcessChannelErrorMasksDisableReasonAndNotification(t *testing.T) {
 		common.SetMainDatabaseType(previousType)
 		common.MemoryCacheEnabled, common.RedisEnabled = previousCache, previousRedis
 		common.AutomaticDisableChannelEnabled, constant.ErrorLogEnabled = previousAutoDisable, previousErrorLog
-		constant.NotifyLimitCount = previousNotifyLimit
 		httpClient = previousClient
 		*fetch = previousFetch
 	})
@@ -80,48 +75,26 @@ func TestProcessChannelErrorMasksDisableReasonAndNotification(t *testing.T) {
 	require.NoError(t, err)
 	sqlDB.SetMaxOpenConns(1)
 	t.Cleanup(func() { require.NoError(t, sqlDB.Close()) })
-	require.NoError(t, database.AutoMigrate(&model.Channel{}, &model.Ability{}, &model.User{}))
+	require.NoError(t, database.AutoMigrate(&model.Channel{}, &model.Ability{}))
 	model.DB = database
 	common.SetMainDatabaseType(common.DatabaseTypeSQLite)
 	common.MemoryCacheEnabled, common.RedisEnabled = false, false
 	common.AutomaticDisableChannelEnabled, constant.ErrorLogEnabled = true, false
-	constant.NotifyLimitCount = 10
 	channel := &model.Channel{Name: "relay-review", Key: "fixture-key", Type: 1, Status: common.ChannelStatusEnabled, Group: "default", Models: "test-model"}
 	require.NoError(t, channel.Insert())
-	notifications := make(chan []byte, 1)
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		notifications <- body
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	t.Cleanup(server.Close)
-	httpClient = server.Client()
-	fetch.EnableSSRFProtection = false
-	settings, err := common.Marshal(kitdto.UserSetting{NotifyType: kitdto.NotifyTypeWebhook, WebhookUrl: server.URL})
-	require.NoError(t, err)
-	root := &model.User{Username: "notification-test-root", Role: common.RoleRootUser, Status: common.UserStatusEnabled, Setting: string(settings)}
-	require.NoError(t, database.Create(root).Error)
-	notifyKey := fmt.Sprintf("%d:%s:%s", root.Id, formatNotifyType(channel.Id, common.ChannelStatusAutoDisabled), time.Now().Format("2006010215"))
-	notifyLimitStore.Delete(notifyKey)
-	t.Cleanup(func() { notifyLimitStore.Delete(notifyKey) })
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())
 	apiErr := types.NewErrorWithStatusCode(errors.New("upstream https://private.example.com/path?token=review-token api_key:review-secret"), types.ErrorCodeChannelNoAvailableKey, http.StatusUnauthorized)
 	ProcessChannelError(c, types.ChannelError{ChannelId: channel.Id, ChannelName: channel.Name, AutoBan: true}, apiErr, nil)
-	var notification WebhookPayload
-	select {
-	case payload := <-notifications:
-		require.NoError(t, common.Unmarshal(payload, &notification))
-	case <-time.After(5 * time.Second):
-		t.Fatal("automatic channel-disable notification was not delivered")
-	}
+	// DisableChannel runs in a goroutine (gopool.Go); poll until it lands.
+	require.Eventually(t, func() bool {
+		loaded, err := model.GetChannelById(channel.Id, true)
+		return err == nil && loaded.Status == common.ChannelStatusAutoDisabled
+	}, 5*time.Second, 10*time.Millisecond)
 	loaded, err := model.GetChannelById(channel.Id, true)
 	require.NoError(t, err)
 	assert.Equal(t, common.ChannelStatusAutoDisabled, loaded.Status)
 	wantReason := "status_code=401, upstream https://***.com/***?token=*** api_key:***"
 	assert.Equal(t, wantReason, loaded.GetOtherInfo()["status_reason"])
-	assert.Contains(t, notification.Content, wantReason)
-	assert.NotContains(t, notification.Content, "review-token")
-	assert.NotContains(t, notification.Content, "review-secret")
 	assert.Equal(t, http.StatusUnauthorized, apiErr.StatusCode)
 }
 

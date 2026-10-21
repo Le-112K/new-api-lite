@@ -12,7 +12,6 @@ import (
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
-	perfmetrics "github.com/QuantumNous/new-api/pkg/perf_metrics"
 	"github.com/QuantumNous/new-api/relay"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
@@ -88,13 +87,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 	}
 
 	defer func() {
-		recovered := recover()
-		resultErr := newAPIError
-		if recovered != nil {
-			resultErr = types.NewError(fmt.Errorf("relay panic: %v", recovered), types.ErrorCodeBadResponse)
-		}
-		perfmetrics.RecordRelayResult(c.Request.Context(), relayInfo, resultErr)
-		if recovered != nil {
+		if recovered := recover(); recovered != nil {
 			panic(recovered)
 		}
 	}()

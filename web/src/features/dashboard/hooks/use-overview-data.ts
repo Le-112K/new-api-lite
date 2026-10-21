@@ -21,8 +21,6 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { getUserQuotaDates } from '@/features/dashboard/api'
-import { getPerfMetricsSummary } from '@/features/performance-metrics/api'
-import { formatUptimePct } from '@/features/performance-metrics/lib/format'
 import { getAllLogs, getUserLogs } from '@/features/usage-logs/api'
 import { LOG_TYPE_ENUM } from '@/features/usage-logs/constants'
 import type { UsageLog } from '@/features/usage-logs/data/schema'
@@ -84,13 +82,11 @@ export interface OverviewData {
   balanceDisplay: string
   spendDisplay: string
   requestsDisplay: string
-  successRateDisplay: string
   spendDelta: OverviewDelta
   requestsDelta: OverviewDelta
   balanceTrend: number[]
   spendTrend: number[]
   requestsTrend: number[]
-  successRateTrend: number[]
   dailyPoints: OverviewPoint[]
   totalRequests: number
   slices: OverviewSlice[]
@@ -282,21 +278,10 @@ export function useOverviewData(): OverviewData {
     staleTime: 60 * 1000,
   })
 
-  const perfQuery = useQuery({
-    queryKey: ['dashboard', 'overview', 'success-rate', OVERVIEW_RANGE_DAYS],
-    queryFn: async () =>
-      requireServerSuccess(
-        await getPerfMetricsSummary(OVERVIEW_RANGE_DAYS * 24)
-      ),
-    staleTime: 60 * 1000,
-    retry: false,
-  })
 
   return useMemo<OverviewData>(() => {
     const items = quotaQuery.data?.data ?? []
     const logs = logsQuery.data?.data?.items ?? []
-    const summary = perfQuery.data?.data.summary
-    const perfModels = perfQuery.data?.data.models ?? []
 
     const totalRequests = items.reduce(
       (total, item) => total + (Number(item.count) || 0),
@@ -326,28 +311,6 @@ export function useOverviewData(): OverviewData {
       running += buckets[i].quota
     }
 
-    // Mean of every model's recent success-rate series, aligned by timestamp.
-    const seriesMap = new Map<number, { total: number; count: number }>()
-    for (const model of perfModels) {
-      for (const point of model.recent_success_series ?? []) {
-        const entry = seriesMap.get(point.ts) ?? { total: 0, count: 0 }
-        entry.total += point.success_rate
-        entry.count += 1
-        seriesMap.set(point.ts, entry)
-      }
-    }
-    const successRateTrend = [...seriesMap.entries()]
-      .sort((a, b) => a[0] - b[0])
-      .map(([, entry]) => entry.total / entry.count)
-
-    const successRate = summary?.success_rate
-    const hasSuccessRate = Number.isFinite(successRate)
-    let successRateTrendValues: number[] = []
-    if (hasSuccessRate) {
-      successRateTrendValues = successRateTrend.length
-        ? successRateTrend
-        : [successRate as number]
-    }
 
     return {
       loading: quotaQuery.isLoading || logsQuery.isLoading,
@@ -357,15 +320,11 @@ export function useOverviewData(): OverviewData {
       balanceDisplay: formatQuota(balance, { keepTrailingZeros: true }),
       spendDisplay: formatQuota(totalQuota, { keepTrailingZeros: true }),
       requestsDisplay: formatNumber(totalRequests),
-      successRateDisplay: hasSuccessRate
-        ? formatUptimePct(successRate as number)
-        : '—',
       spendDelta: periodDelta(buckets, (bucket) => bucket.quota),
       requestsDelta: periodDelta(buckets, (bucket) => bucket.requests),
       balanceTrend,
       spendTrend: buckets.map((bucket) => bucket.quota),
       requestsTrend: buckets.map((bucket) => bucket.requests),
-      successRateTrend: successRateTrendValues,
       dailyPoints,
       totalRequests,
       slices: buildSlices(items, totalRequests, t('Other / Unknown')),
@@ -374,7 +333,6 @@ export function useOverviewData(): OverviewData {
   }, [
     logsQuery.data,
     logsQuery.isLoading,
-    perfQuery.data,
     quotaQuery.data,
     quotaQuery.isLoading,
     t,

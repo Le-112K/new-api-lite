@@ -18,7 +18,6 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { SystemBehaviorSection } from '../general/system-behavior-section'
 import { EmailSettingsSection } from '../integrations/email-settings-section'
-import { MonitoringSettingsSection } from '../integrations/monitoring-settings-section'
 import { LogSettingsSection } from '../maintenance/log-settings-section'
 import { PerformanceSection } from '../maintenance/performance-section'
 import type { OperationsSettings } from '../types'
@@ -33,24 +32,6 @@ const OPERATIONS_SECTIONS = [
       <SystemBehaviorSection
         defaultValues={{
           DefaultCollapseSidebar: settings.DefaultCollapseSidebar,
-        }}
-      />
-    ),
-  },
-  {
-    id: 'alerts',
-    titleKey: 'Monitoring & Alerts',
-    build: (settings: OperationsSettings) => (
-      <MonitoringSettingsSection
-        defaultValues={{
-          'perf_metrics_setting.enabled':
-            settings['perf_metrics_setting.enabled'] ?? true,
-          'perf_metrics_setting.flush_interval':
-            settings['perf_metrics_setting.flush_interval'] ?? 5,
-          'perf_metrics_setting.bucket_time':
-            settings['perf_metrics_setting.bucket_time'] ?? 'hour',
-          'perf_metrics_setting.retention_days':
-            settings['perf_metrics_setting.retention_days'] ?? 0,
         }}
       />
     ),

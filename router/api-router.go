@@ -29,12 +29,6 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/privacy-policy", controller.GetPrivacyPolicy)
 		apiRouter.GET("/home_page_content", controller.GetHomePageContent)
 		apiRouter.GET("/pricing", middleware.HeaderNavModuleAuth("pricing"), controller.GetPricing)
-		perfMetricsRoute := apiRouter.Group("/perf-metrics")
-		perfMetricsRoute.Use(middleware.HeaderNavModulePublicOrUserAuth("pricing"))
-		{
-			perfMetricsRoute.GET("/summary", controller.GetPerfMetricsSummary)
-			perfMetricsRoute.GET("", controller.GetPerfMetrics)
-		}
 		apiRouter.GET("/verification", middleware.EmailVerificationRateLimit(), middleware.TurnstileCheck(), controller.SendEmailVerification)
 		apiRouter.GET("/reset_password", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendPasswordResetEmail)
 		apiRouter.POST("/user/reset", middleware.CriticalRateLimit(), anonymousRequestBodyLimit, controller.ResetPassword)

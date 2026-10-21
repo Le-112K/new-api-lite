@@ -27,7 +27,6 @@ import { useAuthStore } from '@/stores/auth-store'
 import { CheckinCalendarCard } from './components/checkin-calendar-card'
 import { LanguagePreferencesCard } from './components/language-preferences-card'
 import { ProfileHeader } from './components/profile-header'
-import { ProfileSettingsCard } from './components/profile-settings-card'
 import { SidebarModulesCard } from './components/sidebar-modules-card'
 import { useProfile } from './hooks'
 
@@ -54,11 +53,6 @@ export function Profile() {
           <CardStaggerItem>
             <div className='grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.46fr)] xl:items-start'>
               <div className='space-y-4 sm:space-y-6'>
-                <ProfileSettingsCard
-                  profile={profile}
-                  loading={loading}
-                  onProfileUpdate={refreshProfile}
-                />
                 <LanguagePreferencesCard
                   profile={profile}
                   onProfileUpdate={refreshProfile}

@@ -606,61 +606,6 @@ func TestCollectPendingUpstreamModelChangesFromModels_WithIgnoredRegexPatterns(t
 	require.Equal(t, []string{}, pendingRemoveModels)
 }
 
-func TestBuildUpstreamModelUpdateTaskNotificationContent_OmitOverflowDetails(t *testing.T) {
-	channelSummaries := make([]upstreamModelUpdateChannelSummary, 0, 12)
-	for i := range 12 {
-		channelSummaries = append(channelSummaries, upstreamModelUpdateChannelSummary{
-			ChannelName: "channel-" + string(rune('A'+i)),
-			AddCount:    i + 1,
-			RemoveCount: i,
-		})
-	}
-
-	content := buildUpstreamModelUpdateTaskNotificationContent(
-		24,
-		12,
-		56,
-		21,
-		9,
-		[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
-		channelSummaries,
-		[]string{
-			"gpt-4.1", "gpt-4.1-mini", "o3", "o4-mini", "gemini-2.5-pro", "claude-3.7-sonnet",
-			"qwen-max", "deepseek-r1", "llama-3.3-70b", "mistral-large", "command-r-plus", "doubao-pro-32k",
-			"hunyuan-large",
-		},
-		[]string{
-			"gpt-3.5-turbo", "claude-2.1", "gemini-1.5-pro", "mixtral-8x7b", "qwen-plus", "glm-4",
-			"yi-large", "moonshot-v1", "doubao-lite",
-		},
-	)
-
-	require.Contains(t, content, "其余 4 个渠道已省略")
-	require.Contains(t, content, "其余 1 个已省略")
-	require.Contains(t, content, "失败渠道 ID（展示 10/12）")
-	require.Contains(t, content, "其余 2 个已省略")
-}
-
-func TestShouldSendUpstreamModelUpdateNotification(t *testing.T) {
-	channelUpstreamModelUpdateNotifyState.Lock()
-	channelUpstreamModelUpdateNotifyState.lastNotifiedAt = 0
-	channelUpstreamModelUpdateNotifyState.lastChangedChannels = 0
-	channelUpstreamModelUpdateNotifyState.lastFailedChannels = 0
-	channelUpstreamModelUpdateNotifyState.Unlock()
-
-	baseTime := int64(2000000)
-
-	require.True(t, shouldSendUpstreamModelUpdateNotification(baseTime, 6, 0))
-	require.False(t, shouldSendUpstreamModelUpdateNotification(baseTime+3600, 6, 0))
-	require.True(t, shouldSendUpstreamModelUpdateNotification(baseTime+3600, 7, 0))
-	require.False(t, shouldSendUpstreamModelUpdateNotification(baseTime+7200, 7, 0))
-	require.True(t, shouldSendUpstreamModelUpdateNotification(baseTime+8000, 0, 3))
-	require.False(t, shouldSendUpstreamModelUpdateNotification(baseTime+9000, 0, 3))
-	require.True(t, shouldSendUpstreamModelUpdateNotification(baseTime+10000, 0, 4))
-	require.True(t, shouldSendUpstreamModelUpdateNotification(baseTime+90000, 7, 0))
-	require.True(t, shouldSendUpstreamModelUpdateNotification(baseTime+90001, 0, 0))
-}
-
 func TestDetectAllChannelUpstreamModelUpdatesRejectsExistingActiveTask(t *testing.T) {
 	db := setupModelListControllerTestDB(t)
 	require.NoError(t, db.AutoMigrate(&model.SystemTask{}, &model.SystemTaskLock{}))

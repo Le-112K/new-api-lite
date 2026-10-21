@@ -21,7 +21,6 @@ import (
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
-	perfmetrics "github.com/QuantumNous/new-api/pkg/perf_metrics"
 	"github.com/QuantumNous/new-api/pkg/wsmanager"
 	kitutil "github.com/QuantumNous/new-api/relaykit/relayconvert/kitutil"
 	"github.com/QuantumNous/new-api/router"
@@ -317,8 +316,6 @@ func InitResources() error {
 	if err != nil {
 		return err
 	}
-
-	perfmetrics.Init()
 
 	// 启动系统监控
 	common.StartSystemMonitor()

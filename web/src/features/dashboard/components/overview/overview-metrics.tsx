@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Activity, Coins, ShieldCheck, Wallet } from 'lucide-react'
+import { Activity, Coins, Wallet } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -33,13 +33,11 @@ export type OverviewMetricsData = Pick<
   | 'balanceDisplay'
   | 'spendDisplay'
   | 'requestsDisplay'
-  | 'successRateDisplay'
   | 'spendDelta'
   | 'requestsDelta'
   | 'balanceTrend'
   | 'spendTrend'
   | 'requestsTrend'
-  | 'successRateTrend'
 >
 
 export interface OverviewMetricsProps {
@@ -51,7 +49,7 @@ export function OverviewMetrics(props: OverviewMetricsProps) {
   const data = props.data
 
   return (
-    <CardStaggerContainer className='grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4'>
+    <CardStaggerContainer className='grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3'>
       <CardStaggerItem className='bg-card h-full rounded-2xl border p-4 shadow-xs'>
         <StatCard
           title={t('Account balance')}
@@ -93,19 +91,6 @@ export function OverviewMetrics(props: OverviewMetricsProps) {
         />
       </CardStaggerItem>
 
-      <CardStaggerItem className='bg-card h-full rounded-2xl border p-4 shadow-xs'>
-        <StatCard
-          title={t('Request success rate')}
-          value={data.successRateDisplay}
-          description=''
-          icon={ShieldCheck}
-          iconTone='neutral'
-          trend={{ value: t('Success rate'), direction: 'flat' }}
-          sparkline={data.successRateTrend}
-          sparklineVariant='line'
-          loading={data.loading}
-        />
-      </CardStaggerItem>
     </CardStaggerContainer>
   )
 }
