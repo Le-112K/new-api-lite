@@ -374,6 +374,11 @@ func migrateDB() error {
 			return err
 		}
 	}
+	if migrated, err := MigrateChannelKeyEncryption(); err != nil {
+		return err
+	} else if migrated > 0 {
+		common.SysLog(fmt.Sprintf("migrated %d legacy plaintext channel keys to encrypted storage", migrated))
+	}
 	return nil
 }
 
