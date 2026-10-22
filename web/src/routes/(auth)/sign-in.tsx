@@ -31,7 +31,12 @@ const searchSchema = z.object({
 export const Route = createFileRoute('/(auth)/sign-in')({
   component: SignIn,
   validateSearch: searchSchema,
-  beforeLoad: async ({ search }) => {
+  beforeLoad: async ({ search, preload }) => {
+    // 悬停预载（defaultPreload: 'intent'）不得发起网络请求，更不得 throw
+    // redirect——preload 里的 redirect 会被路由器升级成真实跳转并重渲染，
+    // 与悬停再触发预载形成死循环。预载直接放行，真实导航再做完整校验。
+    if (preload) return
+
     // 根 guard 可能因为没有会话提示而跳过了 refresh。此处必须回源确认，
     // 否则持有有效 Refresh Cookie 的用户会被要求重新输入密码。
     await resolveAuthentication()

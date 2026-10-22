@@ -23,7 +23,16 @@ import { resolveAuthentication } from '@/lib/auth-session'
 import { useAuthStore } from '@/stores/auth-store'
 
 export const Route = createFileRoute('/_authenticated')({
-  beforeLoad: async ({ location }) => {
+  beforeLoad: async ({ location, preload }) => {
+    // `defaultPreload: 'intent'` runs this guard on every hover/focus of a
+    // nav link. A redirect thrown from a preload is upgraded by the router
+    // into a real navigation, which re-renders the header, which re-triggers
+    // the hover preload — an anonymous visitor freezing the tab within
+    // seconds just by moving the mouse across the navigation. Preloads must
+    // therefore never redirect and never hit the network: just decline
+    // quietly and let the real navigation run this guard in full.
+    if (preload) return
+
     // The root guard may have skipped its refresh because no session hint was
     // present. That skip is an optimization for public pages and must not
     // decide a protected route, so resolve against the server before
