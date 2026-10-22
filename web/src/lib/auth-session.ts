@@ -87,6 +87,29 @@ let authEpoch = 0
  */
 const REFRESH_TIMEOUT_MS = 10_000
 
+/**
+ * After a transient failure (timeout / aborted request / network outage) the
+ * next network refresh is suppressed for this long.
+ *
+ * Without the cooldown the timeout itself feeds a retry loop: settling the
+ * singleton flips `bootstrapState`, the store change re-renders the header's
+ * route links, the router re-executes the `/_authenticated` beforeLoad
+ * (preload), and that beforeLoad calls `resolveAuthentication` again — one
+ * fresh hung request + one queued `navigator.locks` waiter every 10s until
+ * the tab runs out of memory. The cooldown turns that loop into at most one
+ * attempt per window.
+ */
+const REFRESH_RETRY_COOLDOWN_MS = 30_000
+let transientRefreshAt = 0
+
+function markTransientRefresh(): void {
+  transientRefreshAt = Date.now()
+}
+
+function refreshInCooldown(): boolean {
+  return Date.now() - transientRefreshAt < REFRESH_RETRY_COOLDOWN_MS
+}
+
 class AuthRefreshSupersededError extends Error {
   constructor() {
     super('Authentication refresh was superseded')
@@ -281,7 +304,8 @@ export function createRefreshRunner(
 }
 
 async function requestRefresh(
-  expectedSID?: string
+  expectedSID?: string,
+  signal?: AbortSignal
 ): Promise<AuthRefreshHTTPResponse> {
   try {
     const response = await authClient.post(
@@ -289,6 +313,7 @@ async function requestRefresh(
       undefined,
       {
         headers: expectedSID ? { 'X-Auth-Session': expectedSID } : undefined,
+        signal,
       }
     )
     return { status: response.status, data: response.data }
@@ -302,9 +327,12 @@ async function requestRefresh(
   }
 }
 
-function runRefresh(refreshEpoch: number): Promise<RefreshOutcome> {
+function runRefresh(
+  refreshEpoch: number,
+  signal?: AbortSignal
+): Promise<RefreshOutcome> {
   return createRefreshRunner({
-    request: requestRefresh,
+    request: (expectedSID) => requestRefresh(expectedSID, signal),
     getExpectedSID: () => useAuthStore.getState().auth.session?.sid,
     parseBundle: (value) => (isAuthBundle(value) ? value : null),
     acceptBundle: (bundle) => applyAuthBundle(bundle, false),
@@ -315,36 +343,54 @@ function runRefresh(refreshEpoch: number): Promise<RefreshOutcome> {
       }
       clearAuthentication(synchronizeTabs, bootstrapState)
     },
-    markTransient: () => useAuthStore.getState().auth.setBootstrapState('idle'),
+    markTransient: () => {
+      markTransientRefresh()
+      useAuthStore.getState().auth.setBootstrapState('idle')
+    },
     wait: waitForRefreshRace,
     isCurrent: () => authEpoch === refreshEpoch,
   })()
 }
 
 async function performRefreshWithBrowserLock(
-  refreshEpoch: number
+  refreshEpoch: number,
+  signal?: AbortSignal
 ): Promise<RefreshOutcome> {
   try {
     if (typeof navigator === 'undefined' || !navigator.locks) {
-      return runRefresh(refreshEpoch)
+      return runRefresh(refreshEpoch, signal)
     }
     return navigator.locks.request(
       'new-api:auth-refresh',
       { mode: 'exclusive' },
-      () => runRefresh(refreshEpoch)
+      () => runRefresh(refreshEpoch, signal)
     )
   } catch (error: unknown) {
+    markTransientRefresh()
     useAuthStore.getState().auth.setBootstrapState('idle')
     return { kind: 'transient_error', error }
   }
 }
 
 export function refreshAuthentication(): Promise<RefreshOutcome> {
+  if (refreshInCooldown()) {
+    return Promise.resolve({
+      kind: 'transient_error',
+      error: new Error('Auth refresh suppressed after a transient failure'),
+    })
+  }
   if (!refreshPromise) {
     const refreshEpoch = authEpoch
-    const refresh = performRefreshWithBrowserLock(refreshEpoch)
+    const controller = new AbortController()
+    const refresh = performRefreshWithBrowserLock(refreshEpoch, controller.signal)
     const timeout = new Promise<RefreshOutcome>((resolve) => {
       const timer = setTimeout(() => {
+        // Abort the in-flight request so `runRefresh` settles and releases the
+        // browser lock — otherwise the lock is held for as long as the socket
+        // hangs and every later authentication action queues behind it (the
+        // sign-in form included).
+        controller.abort()
+        markTransientRefresh()
         useAuthStore.getState().auth.setBootstrapState('idle')
         resolve({
           kind: 'transient_error',
@@ -440,6 +486,12 @@ export function getCommonHeaders(): Record<string, string> {
 
 export async function getFreshAuthHeaders(): Promise<Record<string, string>> {
   const auth = useAuthStore.getState().auth
+  // Nothing to refresh for a truly anonymous caller (the sign-in form is the
+  // common case): the refresh lock must never delay an unauthenticated
+  // request such as logging in.
+  if (!auth.accessToken && !auth.user && !auth.session) {
+    return getCommonHeaders()
+  }
   const refreshBefore = Math.floor(Date.now() / 1000) + 60
   if (
     auth.accessToken &&
