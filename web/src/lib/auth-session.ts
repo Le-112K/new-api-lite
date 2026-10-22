@@ -80,6 +80,13 @@ const refreshRaceDelays = [80, 200, 500] as const
 let refreshPromise: Promise<RefreshOutcome> | null = null
 let authEpoch = 0
 
+/**
+ * Hard ceiling on one refresh attempt. Without it a hung `navigator.locks` or
+ * a stalled network call leaves the singleton `refreshPromise` pending forever,
+ * and every route guard that awaits `resolveAuthentication` freezes the router.
+ */
+const REFRESH_TIMEOUT_MS = 10_000
+
 class AuthRefreshSupersededError extends Error {
   constructor() {
     super('Authentication refresh was superseded')
@@ -335,7 +342,20 @@ async function performRefreshWithBrowserLock(
 export function refreshAuthentication(): Promise<RefreshOutcome> {
   if (!refreshPromise) {
     const refreshEpoch = authEpoch
-    refreshPromise = performRefreshWithBrowserLock(refreshEpoch).finally(() => {
+    const refresh = performRefreshWithBrowserLock(refreshEpoch)
+    const timeout = new Promise<RefreshOutcome>((resolve) => {
+      const timer = setTimeout(() => {
+        useAuthStore.getState().auth.setBootstrapState('idle')
+        resolve({
+          kind: 'transient_error',
+          error: new Error('Auth refresh timed out'),
+        })
+      }, REFRESH_TIMEOUT_MS)
+      // Clear the timer once the real refresh settles so a normal fast path
+      // never pays the timeout cost.
+      void refresh.finally(() => clearTimeout(timer))
+    })
+    refreshPromise = Promise.race([refresh, timeout]).finally(() => {
       refreshPromise = null
     })
   }

@@ -28,7 +28,14 @@ export const Route = createFileRoute('/_authenticated')({
     // present. That skip is an optimization for public pages and must not
     // decide a protected route, so resolve against the server before
     // redirecting. An in-memory session returns without a request.
-    await resolveAuthentication()
+    //
+    // Race the resolve against a hard timeout: a hung refresh (navigator.locks
+    // deadlock, stalled network) would otherwise leave this beforeLoad pending
+    // forever and freeze the entire router — no page renders, no clicks work.
+    await Promise.race([
+      resolveAuthentication(),
+      new Promise<void>((resolve) => setTimeout(resolve, 10_000)),
+    ])
 
     const { auth } = useAuthStore.getState()
 

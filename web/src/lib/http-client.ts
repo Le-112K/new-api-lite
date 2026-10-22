@@ -58,6 +58,13 @@ export const api = axios.create({
 const inFlightGet = new Map<string, Promise<unknown>>()
 const originalGet = api.get.bind(api)
 
+/**
+ * Safety valve for the in-flight GET dedup map. A request that never settles
+ * (hung socket, stalled proxy) would otherwise poison the map entry forever,
+ * causing every subsequent call for the same key to await a dead promise.
+ */
+const IN_FLIGHT_GET_TIMEOUT_MS = 30_000
+
 api.get = ((url: string, config: ApiRequestConfig = {}) => {
   if (config.disableDuplicate) return originalGet(url, config)
 
@@ -71,6 +78,15 @@ api.get = ((url: string, config: ApiRequestConfig = {}) => {
     inFlightGet.delete(key)
   })
   inFlightGet.set(key, request)
+
+  // Force-evict the map entry if the request outlives the safety window so
+  // future calls issue a fresh request instead of awaiting the dead one.
+  setTimeout(() => {
+    if (inFlightGet.get(key) === request) {
+      inFlightGet.delete(key)
+    }
+  }, IN_FLIGHT_GET_TIMEOUT_MS)
+
   return request
 }) as typeof api.get
 
