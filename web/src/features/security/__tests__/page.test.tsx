@@ -197,10 +197,13 @@ describe('security page migration', () => {
   })
 
   it('Profile retains preferences and no longer mounts security controls or requests', async () => {
+    useAuthStore
+      .getState()
+      .auth.setUser({ ...profile, permissions: { sidebar_settings: true } })
     await renderPage('/profile')
     await waitFor(() =>
       expect(
-        screen.getByRole('button', { name: 'Save Settings' })
+        screen.getByRole('button', { name: 'Save Changes' })
       ).toBeVisible()
     )
     expect(

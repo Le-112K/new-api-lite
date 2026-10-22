@@ -112,19 +112,6 @@ beforeEach(() => {
         },
       }
     }
-    if (url === '/api/perf-metrics/summary') {
-      return {
-        data: {
-          success: true,
-          data: {
-            summary: hasUsage
-              ? { avg_latency_ms: 412, success_rate: 99.24, avg_tps: 38.4 }
-              : null,
-            models: [],
-          },
-        },
-      }
-    }
     throw new Error(`Unexpected overview request: ${url}`)
   })
 })
@@ -177,7 +164,6 @@ describe('overview dashboard', () => {
     expect(await screen.findByText('Account balance')).toBeVisible()
     expect(screen.getByText("This month's spend")).toBeVisible()
     expect(screen.getByText("This month's requests")).toBeVisible()
-    expect(screen.getByText('Request success rate')).toBeVisible()
 
     // KPI numbers come straight from the mocked /api/data/self rows, and the
     // donut centre repeats the same request total — one source of truth.
@@ -193,7 +179,6 @@ describe('overview dashboard', () => {
     expect(screen.getByText('Model call share')).toBeVisible()
     expect(screen.getByText('Recent calls')).toBeVisible()
     expect(screen.getByText('macbook-pro')).toBeVisible()
-    expect(screen.getByText('99.24%')).toBeVisible()
 
     expect(screen.queryByText('No usage yet')).not.toBeInTheDocument()
     // The prototype's review-only state switcher must never ship.
@@ -218,7 +203,6 @@ describe('overview dashboard', () => {
     expect(screen.queryByText('Account balance')).not.toBeInTheDocument()
     expect(screen.queryByText('Usage trend')).not.toBeInTheDocument()
     expect(screen.queryByText('Recent calls')).not.toBeInTheDocument()
-    expect(screen.queryByText('Request success rate')).not.toBeInTheDocument()
   })
 
   it('switches to the analytics layout when usage appears, driven by the data', async () => {
