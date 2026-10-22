@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"strings"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
@@ -36,12 +37,25 @@ const (
 
 var (
 	ErrPaymentMethodMismatch    = errors.New("payment method mismatch")
+	ErrPaymentAmountMismatch    = errors.New("payment amount mismatch")
 	ErrTopUpNotFound            = errors.New("topup not found")
 	ErrTopUpStatusInvalid       = errors.New("topup status invalid")
 	ErrInvalidTopUpQuota        = errors.New("invalid top-up quota")
 	ErrTopUpQuotaLimitExceeded  = errors.New("top-up quota limit exceeded")
 	ErrWalletQuotaLimitExceeded = errors.New("wallet quota limit exceeded")
 )
+
+// paidMoneyMatchesOrder reports whether the gateway-reported paid amount equals
+// the amount recorded on the order, compared at cent precision so float-backed
+// order amounts match the 2-decimal money strings the gateway echoes back.
+// Empty or unparseable amounts fail closed.
+func paidMoneyMatchesOrder(orderMoney float64, paidMoney string) bool {
+	paid, err := decimal.NewFromString(strings.TrimSpace(paidMoney))
+	if err != nil {
+		return false
+	}
+	return decimal.NewFromFloat(orderMoney).Round(2).Equal(paid.Round(2))
+}
 
 func (topUp *TopUp) Insert() error {
 	var err error
@@ -161,11 +175,12 @@ func UpdatePendingTopUpStatus(tradeNo string, expectedPaymentProvider string, ta
 	})
 }
 
-// RechargeEpay 原子完成易支付订单：订单行锁、状态校验、成功更新与用户额度增加
+// RechargeEpay 原子完成易支付订单：订单行锁、状态校验、金额校验、成功更新与用户额度增加
 // 在同一个事务内完成，因此同一订单的并发/重复回调（包括多实例部署下）最多充值一次。
+// paidMoney 是支付网关回调报文中的实付金额，必须与订单预设金额一致，否则拒绝入账。
 // alreadyDone=true 表示订单此前已完成，本次为幂等重复回调。
 // 进程内的 LockOrder 只是优化，正确性由本函数的数据库行锁保证。
-func RechargeEpay(tradeNo string, actualPaymentMethod string, callerIp string) (alreadyDone bool, err error) {
+func RechargeEpay(tradeNo string, paidMoney string, actualPaymentMethod string, callerIp string) (alreadyDone bool, err error) {
 	if tradeNo == "" {
 		return false, errors.New("未提供支付单号")
 	}
@@ -190,6 +205,9 @@ func RechargeEpay(tradeNo string, actualPaymentMethod string, callerIp string) (
 		}
 		if topUp.Status != common.TopUpStatusPending {
 			return ErrTopUpStatusInvalid
+		}
+		if !paidMoneyMatchesOrder(topUp.Money, paidMoney) {
+			return fmt.Errorf("%w: 订单金额 %.2f 实付金额 %q", ErrPaymentAmountMismatch, topUp.Money, paidMoney)
 		}
 		if actualPaymentMethod != "" && topUp.PaymentMethod != actualPaymentMethod {
 			topUp.PaymentMethod = actualPaymentMethod

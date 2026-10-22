@@ -373,13 +373,15 @@ func EpayNotify(c *gin.Context) {
 		// 数据库行锁 + 事务内状态校验保证（多实例部署下同样安全）。
 		LockOrder(verifyInfo.ServiceTradeNo)
 		defer UnlockOrder(verifyInfo.ServiceTradeNo)
-		alreadyDone, err := model.RechargeEpay(verifyInfo.ServiceTradeNo, verifyInfo.Type, c.ClientIP())
+		alreadyDone, err := model.RechargeEpay(verifyInfo.ServiceTradeNo, verifyInfo.Money, verifyInfo.Type, c.ClientIP())
 		if err != nil {
 			switch {
 			case errors.Is(err, model.ErrTopUpNotFound):
 				logger.LogWarn(c.Request.Context(), fmt.Sprintf("易支付 回调订单不存在 trade_no=%s callback_type=%s client_ip=%s verify_info=%q", verifyInfo.ServiceTradeNo, verifyInfo.Type, c.ClientIP(), common.GetJsonString(verifyInfo)))
 			case errors.Is(err, model.ErrPaymentMethodMismatch):
 				logger.LogWarn(c.Request.Context(), fmt.Sprintf("易支付 订单支付网关不匹配 trade_no=%s callback_type=%s client_ip=%s", verifyInfo.ServiceTradeNo, verifyInfo.Type, c.ClientIP()))
+			case errors.Is(err, model.ErrPaymentAmountMismatch):
+				logger.LogWarn(c.Request.Context(), fmt.Sprintf("易支付 回调实付金额与订单不符，拒绝入账 trade_no=%s callback_type=%s client_ip=%s error=%q verify_info=%q", verifyInfo.ServiceTradeNo, verifyInfo.Type, c.ClientIP(), err.Error(), common.GetJsonString(verifyInfo)))
 			case errors.Is(err, model.ErrTopUpStatusInvalid):
 				logger.LogWarn(c.Request.Context(), fmt.Sprintf("易支付 订单状态非法 trade_no=%s callback_type=%s client_ip=%s", verifyInfo.ServiceTradeNo, verifyInfo.Type, c.ClientIP()))
 			default:

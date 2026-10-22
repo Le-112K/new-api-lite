@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/Calcium-Ion/go-epay/epay"
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
@@ -160,7 +162,10 @@ func SubscriptionEpayNotify(c *gin.Context) {
 	LockOrder(verifyInfo.ServiceTradeNo)
 	defer UnlockOrder(verifyInfo.ServiceTradeNo)
 
-	if err := model.CompleteSubscriptionOrder(verifyInfo.ServiceTradeNo, common.GetJsonString(verifyInfo), model.PaymentProviderEpay, verifyInfo.Type); err != nil {
+	if err := model.CompleteSubscriptionOrder(verifyInfo.ServiceTradeNo, verifyInfo.Money, common.GetJsonString(verifyInfo), model.PaymentProviderEpay, verifyInfo.Type); err != nil {
+		if errors.Is(err, model.ErrPaymentAmountMismatch) {
+			logger.LogWarn(c.Request.Context(), fmt.Sprintf("易支付 订阅回调实付金额与订单不符，拒绝入账 trade_no=%s client_ip=%s error=%q verify_info=%q", verifyInfo.ServiceTradeNo, c.ClientIP(), err.Error(), common.GetJsonString(verifyInfo)))
+		}
 		_, _ = c.Writer.Write([]byte("fail"))
 		return
 	}
@@ -209,7 +214,10 @@ func SubscriptionEpayReturn(c *gin.Context) {
 	if verifyInfo.TradeStatus == epay.StatusTradeSuccess {
 		LockOrder(verifyInfo.ServiceTradeNo)
 		defer UnlockOrder(verifyInfo.ServiceTradeNo)
-		if err := model.CompleteSubscriptionOrder(verifyInfo.ServiceTradeNo, common.GetJsonString(verifyInfo), model.PaymentProviderEpay, verifyInfo.Type); err != nil {
+		if err := model.CompleteSubscriptionOrder(verifyInfo.ServiceTradeNo, verifyInfo.Money, common.GetJsonString(verifyInfo), model.PaymentProviderEpay, verifyInfo.Type); err != nil {
+			if errors.Is(err, model.ErrPaymentAmountMismatch) {
+				logger.LogWarn(c.Request.Context(), fmt.Sprintf("易支付 订阅回跳实付金额与订单不符，拒绝入账 trade_no=%s client_ip=%s error=%q verify_info=%q", verifyInfo.ServiceTradeNo, c.ClientIP(), err.Error(), common.GetJsonString(verifyInfo)))
+			}
 			c.Redirect(http.StatusFound, paymentReturnPath("/wallet?pay=fail"))
 			return
 		}
