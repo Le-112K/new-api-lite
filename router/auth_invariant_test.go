@@ -119,6 +119,28 @@ func TestEveryRegisteredRouteRejectsAnonymous(t *testing.T) {
 	assert.NotEmpty(t, registered, "路由表不应为空（装配失败？）")
 }
 
+// TestRetiredApiRoutesStayUnregistered 是「删功能带走路由」的最终防线：
+// 产品有意下线的 /api 端点必须保持未注册，否则前端与调用方会以为它还在。
+// 任何把下面这些路由悄悄加回来的改动都会让本测试变红，而不是靠 code review 发现。
+func TestRetiredApiRoutesStayUnregistered(t *testing.T) {
+	engine := newAuthInvariantTestEngine(t)
+
+	registered := map[string]bool{}
+	for _, route := range engine.Routes() {
+		registered[route.Method+" "+route.Path] = true
+	}
+
+	// 性能指标（批次 09 随 pkg/perf_metrics 一并下线）。
+	retired := []string{
+		"GET /api/perf-metrics",
+		"GET /api/perf-metrics/summary",
+	}
+
+	for _, key := range retired {
+		assert.Falsef(t, registered[key], "retired api route %q is still registered; it must answer 404", key)
+	}
+}
+
 func TestAnonymousAllowlistStaysRegistered(t *testing.T) {
 	engine := newAuthInvariantTestEngine(t)
 	registered := map[string]bool{}
