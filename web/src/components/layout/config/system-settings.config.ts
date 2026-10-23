@@ -43,6 +43,10 @@ import type { NavGroup, SidebarView } from '../types'
  * Kept as a single group because the workspace title in the sidebar
  * header already provides top-level context — the inner group label
  * scopes the items as "administration" actions.
+ *
+ * Order follows how often each cluster is opened: pricing and request
+ * policy run the gateway day to day, site/branding and authentication are
+ * set up once, console content is the occasional polish pass.
  */
 function getSystemSettingsNavGroups(t: TFunction): NavGroup[] {
   return [
@@ -50,16 +54,6 @@ function getSystemSettingsNavGroups(t: TFunction): NavGroup[] {
       id: 'system-administration',
       title: t('System Administration'),
       items: [
-        {
-          title: t('Site & Branding'),
-          icon: Settings,
-          items: getSiteSectionNavItems(t),
-        },
-        {
-          title: t('Authentication'),
-          icon: Shield,
-          items: getAuthSectionNavItems(t),
-        },
         {
           title: t('Billing & Payment'),
           icon: CreditCard,
@@ -71,19 +65,29 @@ function getSystemSettingsNavGroups(t: TFunction): NavGroup[] {
           items: getPolicySectionNavItems(t),
         },
         {
+          title: t('Site & Branding'),
+          icon: Settings,
+          items: getSiteSectionNavItems(t),
+        },
+        {
+          title: t('Authentication'),
+          icon: Shield,
+          items: getAuthSectionNavItems(t),
+        },
+        {
           title: t('Security & Limits'),
           icon: ShieldAlert,
           items: getSecuritySectionNavItems(t),
         },
         {
-          title: t('Console Content'),
-          icon: Layout,
-          items: getContentSectionNavItems(t),
-        },
-        {
           title: t('Operations'),
           icon: Wrench,
           items: getOperationsSectionNavItems(t),
+        },
+        {
+          title: t('Console Content'),
+          icon: Layout,
+          items: getContentSectionNavItems(t),
         },
       ],
     },

@@ -41,17 +41,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { handleServerError } from '@/lib/handle-server-error'
 import { parseHttpStatusCodeRules } from '@/lib/http-status-code-rules'
 
 import {
+  SettingsCluster,
+  SettingsClusterGroup,
+} from '../components/settings-cluster'
+import {
   SettingsControlChildren,
   SettingsControlGroup,
   SettingsForm,
-  SettingsFormGrid,
   SettingsSwitchContent,
   SettingsSwitchItem,
 } from '../components/settings-form-layout'
@@ -319,11 +321,8 @@ export function ChannelHealthSection({
             isSaving={form.formState.isSubmitting}
           />
 
-          <div className='flex min-w-0 flex-col gap-4'>
-            <h4 className='text-sm font-medium'>
-              {t('Channel health checks')}
-            </h4>
-            <SettingsFormGrid>
+          <SettingsClusterGroup defaultOpen={['checks', 'disable']}>
+            <SettingsCluster value='checks' title={t('Channel health checks')}>
               <SettingsControlGroup>
                 <FormField
                   control={form.control}
@@ -483,14 +482,9 @@ export function ChannelHealthSection({
                   </SettingsSwitchItem>
                 )}
               />
-            </SettingsFormGrid>
-          </div>
+            </SettingsCluster>
 
-          <Separator />
-
-          <div className='flex min-w-0 flex-col gap-4'>
-            <h4 className='text-sm font-medium'>{t('Auto-disable rules')}</h4>
-            <SettingsFormGrid>
+            <SettingsCluster value='disable' title={t('Auto-disable rules')}>
               <FormField
                 control={form.control}
                 name='AutomaticDisableChannelEnabled'
@@ -594,8 +588,8 @@ export function ChannelHealthSection({
                   </FormItem>
                 )}
               />
-            </SettingsFormGrid>
-          </div>
+            </SettingsCluster>
+          </SettingsClusterGroup>
         </SettingsForm>
       </Form>
     </SettingsSection>

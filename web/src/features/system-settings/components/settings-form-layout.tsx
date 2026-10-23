@@ -23,6 +23,20 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 
+import { useSettingsDensity } from './settings-page-context'
+
+/**
+ * Two columns pair short fields side by side. Compact panes drop to a single
+ * column so one or two controls do not leave a hole in the layout.
+ */
+function useFormGridClasses() {
+  const compact = useSettingsDensity() === 'compact'
+  return {
+    columns: compact ? 'lg:grid-cols-1' : 'lg:grid-cols-2',
+    gaps: compact ? 'gap-y-5' : 'gap-x-5 gap-y-6',
+  }
+}
+
 type SettingsFormGridProps = {
   children: ReactNode
   className?: string
@@ -49,12 +63,16 @@ const settingsSwitchRowClassName =
   'flex min-w-0 flex-row items-center justify-between gap-4 -mx-2 rounded-lg px-2 py-3 transition-colors hover:bg-muted/40'
 
 export function SettingsFormGrid(props: SettingsFormGridProps) {
+  const grid = useFormGridClasses()
   return (
     <div
       data-settings-form-span='full'
       className={cn(
-        'grid min-w-0 gap-x-5 gap-y-6 lg:grid-cols-2',
+        'grid min-w-0',
+        grid.gaps,
+        grid.columns,
         'lg:[&>[data-settings-form-span=full]]:col-span-2',
+        'lg:[&>[data-slot=alert]]:col-span-2',
         '[&>[data-slot=form-item]]:min-w-0',
         'lg:[&>[data-slot=form-item]:has(textarea)]:col-span-2',
         'lg:[&>[data-slot=form-item]:has([data-slot=switch])]:col-span-2',
@@ -161,7 +179,7 @@ export function SettingsGroupLabel({ children }: { children: ReactNode }) {
   return (
     <div
       data-settings-form-span='full'
-      className='text-muted-foreground/80 -mb-1 border-t border-border/40 pt-4 text-xs font-medium'
+      className='text-muted-foreground/80 border-border/40 -mb-1 border-t pt-4 text-xs font-medium'
     >
       {children}
     </div>
@@ -197,10 +215,13 @@ export function SettingsControlChildren({
 }
 
 export function SettingsForm({ className, ...props }: ComponentProps<'form'>) {
+  const grid = useFormGridClasses()
   return (
     <form
       className={cn(
-        'grid min-w-0 gap-x-5 gap-y-6 lg:grid-cols-2',
+        'grid min-w-0',
+        grid.gaps,
+        grid.columns,
         'lg:[&>*:not([data-slot=form-item])]:col-span-2',
         'lg:[&>[data-settings-form-span=full]]:col-span-2',
         'lg:[&>[data-slot=alert]]:col-span-2',

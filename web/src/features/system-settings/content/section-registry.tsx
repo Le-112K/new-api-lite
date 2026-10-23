@@ -38,6 +38,7 @@ const CONTENT_SECTIONS = [
   {
     id: 'dashboard',
     titleKey: 'Data Dashboard',
+    layout: { density: 'compact' },
     build: (settings: ContentSettings) => (
       <DashboardSection
         defaultValues={{
@@ -73,6 +74,7 @@ const CONTENT_SECTIONS = [
   {
     id: 'faq',
     titleKey: 'FAQ',
+    layout: { density: 'compact' },
     build: (settings: ContentSettings) => (
       <FAQSection
         enabled={settings['console_setting.faq_enabled']}

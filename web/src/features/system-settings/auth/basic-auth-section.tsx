@@ -35,8 +35,11 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 
 import {
+  SettingsCluster,
+  SettingsClusterGroup,
+} from '../components/settings-cluster'
+import {
   SettingsForm,
-  SettingsGroupLabel,
   SettingsSwitchContent,
   SettingsSwitchItem,
 } from '../components/settings-form-layout'
@@ -115,158 +118,169 @@ export function BasicAuthSection({ defaultValues }: BasicAuthSectionProps) {
             onSave={form.handleSubmit(onSubmit)}
             isSaving={updateOption.isPending}
           />
-          <FormField
-            control={form.control}
-            name='PasswordLoginEnabled'
-            render={({ field }) => (
-              <SettingsSwitchItem>
-                <SettingsSwitchContent>
-                  <FormLabel>{t('Password Login')}</FormLabel>
-                  <FormDescription>
-                    {t('Allow users to log in with password')}
-                  </FormDescription>
-                </SettingsSwitchContent>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </SettingsSwitchItem>
-            )}
-          />
 
-          <FormField
-            control={form.control}
-            name='RegisterEnabled'
-            render={({ field }) => (
-              <SettingsSwitchItem>
-                <SettingsSwitchContent>
-                  <FormLabel>{t('Registration Enabled')}</FormLabel>
-                  <FormDescription>
-                    {t('Allow new users to register')}
-                  </FormDescription>
-                </SettingsSwitchContent>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </SettingsSwitchItem>
-            )}
-          />
+          {/* Access switches are the ones an operator flips while running the
+              site; the email rules below are a set-once block and stay folded. */}
+          <SettingsClusterGroup defaultOpen={['access']}>
+            <SettingsCluster
+              value='access'
+              title={t('Sign-in and registration')}
+            >
+              <FormField
+                control={form.control}
+                name='PasswordLoginEnabled'
+                render={({ field }) => (
+                  <SettingsSwitchItem>
+                    <SettingsSwitchContent>
+                      <FormLabel>{t('Password Login')}</FormLabel>
+                      <FormDescription>
+                        {t('Allow users to log in with password')}
+                      </FormDescription>
+                    </SettingsSwitchContent>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </SettingsSwitchItem>
+                )}
+              />
 
-          <FormField
-            control={form.control}
-            name='PasswordRegisterEnabled'
-            render={({ field }) => (
-              <SettingsSwitchItem>
-                <SettingsSwitchContent>
-                  <FormLabel>{t('Password Registration')}</FormLabel>
-                  <FormDescription>
-                    {t('Allow registration with password')}
-                  </FormDescription>
-                </SettingsSwitchContent>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </SettingsSwitchItem>
-            )}
-          />
+              <FormField
+                control={form.control}
+                name='RegisterEnabled'
+                render={({ field }) => (
+                  <SettingsSwitchItem>
+                    <SettingsSwitchContent>
+                      <FormLabel>{t('Registration Enabled')}</FormLabel>
+                      <FormDescription>
+                        {t('Allow new users to register')}
+                      </FormDescription>
+                    </SettingsSwitchContent>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </SettingsSwitchItem>
+                )}
+              />
 
-          <SettingsGroupLabel>
-            {t('Email verification and restrictions')}
-          </SettingsGroupLabel>
+              <FormField
+                control={form.control}
+                name='PasswordRegisterEnabled'
+                render={({ field }) => (
+                  <SettingsSwitchItem>
+                    <SettingsSwitchContent>
+                      <FormLabel>{t('Password Registration')}</FormLabel>
+                      <FormDescription>
+                        {t('Allow registration with password')}
+                      </FormDescription>
+                    </SettingsSwitchContent>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </SettingsSwitchItem>
+                )}
+              />
+            </SettingsCluster>
 
-          <FormField
-            control={form.control}
-            name='EmailVerificationEnabled'
-            render={({ field }) => (
-              <SettingsSwitchItem>
-                <SettingsSwitchContent>
-                  <FormLabel>{t('Email Verification')}</FormLabel>
-                  <FormDescription>
-                    {t('Require email verification for new accounts')}
-                  </FormDescription>
-                </SettingsSwitchContent>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </SettingsSwitchItem>
-            )}
-          />
+            <SettingsCluster
+              value='email'
+              title={t('Email verification and restrictions')}
+            >
+              <FormField
+                control={form.control}
+                name='EmailVerificationEnabled'
+                render={({ field }) => (
+                  <SettingsSwitchItem>
+                    <SettingsSwitchContent>
+                      <FormLabel>{t('Email Verification')}</FormLabel>
+                      <FormDescription>
+                        {t('Require email verification for new accounts')}
+                      </FormDescription>
+                    </SettingsSwitchContent>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </SettingsSwitchItem>
+                )}
+              />
 
-          <FormField
-            control={form.control}
-            name='EmailDomainRestrictionEnabled'
-            render={({ field }) => (
-              <SettingsSwitchItem>
-                <SettingsSwitchContent>
-                  <FormLabel>{t('Email Domain Restriction')}</FormLabel>
-                  <FormDescription>
-                    {t('Only allow specific email domains')}
-                  </FormDescription>
-                </SettingsSwitchContent>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </SettingsSwitchItem>
-            )}
-          />
+              <FormField
+                control={form.control}
+                name='EmailDomainRestrictionEnabled'
+                render={({ field }) => (
+                  <SettingsSwitchItem>
+                    <SettingsSwitchContent>
+                      <FormLabel>{t('Email Domain Restriction')}</FormLabel>
+                      <FormDescription>
+                        {t('Only allow specific email domains')}
+                      </FormDescription>
+                    </SettingsSwitchContent>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </SettingsSwitchItem>
+                )}
+              />
 
-          <FormField
-            control={form.control}
-            name='EmailAliasRestrictionEnabled'
-            render={({ field }) => (
-              <SettingsSwitchItem>
-                <SettingsSwitchContent>
-                  <FormLabel>{t('Email Alias Restriction')}</FormLabel>
-                  <FormDescription>
-                    {t('Block email aliases (e.g., user+alias@domain.com)')}
-                  </FormDescription>
-                </SettingsSwitchContent>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </SettingsSwitchItem>
-            )}
-          />
+              <FormField
+                control={form.control}
+                name='EmailAliasRestrictionEnabled'
+                render={({ field }) => (
+                  <SettingsSwitchItem>
+                    <SettingsSwitchContent>
+                      <FormLabel>{t('Email Alias Restriction')}</FormLabel>
+                      <FormDescription>
+                        {t('Block email aliases (e.g., user+alias@domain.com)')}
+                      </FormDescription>
+                    </SettingsSwitchContent>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </SettingsSwitchItem>
+                )}
+              />
 
-          <FormField
-            control={form.control}
-            name='EmailDomainWhitelist'
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('Email Domain Whitelist')}</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder={t('example.com&#10;company.com')}
-                    rows={4}
-                    {...field}
-                  />
-                </FormControl>
-                <FormDescription>
-                  {t(
-                    'One domain per line (only used when domain restriction is enabled)'
-                  )}
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+              <FormField
+                control={form.control}
+                name='EmailDomainWhitelist'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Email Domain Whitelist')}</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder={t('example.com&#10;company.com')}
+                        rows={4}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t(
+                        'One domain per line (only used when domain restriction is enabled)'
+                      )}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </SettingsCluster>
+          </SettingsClusterGroup>
         </SettingsForm>
       </Form>
     </SettingsSection>

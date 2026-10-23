@@ -49,7 +49,38 @@ const getGroupDefaults = (settings: BillingSettings) => ({
     settings['group_ratio_setting.group_special_usable_group'],
 })
 
+/**
+ * Ordered by how often an operator touches each pane: pricing first (the daily
+ * job), then quota/currency (set once for a new site), then payment and
+ * check-in rewards.
+ */
 const BILLING_SECTIONS = [
+  {
+    id: 'model-pricing',
+    titleKey: 'Model Pricing',
+    layout: { width: 'wide' },
+    build: (settings: BillingSettings) => (
+      <RatioSettingsCard
+        titleKey='Model Pricing'
+        modelDefaults={getModelDefaults(settings)}
+        groupDefaults={getGroupDefaults(settings)}
+        visibleTabs={['models', 'unset-models']}
+      />
+    ),
+  },
+  {
+    id: 'group-pricing',
+    titleKey: 'Group Pricing',
+    layout: { width: 'wide' },
+    build: (settings: BillingSettings) => (
+      <RatioSettingsCard
+        titleKey='Group Pricing'
+        modelDefaults={getModelDefaults(settings)}
+        groupDefaults={getGroupDefaults(settings)}
+        visibleTabs={['groups']}
+      />
+    ),
+  },
   {
     id: 'quota',
     titleKey: 'Quota Settings',
@@ -97,30 +128,6 @@ const BILLING_SECTIONS = [
     ),
   },
   {
-    id: 'model-pricing',
-    titleKey: 'Model Pricing',
-    build: (settings: BillingSettings) => (
-      <RatioSettingsCard
-        titleKey='Model Pricing'
-        modelDefaults={getModelDefaults(settings)}
-        groupDefaults={getGroupDefaults(settings)}
-        visibleTabs={['models', 'unset-models']}
-      />
-    ),
-  },
-  {
-    id: 'group-pricing',
-    titleKey: 'Group Pricing',
-    build: (settings: BillingSettings) => (
-      <RatioSettingsCard
-        titleKey='Group Pricing'
-        modelDefaults={getModelDefaults(settings)}
-        groupDefaults={getGroupDefaults(settings)}
-        visibleTabs={['groups']}
-      />
-    ),
-  },
-  {
     id: 'payment',
     titleKey: 'Payment Gateway',
     build: (settings: BillingSettings) => (
@@ -149,6 +156,7 @@ const BILLING_SECTIONS = [
   {
     id: 'checkin',
     titleKey: 'Check-in Rewards',
+    layout: { density: 'compact' },
     build: (settings: BillingSettings) => (
       <CheckinSettingsSection
         defaultValues={{
@@ -168,7 +176,7 @@ const billingRegistry = createSectionRegistry<
   BillingSettings
 >({
   sections: BILLING_SECTIONS,
-  defaultSection: 'quota',
+  defaultSection: 'model-pricing',
   basePath: '/system-settings/billing',
   urlStyle: 'path',
 })

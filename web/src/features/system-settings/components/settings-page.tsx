@@ -25,6 +25,7 @@ import { SectionPageLayout } from '@/components/layout'
 
 import { useSystemOptions, getOptionValue } from '../hooks/use-system-options'
 import type { SystemOption } from '../types'
+import { resolveSettingsLayout, type SettingsLayoutHint } from '../utils/layout'
 import { SettingsPageProvider } from './settings-page-context'
 
 type SettingsPageProps<
@@ -42,6 +43,7 @@ type SettingsPageProps<
   ) => ReactNode
   getSectionMeta: (sectionId: TSectionId) => {
     titleKey: string
+    layout?: SettingsLayoutHint
   }
   extraArgs?: TExtraArgs
   loadingMessage?: string
@@ -54,6 +56,7 @@ type SettingsPageProps<
 type SettingsPageFrameProps = {
   title: ReactNode
   children: ReactNode
+  layout?: SettingsLayoutHint
 }
 
 function SettingsPageFrame(props: SettingsPageFrameProps) {
@@ -61,13 +64,18 @@ function SettingsPageFrame(props: SettingsPageFrameProps) {
     useState<HTMLDivElement | null>(null)
   const [titleStatusContainer, setTitleStatusContainer] =
     useState<HTMLSpanElement | null>(null)
+  // Width and form rhythm follow the declared weight of the pane: a two-switch
+  // page gets a single narrow column, a twenty-control page keeps the
+  // two-column grid it needs.
+  const { density, contentMaxWidth } = resolveSettingsLayout(props.layout)
 
   return (
     <SettingsPageProvider
       actionsContainer={actionsContainer}
       titleStatusContainer={titleStatusContainer}
+      density={density}
     >
-      <SectionPageLayout contentMaxWidth='max-w-[880px]'>
+      <SectionPageLayout contentMaxWidth={contentMaxWidth}>
         <SectionPageLayout.Title>
           <span className='inline-flex max-w-full min-w-0 items-center gap-2 align-middle'>
             <span className='truncate'>{props.title}</span>
@@ -134,7 +142,10 @@ export function SettingsPage<
 
   if (isLoading) {
     return (
-      <SettingsPageFrame title={t(sectionMeta.titleKey)}>
+      <SettingsPageFrame
+        title={t(sectionMeta.titleKey)}
+        layout={sectionMeta.layout}
+      >
         <div className='text-muted-foreground flex min-h-40 items-center justify-center text-sm'>
           {t(loadingMessage)}
         </div>
@@ -144,7 +155,10 @@ export function SettingsPage<
 
   if (isError && !data) {
     return (
-      <SettingsPageFrame title={t(sectionMeta.titleKey)}>
+      <SettingsPageFrame
+        title={t(sectionMeta.titleKey)}
+        layout={sectionMeta.layout}
+      >
         <ErrorState
           title={t('Failed to load settings')}
           onRetry={() => void refetch()}
@@ -160,7 +174,10 @@ export function SettingsPage<
   )
 
   return (
-    <SettingsPageFrame title={t(sectionMeta.titleKey)}>
+    <SettingsPageFrame
+      title={t(sectionMeta.titleKey)}
+      layout={sectionMeta.layout}
+    >
       {sectionContent}
     </SettingsPageFrame>
   )

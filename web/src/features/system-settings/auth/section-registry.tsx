@@ -42,6 +42,7 @@ const AUTH_SECTIONS = [
   {
     id: 'bot-protection',
     titleKey: 'Bot Protection',
+    layout: { density: 'compact' },
     build: (settings: AuthSettings) => (
       <BotProtectionSection
         defaultValues={{

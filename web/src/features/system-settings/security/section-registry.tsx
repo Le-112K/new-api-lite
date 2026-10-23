@@ -68,6 +68,7 @@ const SECURITY_SECTIONS = [
   {
     id: 'token-limits',
     titleKey: 'Token Limits',
+    layout: { density: 'compact' },
     build: (settings: SecuritySettings) => (
       <TokenLimitSection
         defaultValues={{

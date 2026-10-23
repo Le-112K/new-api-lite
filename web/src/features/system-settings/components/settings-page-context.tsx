@@ -29,16 +29,20 @@ import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 
+import type { SettingsDensity } from '../utils/layout'
+
 type SettingsPageContextValue = {
   actionsContainer: HTMLDivElement | null
   titleStatusContainer: HTMLSpanElement | null
   suppressSectionHeader: boolean
+  density: SettingsDensity
 }
 
 const SettingsPageContext = createContext<SettingsPageContextValue>({
   actionsContainer: null,
   titleStatusContainer: null,
   suppressSectionHeader: false,
+  density: 'regular',
 })
 
 type SettingsPageProviderProps = {
@@ -46,6 +50,7 @@ type SettingsPageProviderProps = {
   titleStatusContainer?: HTMLSpanElement | null
   children: ReactNode
   suppressSectionHeader?: boolean
+  density?: SettingsDensity
 }
 
 export function SettingsPageProvider(props: SettingsPageProviderProps) {
@@ -55,6 +60,7 @@ export function SettingsPageProvider(props: SettingsPageProviderProps) {
         actionsContainer: props.actionsContainer,
         titleStatusContainer: props.titleStatusContainer ?? null,
         suppressSectionHeader: props.suppressSectionHeader ?? true,
+        density: props.density ?? 'regular',
       }}
     >
       {props.children}
@@ -64,6 +70,14 @@ export function SettingsPageProvider(props: SettingsPageProviderProps) {
 
 export function useSuppressSettingsSectionHeader() {
   return useContext(SettingsPageContext).suppressSectionHeader
+}
+
+/**
+ * Page-level density, so shared form primitives can tighten their rhythm on
+ * panes that only hold a couple of controls.
+ */
+export function useSettingsDensity() {
+  return useContext(SettingsPageContext).density
 }
 
 type SettingsPageTitleStatusPortalProps = {

@@ -54,6 +54,10 @@ import { api } from '@/lib/api'
 import { handleServerError } from '@/lib/handle-server-error'
 
 import {
+  SettingsCluster,
+  SettingsClusterGroup,
+} from '../components/settings-cluster'
+import {
   SettingsForm,
   SettingsSwitchContent,
   SettingsSwitchItem,
@@ -331,212 +335,205 @@ export function PerformanceSection(props: Props) {
             onSave={form.handleSubmit(onSubmit)}
             isSaving={updateOption.isPending}
           />
-          {/* Disk Cache Settings */}
-          <div>
-            <h4 className='font-medium'>{t('Disk Cache Settings')}</h4>
-            <p className='text-muted-foreground mt-1 text-xs'>
-              {t(
+          <SettingsClusterGroup defaultOpen={['disk-cache', 'monitor']}>
+            <SettingsCluster
+              value='disk-cache'
+              title={t('Disk Cache Settings')}
+              description={t(
                 'When enabled, large request bodies are temporarily stored on disk instead of memory, significantly reducing memory usage. SSD recommended.'
               )}
-            </p>
-          </div>
-
-          <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
-            <FormField
-              control={form.control}
-              name='performance_setting.disk_cache_enabled'
-              render={({ field }) => (
-                <SettingsSwitchItem>
-                  <SettingsSwitchContent>
-                    <FormLabel>{t('Enable Disk Cache')}</FormLabel>
-                  </SettingsSwitchContent>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </SettingsSwitchItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='performance_setting.disk_cache_threshold_mb'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Disk Cache Threshold (MB)')}</FormLabel>
-                  <FormControl>
-                    <Input
-                      type='number'
-                      min={1}
-                      step={1}
-                      {...safeNumberFieldProps(field)}
-                      disabled={!diskEnabled}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    {t('Use disk cache when request body exceeds this size')}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='performance_setting.disk_cache_max_size_mb'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Max Disk Cache Size (MB)')}</FormLabel>
-                  <FormControl>
-                    <Input
-                      type='number'
-                      min={100}
-                      step={1}
-                      {...safeNumberFieldProps(field)}
-                      disabled={!diskEnabled}
-                    />
-                  </FormControl>
-                  {stats?.disk_space_info &&
-                    stats.disk_space_info.total > 0 && (
-                      <FormDescription>
-                        {t('Free: {{free}} / Total: {{total}}', {
-                          free: formatBytes(stats.disk_space_info.free),
-                          total: formatBytes(stats.disk_space_info.total),
-                        })}
-                      </FormDescription>
-                    )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          {lowDiskSpace && (
-            <Alert variant='destructive'>
-              <AlertDescription>
-                {`${t('Warning')}: ${t('Available disk space')} (${formatBytes(stats?.disk_space_info?.free ?? 0)}) ${t('is less than the configured maximum cache size')} (${maxCacheSizeMb} MB). ${t('This may cause cache failures.')}`}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {!stats?.config?.is_running_in_container && (
-            <FormField
-              control={form.control}
-              name='performance_setting.disk_cache_path'
-              render={({ field }) => (
-                <FormItem className='max-w-md'>
-                  <FormLabel>{t('Cache Directory')}</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder={t(
-                        'Leave empty to use system temp directory'
+            >
+              <FormField
+                control={form.control}
+                name='performance_setting.disk_cache_enabled'
+                render={({ field }) => (
+                  <SettingsSwitchItem>
+                    <SettingsSwitchContent>
+                      <FormLabel>{t('Enable Disk Cache')}</FormLabel>
+                    </SettingsSwitchContent>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </SettingsSwitchItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='performance_setting.disk_cache_threshold_mb'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Disk Cache Threshold (MB)')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type='number'
+                        min={1}
+                        step={1}
+                        {...safeNumberFieldProps(field)}
+                        disabled={!diskEnabled}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t('Use disk cache when request body exceeds this size')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='performance_setting.disk_cache_max_size_mb'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Max Disk Cache Size (MB)')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type='number'
+                        min={100}
+                        step={1}
+                        {...safeNumberFieldProps(field)}
+                        disabled={!diskEnabled}
+                      />
+                    </FormControl>
+                    {stats?.disk_space_info &&
+                      stats.disk_space_info.total > 0 && (
+                        <FormDescription>
+                          {t('Free: {{free}} / Total: {{total}}', {
+                            free: formatBytes(stats.disk_space_info.free),
+                            total: formatBytes(stats.disk_space_info.total),
+                          })}
+                        </FormDescription>
                       )}
-                      value={field.value ?? ''}
-                      onChange={(event) => field.onChange(event.target.value)}
-                      name={field.name}
-                      onBlur={field.onBlur}
-                      ref={field.ref}
-                      disabled={!diskEnabled}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {lowDiskSpace && (
+                <Alert variant='destructive'>
+                  <AlertDescription>
+                    {`${t('Warning')}: ${t('Available disk space')} (${formatBytes(stats?.disk_space_info?.free ?? 0)}) ${t('is less than the configured maximum cache size')} (${maxCacheSizeMb} MB). ${t('This may cause cache failures.')}`}
+                  </AlertDescription>
+                </Alert>
               )}
-            />
-          )}
 
-          <Separator />
+              {!stats?.config?.is_running_in_container && (
+                <FormField
+                  control={form.control}
+                  name='performance_setting.disk_cache_path'
+                  render={({ field }) => (
+                    <FormItem className='max-w-md'>
+                      <FormLabel>{t('Cache Directory')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t(
+                            'Leave empty to use system temp directory'
+                          )}
+                          value={field.value ?? ''}
+                          onChange={(event) =>
+                            field.onChange(event.target.value)
+                          }
+                          name={field.name}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                          disabled={!diskEnabled}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </SettingsCluster>
 
-          {/* System Performance Monitor */}
-          <div>
-            <h4 className='font-medium'>
-              {t('System Performance Monitoring')}
-            </h4>
-            <p className='text-muted-foreground mt-1 text-xs'>
-              {t(
+            <SettingsCluster
+              value='monitor'
+              title={t('System Performance Monitoring')}
+              description={t(
                 'When performance monitoring is enabled and system resource usage exceeds the set threshold, new Relay requests will be rejected.'
               )}
-            </p>
-          </div>
-
-          <div className='grid grid-cols-1 gap-4 md:grid-cols-4'>
-            <FormField
-              control={form.control}
-              name='performance_setting.monitor_enabled'
-              render={({ field }) => (
-                <SettingsSwitchItem>
-                  <SettingsSwitchContent>
-                    <FormLabel>{t('Enable Performance Monitoring')}</FormLabel>
-                  </SettingsSwitchContent>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </SettingsSwitchItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='performance_setting.monitor_cpu_threshold'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('CPU Threshold (%)')}</FormLabel>
-                  <FormControl>
-                    <Input
-                      type='number'
-                      min={0}
-                      step={1}
-                      {...safeNumberFieldProps(field)}
-                      disabled={!monitorEnabled}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='performance_setting.monitor_memory_threshold'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Memory Threshold (%)')}</FormLabel>
-                  <FormControl>
-                    <Input
-                      type='number'
-                      min={0}
-                      max={100}
-                      step={1}
-                      {...safeNumberFieldProps(field)}
-                      disabled={!monitorEnabled}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='performance_setting.monitor_disk_threshold'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Disk Threshold (%)')}</FormLabel>
-                  <FormControl>
-                    <Input
-                      type='number'
-                      min={0}
-                      max={100}
-                      step={1}
-                      {...safeNumberFieldProps(field)}
-                      disabled={!monitorEnabled}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+            >
+              <FormField
+                control={form.control}
+                name='performance_setting.monitor_enabled'
+                render={({ field }) => (
+                  <SettingsSwitchItem>
+                    <SettingsSwitchContent>
+                      <FormLabel>
+                        {t('Enable Performance Monitoring')}
+                      </FormLabel>
+                    </SettingsSwitchContent>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </SettingsSwitchItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='performance_setting.monitor_cpu_threshold'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('CPU Threshold (%)')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type='number'
+                        min={0}
+                        step={1}
+                        {...safeNumberFieldProps(field)}
+                        disabled={!monitorEnabled}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='performance_setting.monitor_memory_threshold'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Memory Threshold (%)')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type='number'
+                        min={0}
+                        max={100}
+                        step={1}
+                        {...safeNumberFieldProps(field)}
+                        disabled={!monitorEnabled}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='performance_setting.monitor_disk_threshold'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Disk Threshold (%)')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type='number'
+                        min={0}
+                        max={100}
+                        step={1}
+                        {...safeNumberFieldProps(field)}
+                        disabled={!monitorEnabled}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </SettingsCluster>
+          </SettingsClusterGroup>
         </SettingsForm>
       </Form>
 

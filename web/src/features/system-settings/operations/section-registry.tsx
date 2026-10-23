@@ -24,18 +24,11 @@ import type { OperationsSettings } from '../types'
 import { createSectionRegistry } from '../utils/section-registry'
 import { SystemTasksPanel } from './system-tasks/system-tasks-panel'
 
+/**
+ * Ordered by operational frequency: mail delivery and scheduled tasks are what
+ * an operator actually opens, the sidebar preference sits last.
+ */
 const OPERATIONS_SECTIONS = [
-  {
-    id: 'behavior',
-    titleKey: 'System Behavior',
-    build: (settings: OperationsSettings) => (
-      <SystemBehaviorSection
-        defaultValues={{
-          DefaultCollapseSidebar: settings.DefaultCollapseSidebar,
-        }}
-      />
-    ),
-  },
   {
     id: 'email',
     titleKey: 'SMTP Email',
@@ -56,8 +49,15 @@ const OPERATIONS_SECTIONS = [
     ),
   },
   {
+    id: 'tasks',
+    titleKey: 'System Tasks',
+    layout: { width: 'wide' },
+    build: () => <SystemTasksPanel />,
+  },
+  {
     id: 'logs',
     titleKey: 'Log Maintenance',
+    layout: { density: 'compact' },
     build: (settings: OperationsSettings) => (
       <LogSettingsSection
         defaultEnabled={Boolean(settings.LogConsumeEnabled)}
@@ -91,9 +91,16 @@ const OPERATIONS_SECTIONS = [
     ),
   },
   {
-    id: 'tasks',
-    titleKey: 'System Tasks',
-    build: () => <SystemTasksPanel />,
+    id: 'behavior',
+    titleKey: 'System Behavior',
+    layout: { density: 'compact' },
+    build: (settings: OperationsSettings) => (
+      <SystemBehaviorSection
+        defaultValues={{
+          DefaultCollapseSidebar: settings.DefaultCollapseSidebar,
+        }}
+      />
+    ),
   },
 ] as const
 
@@ -104,7 +111,7 @@ const operationsRegistry = createSectionRegistry<
   OperationsSettings
 >({
   sections: OPERATIONS_SECTIONS,
-  defaultSection: 'behavior',
+  defaultSection: 'email',
   basePath: '/system-settings/operations',
   urlStyle: 'path',
 })

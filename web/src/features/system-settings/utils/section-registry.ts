@@ -19,12 +19,20 @@ For commercial licensing, please contact support@quantumnous.com
 import type { TFunction } from 'i18next'
 import type { ReactNode } from 'react'
 
+import type { SettingsLayoutHint } from './layout'
+
 /**
  * Section definition for settings pages
  */
 export type SectionDefinition<TSettings, TExtraArgs extends unknown[] = []> = {
   id: string
   titleKey: string
+  /**
+   * Optional layout hint. Panes with a handful of controls declare `compact`
+   * so the shell narrows to a single column; table-shaped panes declare
+   * `wide`. Omitted means the default two-column grid.
+   */
+  layout?: SettingsLayoutHint
   build: (settings: TSettings, ...extraArgs: TExtraArgs) => ReactNode
 }
 

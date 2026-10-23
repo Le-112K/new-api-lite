@@ -22,7 +22,23 @@ import type { RequestPolicySettings } from './defaults'
 import { RequestChecksSection } from './request-checks-section'
 import { RoutingPolicySection } from './routing-section'
 
+/**
+ * Ordered by operational frequency: session/retry policy and channel health are
+ * touched while running the gateway, the sensitive-word filter is set once.
+ */
 const POLICY_SECTIONS = [
+  {
+    id: 'routing',
+    titleKey: 'Sessions and retries',
+    build: () => <RoutingPolicySection />,
+  },
+  {
+    id: 'health',
+    titleKey: 'Channel health',
+    build: (settings: RequestPolicySettings) => (
+      <ChannelHealthSection defaultValues={settings} />
+    ),
+  },
   {
     id: 'filtering',
     titleKey: 'Request checks',
@@ -34,18 +50,6 @@ const POLICY_SECTIONS = [
           SensitiveWords: settings.SensitiveWords,
         }}
       />
-    ),
-  },
-  {
-    id: 'routing',
-    titleKey: 'Sessions and retries',
-    build: () => <RoutingPolicySection />,
-  },
-  {
-    id: 'health',
-    titleKey: 'Channel health',
-    build: (settings: RequestPolicySettings) => (
-      <ChannelHealthSection defaultValues={settings} />
     ),
   },
 ] as const
