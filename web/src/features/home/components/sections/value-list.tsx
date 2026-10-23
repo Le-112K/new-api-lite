@@ -60,22 +60,26 @@ export function ValueList() {
       ),
     },
     {
-      label: t('Your server, your data'),
+      label: t('One allowance'),
       body: t(
-        'Self-hosted by design: requests, logs and billing never leave the machine you deploy on, and there is no upstream account to share.'
+        'One monthly quota per account, shared by every model and every key. No daily or weekly caps unless the operator sets them, and self-hosted means none of it leaves your machine.'
       ),
-      example: <Mono>docker compose up -d</Mono>,
+      example: (
+        <>
+          <Mono>quota</Mono>
+          <Mono>rate limit</Mono>
+        </>
+      ),
     },
     {
-      label: t('Usage you can audit'),
+      label: t('One bill'),
       body: t(
-        'Every request records its tokens, latency, channel and cost. Filter by user or by token, and export when finance asks.'
+        'One invoice instead of one per vendor. Every request records its tokens, latency, channel and cost, so a line on the bill can always be traced back to a line in the log.'
       ),
       example: (
         <>
           <Mono>logs</Mono>
-          <Mono>quota</Mono>
-          <Mono>channel</Mono>
+          <Mono>usage</Mono>
         </>
       ),
     },
@@ -87,7 +91,7 @@ export function ValueList() {
         label={t('Why a gateway')}
         title={t('One account instead of one per provider')}
         lede={t(
-          'Separate accounts, keys and invoices for every AI lab is the problem this software exists to solve. This is what replaces them.'
+          'No separate accounts, keys and invoices for each AI lab. This is what you get instead.'
         )}
       />
 

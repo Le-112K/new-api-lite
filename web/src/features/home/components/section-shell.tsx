@@ -59,6 +59,10 @@ export function SectionHeading(props: {
   lede?: string
   action?: ReactNode
   className?: string
+  /** The reference sets the catalog heading at 28px and the other four at 44px;
+       that difference is what keeps the catalog looking like a table caption
+      rather than a second hero. */
+  compact?: boolean
 }) {
   return (
     <div
@@ -67,11 +71,18 @@ export function SectionHeading(props: {
         props.className
       )}
     >
-      <div className='max-w-[36rem]'>
+      <div className='max-w-[44rem]'>
         <p className='mb-3 text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase'>
           {props.label}
         </p>
-        <h2 className='lp-display text-[clamp(1.75rem,3vw,2.75rem)] leading-[1.15] font-semibold text-foreground'>
+        <h2
+          className={cn(
+            'lp-display font-semibold text-foreground',
+            props.compact
+              ? 'text-[clamp(1.25rem,1.9vw,1.75rem)] leading-[1.25] tracking-[-0.02em]'
+              : 'text-[clamp(1.75rem,3vw,2.75rem)] leading-[1.15]'
+          )}
+        >
           {props.title}
         </h2>
         {props.lede ? (

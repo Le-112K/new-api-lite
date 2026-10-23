@@ -49,8 +49,8 @@ export function CTA(props: CTAProps) {
       <div className='mx-auto flex w-full max-w-[1424px] flex-col items-start gap-8 px-6 py-14 md:flex-row md:items-center md:justify-between md:px-12 md:py-20'>
         <div>
           <h2 className='lp-display max-w-[34rem] text-[clamp(1.75rem,3vw,2.75rem)] leading-[1.15] font-semibold'>
-            <span className='block'>{t('Send your first request,')}</span>
-            <span className='block'>{t('it takes two environment variables.')}</span>
+            <span className='block'>{t('Start with any model.')}</span>
+            <span className='block'>{t('Change it whenever you like.')}</span>
           </h2>
           <p className='mt-4 text-[16px] leading-[1.6] text-background/55'>
             {t('Choose a model, create a key, and point your tools at the gateway.')}
@@ -72,7 +72,7 @@ export function CTA(props: CTAProps) {
                 className='h-12 rounded-lg bg-background px-5 text-[15px] font-medium text-foreground hover:bg-background/90'
                 render={<Link to='/pricing' />}
               >
-                {t('Browse the models')}
+                {t('Get started')}
                 <ArrowRight className='ml-1 size-4' aria-hidden />
               </Button>
               <Button
@@ -86,7 +86,7 @@ export function CTA(props: CTAProps) {
                   />
                 }
               >
-                {t('Deployment guide')}
+                {t('Read the docs')}
               </Button>
             </>
           )}

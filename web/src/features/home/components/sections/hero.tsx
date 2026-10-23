@@ -88,20 +88,26 @@ export function Hero(props: HeroProps) {
               is nine characters wide and needs 540px at 60px type, which 467px
               cannot give without breaking the line after five characters. */}
           <div>
-            <h1 className='lp-display text-[clamp(2.4rem,3.9vw,3.75rem)] leading-[1.05] font-semibold text-foreground'>
-              <span className='block'>{t('One API,')}</span>
-              <span className='block'>{t('The models you use')}</span>
+            <h1 className='lp-display text-[clamp(2.3rem,3.6vw,3.4rem)] leading-[1.06] font-semibold text-foreground'>
+              <span className='block'>{t('One API key,')}</span>
+              <span className='block'>{t('For every model you run.')}</span>
             </h1>
 
+            {/* Two sentences on two lines, like the reference: CJK has no word
+                boundaries, so a soft wrap here lands in the middle of a phrase
+                and leaves a two-character orphan on the last line. */}
             <p className='mt-5 text-[18px] leading-[1.62] text-muted-foreground'>
-              {t(
-                'Point Claude Code, Codex CLI or your own code at this gateway. Claude, GPT, Gemini, DeepSeek and Qwen answer on one key and one bill.'
-              )}
+              <span className='block'>
+                {t('Point Claude Code, Codex CLI or your own code at this gateway.')}
+              </span>
+              <span className='block'>
+                {t('Claude, GPT, Gemini, DeepSeek and Qwen run on a single key and one invoice.')}
+              </span>
             </p>
 
             <div className='mt-7 flex flex-wrap items-center gap-3'>
-              {renderCta(`${docsBase}/zh/docs/installation`, t('Deployment options'), true)}
-              {renderCta(`${docsBase}/zh/docs/api`, t('API reference'), false)}
+              {renderCta('/pricing', t('See pricing'), true)}
+              {renderCta(`${docsBase}/zh/docs`, t('Read the docs'), false)}
             </div>
 
             {/* Hairline + micro bullets: the reference's way of adding three
@@ -111,7 +117,7 @@ export function Hero(props: HeroProps) {
                 {[
                   t('OpenAI- and Anthropic-compatible endpoints'),
                   t('Works with Cherry Studio, Claude Code and Codex CLI'),
-                  t('Cancel any time — or self-host and pay no subscription'),
+                  t('Self-host in one command, no subscription'),
                 ].map((line) => (
                   <li
                     key={line}
@@ -134,7 +140,7 @@ export function Hero(props: HeroProps) {
                 <span className='rounded-md border border-border px-1.5 py-0.5 text-[11px] font-semibold text-foreground'>
                   {t('Open source')}
                 </span>
-                {t('Self-host in one command, no subscription')}
+                {t('Deploy on your own server, no per-seat fee')}
                 <ArrowRight className='size-3.5' aria-hidden />
               </a>
             </div>

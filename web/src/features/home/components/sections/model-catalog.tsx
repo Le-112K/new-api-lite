@@ -65,21 +65,32 @@ export function ModelCatalog() {
 
   const shown = models.slice(0, SHOWCASE_LIMIT)
   const remaining = models.length - shown.length
+  /* Families come from the vendor list, not from `vendor_name` on each model —
+     that field is not always filled in, and counting it would print "0". */
+  const vendorCount = data?.vendors?.length ?? 0
 
   return (
     <SectionShell id='models'>
       <SectionHeading
+        compact
         label={t('Models')}
-        title={t('Every model you have switched on, in one catalog')}
+        title={
+          vendorCount > 0
+            ? t('{{models}} models from {{vendors}} families, on one API key.', {
+                models: models.length,
+                vendors: vendorCount,
+              })
+            : t('{{models}} models, on one API key.', { models: models.length })
+        }
         lede={t(
-          'The list is read from the live catalog, so a model you enable or retire in the console shows up here without touching the site.'
+          'Read from the live catalog — enable or retire a model in the console and this list follows.'
         )}
         action={
           <Link
             to='/pricing'
             className='group inline-flex items-center gap-1.5 text-[13.5px] font-medium text-foreground'
           >
-            {t('All models and prices')}
+            {t('All models')}
             <ArrowRight
               className='size-3.5 transition-transform group-hover:translate-x-0.5'
               aria-hidden

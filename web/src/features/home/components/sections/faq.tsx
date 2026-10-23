@@ -70,7 +70,7 @@ export function Faq() {
       <SectionHeading
         label={t('Questions')}
         title={t('Questions')}
-        lede={t('Something else? The documentation covers the rest.')}
+        lede={t('Something else? The documentation covers the rest of it.')}
       />
 
       <div className='border-t border-border'>

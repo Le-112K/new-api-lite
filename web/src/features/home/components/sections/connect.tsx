@@ -61,11 +61,11 @@ export function Connect() {
             {t('Setup')}
           </p>
           <h2 className='lp-display text-[clamp(1.75rem,3vw,2.75rem)] leading-[1.15] font-semibold text-foreground'>
-            {t('Change two settings. Keep your tools.')}
+            {t('Keep your tools. Change two settings.')}
           </h2>
           <p className='mt-4 max-w-[30rem] text-[16px] leading-[1.62] text-muted-foreground'>
             {t(
-              'Claude Code, Codex CLI, Cursor and the official SDKs all read a base URL and a key. Point them here and every model answers on the same key.'
+              'Claude Code, Codex CLI, Cursor and the official SDKs all read a base URL and an API key. Point them here, and every model answers on the same key.'
             )}
           </p>
 
