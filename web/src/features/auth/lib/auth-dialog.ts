@@ -24,7 +24,7 @@ For commercial licensing, please contact support@quantumnous.com
  * the back button honest. That is also why the tab is part of the same param —
  * `auth` names both "is it open" and "which pane".
  */
-export type AuthDialogMode = 'sign-in' | 'sign-up'
+export type AuthDialogMode = 'sign-in' | 'sign-up' | 'forgot-password'
 
 export type AuthDialogState = {
   open: boolean
@@ -38,11 +38,13 @@ const REDIRECT_PARAM = 'redirect'
 const MODE_TO_PARAM: Record<AuthDialogMode, string> = {
   'sign-in': 'signin',
   'sign-up': 'signup',
+  'forgot-password': 'forgot',
 }
 
 const PARAM_TO_MODE: Record<string, AuthDialogMode> = {
   signin: 'sign-in',
   signup: 'sign-up',
+  forgot: 'forgot-password',
 }
 
 export function parseAuthDialogState(search: string): AuthDialogState {
@@ -73,6 +75,10 @@ export function buildAuthDialogClosedHref(
 ): string {
   const params = new URLSearchParams(search)
   params.delete(AUTH_PARAM)
+  // `redirect` only means something while the dialog is open; leaving it behind
+  // litters the URL after close and makes a later open look like it came from
+  // a different page.
+  params.delete(REDIRECT_PARAM)
   return withQuery(pathname, params)
 }
 

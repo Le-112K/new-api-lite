@@ -52,8 +52,16 @@ import { cn } from '@/lib/utils'
 export function UserAuthForm({
   className,
   redirectTo,
+  onForgotPassword,
   ...props
-}: AuthFormProps) {
+}: AuthFormProps & {
+  /**
+   * In-dialog behaviour for the "forgot password" affordance. When provided the
+   * link becomes a button that switches the dialog pane; standalone pages keep
+   * the route link.
+   */
+  onForgotPassword?: () => void
+}) {
   const { t } = useTranslation()
   const [isLoading, setIsLoading] = useState(false)
   const [agreedToLegal, setAgreedToLegal] = useState(false)
@@ -180,12 +188,22 @@ export function UserAuthForm({
                 />
               </FormControl>
               <FormMessage />
-              <Link
-                to='/forgot-password'
-                className='text-muted-foreground absolute end-0 -top-0.5 z-10 text-sm font-medium hover:opacity-75'
-              >
-                {t('Forgot password?')}
-              </Link>
+              {onForgotPassword ? (
+                <button
+                  type='button'
+                  onClick={onForgotPassword}
+                  className='text-muted-foreground hover:text-foreground absolute end-0 -top-0.5 z-10 text-sm font-medium transition-colors'
+                >
+                  {t('Forgot password?')}
+                </button>
+              ) : (
+                <Link
+                  to='/forgot-password'
+                  className='text-muted-foreground hover:text-foreground absolute end-0 -top-0.5 z-10 text-sm font-medium transition-colors'
+                >
+                  {t('Forgot password?')}
+                </Link>
+              )}
             </FormItem>
           )}
         />

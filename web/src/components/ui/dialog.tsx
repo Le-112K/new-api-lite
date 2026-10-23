@@ -48,7 +48,11 @@ function DialogOverlay({
     <DialogPrimitive.Backdrop
       data-slot='dialog-overlay'
       className={cn(
-        'data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs',
+        // No `backdrop-blur` here: Chromium keeps a filtered backdrop's blur
+        // applied for a few frames after the element starts fading, so closing
+        // any dialog left the whole page smeared and then snapped sharp — a
+        // visible one-frame flash. A plain tint fades out cleanly.
+        'data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 fixed inset-0 isolate z-50 bg-black/10 duration-150',
         className
       )}
       {...props}

@@ -50,8 +50,15 @@ import { cn } from '@/lib/utils'
 
 export function SignUpForm({
   className,
+  onSuccess,
   ...props
-}: React.HTMLAttributes<HTMLFormElement>) {
+}: React.HTMLAttributes<HTMLFormElement> & {
+  /**
+   * In-dialog success behaviour: the dialog switches back to the sign-in pane
+   * instead of leaving for the standalone /sign-in route.
+   */
+  onSuccess?: () => void
+}) {
   const { t } = useTranslation()
   const [isLoading, setIsLoading] = useState(false)
   const [verificationCode, setVerificationCode] = useState('')
@@ -135,7 +142,11 @@ export function SignUpForm({
 
       if (res?.success) {
         toast.success(t('Account created! Please sign in'))
-        redirectToLogin()
+        if (onSuccess) {
+          onSuccess()
+        } else {
+          redirectToLogin()
+        }
       } else {
         handleServerError(createServerError(res, t('Failed to create account')))
       }

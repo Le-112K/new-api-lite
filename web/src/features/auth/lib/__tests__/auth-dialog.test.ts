@@ -44,6 +44,11 @@ describe('auth dialog URL state', () => {
       mode: 'sign-up',
       redirectTo: '/dashboard',
     })
+    expect(parseAuthDialogState('?auth=forgot')).toEqual({
+      open: true,
+      mode: 'forgot-password',
+      redirectTo: undefined,
+    })
   })
 
   test('ignores an unknown auth value instead of opening the dialog', () => {
@@ -58,13 +63,17 @@ describe('auth dialog URL state', () => {
     expect(buildAuthDialogHref('/', '?foo=1', 'sign-up')).toBe(
       '/?foo=1&auth=signup'
     )
+    expect(buildAuthDialogHref('/', '', 'forgot-password')).toBe(
+      '/?auth=forgot'
+    )
   })
 
-  test('closing drops only the auth parameter and keeps the destination', () => {
+  test('closing drops the auth parameter and the stale destination', () => {
     expect(buildAuthDialogClosedHref('/', '?auth=signin')).toBe('/')
     expect(
       buildAuthDialogClosedHref('/', '?auth=signin&redirect=%2Fdashboard')
-    ).toBe('/?redirect=%2Fdashboard')
+    ).toBe('/')
+    expect(buildAuthDialogClosedHref('/', '?foo=1&auth=forgot')).toBe('/?foo=1')
   })
 
   test('a built href round-trips back through the parser', () => {
