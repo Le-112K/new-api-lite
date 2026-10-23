@@ -4297,6 +4297,8 @@
     "Point Claude Code, Codex CLI or your own code at this gateway.": "Point Claude Code, Codex CLI or your own code at this gateway.",
     "Claude, GPT, Gemini, DeepSeek and Qwen run on a single key and one invoice.": "Claude, GPT, Gemini, DeepSeek and Qwen run on a single key and one invoice.",
     "One monthly quota per account, shared by every model and every key. No daily or weekly caps unless the operator sets them, and self-hosted means none of it leaves your machine.": "One monthly quota per account, shared by every model and every key. No daily or weekly caps unless the operator sets them, and self-hosted means none of it leaves your machine.",
-    "One invoice instead of one per vendor. Every request records its tokens, latency, channel and cost, so a line on the bill can always be traced back to a line in the log.": "One invoice instead of one per vendor. Every request records its tokens, latency, channel and cost, so a line on the bill can always be traced back to a line in the log."
+    "One invoice instead of one per vendor. Every request records its tokens, latency, channel and cost, so a line on the bill can always be traced back to a line in the log.": "One invoice instead of one per vendor. Every request records its tokens, latency, channel and cost, so a line on the bill can always be traced back to a line in the log.",
+    "Claude, GPT, Gemini, DeepSeek and Qwen,": "Claude, GPT, Gemini, DeepSeek and Qwen,",
+    "on a single key and one invoice.": "on a single key and one invoice."
   }
 }

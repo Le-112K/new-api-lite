@@ -4297,6 +4297,8 @@
     "Point Claude Code, Codex CLI or your own code at this gateway.": "把 Claude Code、Codex CLI 或你自己的代码指向这个网关。",
     "Claude, GPT, Gemini, DeepSeek and Qwen run on a single key and one invoice.": "Claude、GPT、Gemini、DeepSeek、通义千问，共用一把 key、一张账单。",
     "One monthly quota per account, shared by every model and every key. No daily or weekly caps unless the operator sets them, and self-hosted means none of it leaves your machine.": "每个账号一份月度额度，所有模型、所有 key 共用。不设每日或每周上限（除非部署者自己设），自托管则数据不出你的机器。",
-    "One invoice instead of one per vendor. Every request records its tokens, latency, channel and cost, so a line on the bill can always be traced back to a line in the log.": "一张账单，而不是每家供应商各一张。每次请求都记录 token、耗时、渠道和费用，账单上的每一行都能追回日志里的那一行。"
+    "One invoice instead of one per vendor. Every request records its tokens, latency, channel and cost, so a line on the bill can always be traced back to a line in the log.": "一张账单，而不是每家供应商各一张。每次请求都记录 token、耗时、渠道和费用，账单上的每一行都能追回日志里的那一行。",
+    "Claude, GPT, Gemini, DeepSeek and Qwen,": "Claude、GPT、Gemini、DeepSeek、通义千问，",
+    "on a single key and one invoice.": "共用一把 key、一张账单。"
   }
 }

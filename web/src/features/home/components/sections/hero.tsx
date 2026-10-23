@@ -100,8 +100,14 @@ export function Hero(props: HeroProps) {
               <span className='block'>
                 {t('Point Claude Code, Codex CLI or your own code at this gateway.')}
               </span>
+              {/* Third line split by hand: at 18px the model list + benefit
+                  sentence is ~607px and the copy column is 553px, so a soft wrap
+                  drops 「张账单。」 alone on a fourth line. */}
               <span className='block'>
-                {t('Claude, GPT, Gemini, DeepSeek and Qwen run on a single key and one invoice.')}
+                {t('Claude, GPT, Gemini, DeepSeek and Qwen,')}
+              </span>
+              <span className='block'>
+                {t('on a single key and one invoice.')}
               </span>
             </p>
 
