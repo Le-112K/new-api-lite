@@ -20,7 +20,7 @@ import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { Skeleton } from '@/components/ui/skeleton'
-import { ApertureGlobe } from '@/features/home/components/aperture-globe'
+import { ApertureGlobe } from '@/features/auth/components/aperture-globe'
 import { useSystemConfig } from '@/hooks/use-system-config'
 import { cn } from '@/lib/utils'
 

@@ -17,5 +17,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 export { CTA } from './sections/cta'
+export { Connect } from './sections/connect'
+export { Faq } from './sections/faq'
 export { Hero } from './sections/hero'
-export { ProvidersMarquee } from './sections/providers-marquee'
+export { ModelCatalog } from './sections/model-catalog'
+export { ValueList } from './sections/value-list'

@@ -20,13 +20,13 @@ import { useTranslation } from 'react-i18next'
 
 import { Footer } from '@/components/layout/components/footer'
 import { Skeleton } from '@/components/ui/skeleton'
-import { HeroBackdrop } from '@/features/home/components/hero-backdrop'
+import { HeroBackdrop } from '@/features/auth/components/hero-backdrop'
 import { useSystemConfig } from '@/hooks/use-system-config'
 import { cn } from '@/lib/utils'
 
 import { AuthBrandMark, AuthVisualPanel } from './components/auth-visual-panel'
 
-import '@/features/home/components/hero.css'
+import '@/features/auth/components/hero.css'
 
 type AuthLayoutProps = {
   children: React.ReactNode

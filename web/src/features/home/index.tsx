@@ -26,7 +26,7 @@ import { useTheme } from '@/context/theme-provider'
 import { isLikelyHtml } from '@/lib/content-format'
 import { useAuthStore } from '@/stores/auth-store'
 
-import { CTA, Hero, ProvidersMarquee } from './components'
+import { CTA, Connect, Faq, Hero, ModelCatalog, ValueList } from './components'
 import { useHomePageContent } from './hooks'
 
 export function Home() {
@@ -122,13 +122,17 @@ export function Home() {
 
   return (
     <PublicLayout showMainContainer={false}>
-      {/* The approved landing design is deliberately short: hero (with the
-          globe and the terminal), a provider strip, then a single closing CTA.
-          The stats / features / how-it-works sections that used to sit between
-          them were not part of that design and have been removed — they also
-          carried internal design rationale rendered as user-facing copy. */}
+      {/* The landing page is a claim followed by four pieces of evidence:
+          hero (what it is + the two export lines), the live catalog, the setup
+          block, the four promises, the questions, then one ask. The rotating
+          globe and the provider marquee that used to sit here were replaced by
+          the console and the catalog — a marketing page for a gateway has to
+          show the request, not an illustration of the world. */}
       <Hero isAuthenticated={isAuthenticated} />
-      <ProvidersMarquee />
+      <ModelCatalog />
+      <Connect />
+      <ValueList />
+      <Faq />
       <CTA isAuthenticated={isAuthenticated} />
       <Footer />
     </PublicLayout>

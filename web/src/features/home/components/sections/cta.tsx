@@ -16,9 +16,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
-import { AnimateInView } from '@/components/animate-in-view'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -27,68 +27,66 @@ interface CTAProps {
   isAuthenticated?: boolean
 }
 
+/**
+ * Closing block.
+ *
+ * The previous version wrapped the ask in a 500px-tall black card with a
+ * gradient, which competed with the hero for attention at the exact moment the
+ * page should be quiet. It is now the same two-column rhythm as every other
+ * block — claim on the left, actions on the right — so the page ends instead of
+ * restarting.
+ *
+ * Signed-in visitors get the only action that is useful to them: go to the
+ * console. Previously the whole block disappeared, which left a signed-in
+ * reader with no exit at the bottom of a long page.
+ */
 export function CTA(props: CTAProps) {
   const { t } = useTranslation()
 
-  if (props.isAuthenticated) {
-    return null
-  }
-
   return (
     <section
-      className={cn('relative z-10 bg-background py-[72px] md:py-28', props.className)}
+      className={cn('relative border-t border-border bg-background', props.className)}
     >
-      <div className='mx-auto w-full max-w-[1200px] px-6 md:px-12'>
-        <AnimateInView animation='fade-up'>
-          <div className='relative overflow-hidden rounded-2xl bg-[#0A0A0A] px-8 py-[72px] shadow-[0_24px_64px_rgba(0,0,0,0.14),0_4px_12px_rgba(0,0,0,0.06)] md:rounded-3xl md:px-12 md:py-24 dark:bg-card dark:shadow-[inset_0_0_0_1px_var(--hairline)]'>
-            <div
-              aria-hidden='true'
-              className='pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_50%_0%,rgba(255,255,255,0.07),transparent_60%)]'
-            />
-            <div className='relative mx-auto max-w-[720px] text-center'>
-              <h2 className='mb-5 text-[clamp(2.5rem,5.2vw,4.5rem)] leading-[1.04] font-bold text-white'>
-                <span className='block'>{t('Deploy Aperture,')}</span>
-                <span className='block font-normal text-white/55'>
-                  {t('Connect your AI apps')}
-                </span>
-              </h2>
-              <p className='mx-auto mb-10 max-w-[30rem] text-[1.1875rem] leading-[1.5] text-white/[0.62]'>
-                {t(
-                  'Guides cover Docker, Docker Compose, 1Panel, BaoTa, and supported app integrations.'
-                )}
-              </p>
-              <div className='flex flex-wrap items-center justify-center gap-3.5'>
-                <Button
-                  className='h-12 rounded-full bg-white px-6 text-sm font-semibold text-[#0A0A0A] hover:bg-[#E8E8ED]'
-                  render={
-                    <a
-                      /* Docs paths all live under /docs/ — a bare /installation/
-                         resolves to a 404 on the live site. */
-                      href='https://docs.newapi.pro/docs/installation'
-                      target='_blank'
-                      rel='noopener noreferrer'
-                    />
-                  }
-                >
-                  {t('Deployment guide')}
-                </Button>
-                <Button
-                  variant='outline'
-                  className='h-12 rounded-full border-white/25 bg-transparent px-6 text-sm font-semibold text-[#F5F5F7] hover:border-white/40 hover:bg-white/10'
-                  render={
-                    <a
-                      href='https://docs.newapi.pro/docs/apps'
-                      target='_blank'
-                      rel='noopener noreferrer'
-                    />
-                  }
-                >
-                  {t('App integration guides')}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </AnimateInView>
+      <div className='mx-auto flex w-full max-w-[1200px] flex-col gap-8 px-6 py-16 md:flex-row md:items-end md:justify-between md:px-12 md:py-24'>
+        <h2 className='max-w-[34rem] text-[clamp(1.9rem,3.6vw,2.9rem)] leading-[1.08] font-semibold tracking-[-0.03em] text-foreground'>
+          <span className='block'>{t('Send your first request,')}</span>
+          <span className='block text-muted-foreground'>
+            {t('it takes two environment variables.')}
+          </span>
+        </h2>
+
+        <div className='flex flex-wrap items-center gap-3'>
+          {props.isAuthenticated ? (
+            <Button
+              className='h-11 rounded-full px-5 text-[13.5px] font-semibold'
+              render={<Link to='/dashboard' />}
+            >
+              {t('Open the console')}
+            </Button>
+          ) : (
+            <>
+              <Button
+                className='h-11 rounded-full px-5 text-[13.5px] font-semibold'
+                render={<Link to='/pricing' />}
+              >
+                {t('Browse the models')}
+              </Button>
+              <Button
+                variant='outline'
+                className='h-11 rounded-full border-border bg-transparent px-5 text-[13.5px] font-semibold text-foreground hover:bg-secondary'
+                render={
+                  <a
+                    href='https://docs.newapi.pro/docs/installation'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                  />
+                }
+              >
+                {t('Deployment guide')}
+              </Button>
+            </>
+          )}
+        </div>
       </div>
     </section>
   )
