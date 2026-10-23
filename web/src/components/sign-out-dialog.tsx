@@ -26,7 +26,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog'
 import { logout } from '@/features/auth/api'
 import { clearAuthenticatedClientState } from '@/lib/auth-session'
 import { handleServerError } from '@/lib/handle-server-error'
-import { beginSignOutWindow, endSignOutWindow } from '@/lib/http-client'
+import { beginSignOutWindow, endSignOutWindow } from '@/lib/sign-out-window'
 
 interface SignOutDialogProps {
   open: boolean

@@ -20,6 +20,7 @@ import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
 
 import { handleServerError } from './handle-server-error'
 import { getServerErrorStatus } from './server-error-message'
+import { isSignOutWindowActive } from './sign-out-window'
 
 interface ErrorNotificationMeta extends Record<string, unknown> {
   /** Disable automatic notifications when a caller presents the failure itself. */
@@ -49,6 +50,9 @@ export function createAppQueryClient(
     },
     mutationCache: new MutationCache({
       onError: (error, _variables, _context, mutation) => {
+        // Errors raised while a logout tears the session down are expected
+        // noise; the sign-out dialog owns the single message the user sees.
+        if (isSignOutWindowActive()) return
         // A mutation-specific callback owns its fallback or inline error state.
         if (mutation.meta?.errorToast !== false && !mutation.options.onError) {
           handleServerError(error)
@@ -57,6 +61,7 @@ export function createAppQueryClient(
     }),
     queryCache: new QueryCache({
       onError: (error, query) => {
+        if (isSignOutWindowActive()) return
         if (query.meta?.errorToast !== false) handleServerError(error)
         if (getServerErrorStatus(error) === 500) onInternalServerError?.()
       },

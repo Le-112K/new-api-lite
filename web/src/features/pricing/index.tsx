@@ -23,7 +23,6 @@ import { PublicLayout } from '@/components/layout'
 import { PageTransition } from '@/components/page-transition'
 
 import {
-  LoadingSkeleton,
   EmptyState,
   PricingTable,
   PricingToolbar,
@@ -148,10 +147,17 @@ export function Pricing() {
   }
 
   if (isLoading) {
+    // The route preloads this data, so this state is a rare fallback. It is
+    // deliberately a plain spinner rather than a skeleton of the page: the
+    // skeleton read as an unstyled "old version" flash while data arrived.
     return (
       <PublicLayout showMainContainer={false}>
-        <div className='mx-auto w-full max-w-[1800px] px-3 pt-16 pb-8 sm:px-6 sm:pt-20 sm:pb-10 xl:px-8'>
-          <LoadingSkeleton viewMode={viewMode} />
+        <div
+          className='flex min-h-[70vh] flex-col items-center justify-center gap-3'
+          aria-busy='true'
+        >
+          <span className='border-foreground/15 border-t-foreground size-5 animate-spin rounded-full border-2 motion-reduce:animate-none' />
+          <p className='text-muted-foreground text-sm'>{t('Loading...')}</p>
         </div>
       </PublicLayout>
     )

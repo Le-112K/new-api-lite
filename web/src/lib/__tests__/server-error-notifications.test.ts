@@ -33,6 +33,7 @@ import { useUpdateOption } from '@/features/system-settings/hooks/use-update-opt
 import { handleServerError } from '@/lib/handle-server-error'
 import { api } from '@/lib/http-client'
 import { createAppQueryClient } from '@/lib/query-client'
+import { beginSignOutWindow, endSignOutWindow } from '@/lib/sign-out-window'
 import { AuthOperationError } from '@/lib/secure-verification'
 import {
   createServerError,
@@ -440,5 +441,51 @@ it('rejects an unsuccessful setting update so callers cannot proceed as if it sa
   ])
   expect(success).not.toHaveBeenCalled()
   unmount()
+  client.clear()
+})
+
+it('suppresses query error toasts while a sign-out is tearing the session down', async () => {
+  const unauthorized = new AxiosError(
+    'HTTP 401',
+    'ERR_BAD_REQUEST',
+    undefined,
+    undefined,
+    {
+      data: { message: '无权进行此操作，access token 无效' },
+      status: 401,
+      statusText: 'Unauthorized',
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+    }
+  )
+  const notify = vi.spyOn(toast, 'error').mockReturnValue('error')
+  const client = createAppQueryClient()
+
+  beginSignOutWindow()
+  await client
+    .fetchQuery({
+      queryKey: ['sign-out-window', 1],
+      queryFn: async () => {
+        throw unauthorized
+      },
+      retry: false,
+    })
+    .catch(() => undefined)
+  expect(notify).not.toHaveBeenCalled()
+
+  endSignOutWindow()
+  await client
+    .fetchQuery({
+      queryKey: ['sign-out-window', 2],
+      queryFn: async () => {
+        throw unauthorized
+      },
+      retry: false,
+    })
+    .catch(() => undefined)
+  expect(notify.mock.calls.map(([message]) => message)).toEqual([
+    '无权进行此操作，access token 无效',
+  ])
+
   client.clear()
 })

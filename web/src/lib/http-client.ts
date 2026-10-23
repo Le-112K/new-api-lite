@@ -28,6 +28,7 @@ import {
 } from '@/lib/auth-session'
 import { markServerErrorHandled } from '@/lib/handle-server-error'
 import { getServerErrorMessage } from '@/lib/server-error-message'
+import { isSignOutWindowActive } from '@/lib/sign-out-window'
 import { useAuthStore } from '@/stores/auth-store'
 
 declare module 'axios' {
@@ -88,28 +89,7 @@ api.get = ((url: string, config: ApiRequestConfig = {}) => {
   return request
 }) as typeof api.get
 
-/**
- * Sign-out teardown window. While active, a 401 is expected noise: requests
- * that were in flight when the session ended come back unauthorised after the
- * user already chose to leave. Each one used to fire its own "session expired"
- * toast on top of the "signed out" one, so a single logout could stack three
- * contradictory messages. The window swallows them silently and expires on its
- * own in case the dialog is abandoned mid-teardown.
- */
-let signOutWindowUntil = 0
-
-export function beginSignOutWindow(durationMs = 10_000): void {
-  signOutWindowUntil = Date.now() + durationMs
-}
-
-export function endSignOutWindow(): void {
-  signOutWindowUntil = 0
-}
-
-function inSignOutWindow(): boolean {
-  return Date.now() < signOutWindowUntil
-}
-
+/** Emergency bounce to the sign-in dialog after a dead session. */
 function redirectToSignIn(): void {
   if (typeof window === 'undefined') return
   const { pathname, search } = window.location
@@ -147,7 +127,10 @@ api.interceptors.response.use(
     if (status === 401) {
       // A logout is clearing the session right now: late 401s from requests
       // that were already in flight are expected, not user-facing events.
-      if (inSignOutWindow()) {
+      // Marking them handled keeps the query/mutation caches from toasting the
+      // same rejection with the server's own wording.
+      if (isSignOutWindowActive()) {
+        markServerErrorHandled(error)
         throw error
       }
 

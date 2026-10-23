@@ -20,6 +20,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import z from 'zod'
 
 import { Pricing } from '@/features/pricing'
+import { pricingQueryOptions } from '@/features/pricing/queries'
 import { getModuleAccessForGuard } from '@/lib/nav-modules'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -38,7 +39,17 @@ const pricingSearchSchema = z.object({
 
 export const Route = createFileRoute('/pricing/')({
   validateSearch: pricingSearchSchema,
-  beforeLoad: async ({ context, location }) => {
+  beforeLoad: async ({ context, location, preload }) => {
+    // Hover preloads must never redirect (a redirect from a preload is
+    // upgraded into a real navigation and can loop); warming the data is the
+    // only useful thing a preload can do here.
+    if (preload) {
+      void context.queryClient
+        .ensureQueryData(pricingQueryOptions())
+        .catch(() => undefined)
+      return
+    }
+
     const access = await getModuleAccessForGuard(context.queryClient, 'pricing')
     if (!access.enabled) {
       throw redirect({ to: '/' })
@@ -52,6 +63,13 @@ export const Route = createFileRoute('/pricing/')({
         })
       }
     }
+
+    // Load the model list while the navigation is still pending: the current
+    // page stays on screen until the data is here, so the route paints
+    // complete instead of flashing a bare skeleton of the layout.
+    await context.queryClient
+      .ensureQueryData(pricingQueryOptions())
+      .catch(() => undefined)
   },
   component: Pricing,
 })
