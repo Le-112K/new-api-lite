@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -26,6 +26,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog'
 import { logout } from '@/features/auth/api'
 import { clearAuthenticatedClientState } from '@/lib/auth-session'
 import { handleServerError } from '@/lib/handle-server-error'
+import { beginSignOutWindow, endSignOutWindow } from '@/lib/http-client'
 
 interface SignOutDialogProps {
   open: boolean
@@ -37,20 +38,36 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [isSigningOut, setIsSigningOut] = useState(false)
+  // Signing out of a protected page means the content itself has to leave;
+  // signing out from a public page is a light action that stays put.
+  const onProtectedRoute = useRouterState({
+    select: (state) =>
+      state.matches.some((match) =>
+        String(match.routeId).startsWith('/_authenticated')
+      ),
+  })
 
   const handleSignOut = async () => {
     setIsSigningOut(true)
     try {
+      // Late 401s from in-flight requests are expected from here on — silence
+      // them so the only message is the single "signed out" toast.
+      beginSignOutWindow()
       const response = await logout()
       if (!response.success) {
+        endSignOutWindow()
         handleServerError(response, t('Failed to sign out session'))
         return
       }
 
+      await queryClient.cancelQueries()
       clearAuthenticatedClientState(queryClient)
       toast.success(t('Signed out'))
-      void navigate({ to: '/sign-in', replace: true })
+      if (onProtectedRoute) {
+        void navigate({ to: '/', replace: true })
+      }
     } catch (error: unknown) {
+      endSignOutWindow()
       handleServerError(error, t('Failed to sign out session'))
     } finally {
       setIsSigningOut(false)

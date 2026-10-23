@@ -16,10 +16,15 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
-import { ForgotPassword } from '@/features/auth/forgot-password'
-
+/**
+ * `/forgot-password` no longer renders a page: the reset request lives in the
+ * landing dialog (`?auth=forgot`), matching sign-in and sign-up.
+ */
 export const Route = createFileRoute('/(auth)/forgot-password')({
-  component: ForgotPassword,
+  beforeLoad: ({ preload }) => {
+    if (preload) return
+    throw redirect({ href: '/?auth=forgot', replace: true })
+  },
 })

@@ -342,7 +342,7 @@ it.each([200, 401])(
         config,
       }
     }
-    const notify = vi.spyOn(toast, 'error').mockReturnValue('error')
+    const notify = vi.spyOn(toast, 'info').mockReturnValue('info')
     const client = createAppQueryClient()
     await client
       .fetchQuery({
@@ -360,7 +360,7 @@ it.each([200, 401])(
     } else {
       expect(requests).toBe(1)
       expect(notify.mock.calls.map(([message]) => message)).toEqual([
-        'Session expired!',
+        'Your session has expired. Please sign in again.',
       ])
       expect(useAuthStore.getState().auth.accessToken).toBeNull()
     }

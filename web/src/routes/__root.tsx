@@ -22,7 +22,7 @@ import {
   createRootRouteWithContext,
   Outlet,
   redirect,
-  useNavigate,
+  useRouter,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
@@ -44,7 +44,7 @@ import { resolveLegacyRoute } from '@/lib/legacy-route'
 import { useAuthStore } from '@/stores/auth-store'
 
 function RootComponent() {
-  const navigate = useNavigate()
+  const router = useRouter()
   const queryClient = useQueryClient()
 
   // Load system configuration (logo, system name, etc.) from backend
@@ -77,11 +77,15 @@ function RootComponent() {
         }
 
         if (currentSID && event.sid === currentSID) {
+          // Another tab signed out. Clear quietly — no toast, no forced
+          // navigation: re-resolving the current matches lets the guarded
+          // routes redirect only where the content is actually private,
+          // while public pages simply re-render in the signed-out state.
           clearAuthenticatedClientState(queryClient, false)
-          void navigate({ to: '/sign-in', replace: true })
+          void router.invalidate()
         }
       }),
-    [navigate, queryClient]
+    [queryClient, router]
   )
 
   return (

@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import axios, { type AxiosRequestConfig } from 'axios'
 import { t } from 'i18next'
+import { toast } from 'sonner'
 
 import {
   applyAuthRotation,
@@ -25,11 +26,8 @@ import {
   getFreshAuthHeaders,
   refreshAuthentication,
 } from '@/lib/auth-session'
-import { handleServerError } from '@/lib/handle-server-error'
-import {
-  getServerErrorMessage,
-  safeServerErrorMessage,
-} from '@/lib/server-error-message'
+import { markServerErrorHandled } from '@/lib/handle-server-error'
+import { getServerErrorMessage } from '@/lib/server-error-message'
 import { useAuthStore } from '@/stores/auth-store'
 
 declare module 'axios' {
@@ -90,13 +88,47 @@ api.get = ((url: string, config: ApiRequestConfig = {}) => {
   return request
 }) as typeof api.get
 
+/**
+ * Sign-out teardown window. While active, a 401 is expected noise: requests
+ * that were in flight when the session ended come back unauthorised after the
+ * user already chose to leave. Each one used to fire its own "session expired"
+ * toast on top of the "signed out" one, so a single logout could stack three
+ * contradictory messages. The window swallows them silently and expires on its
+ * own in case the dialog is abandoned mid-teardown.
+ */
+let signOutWindowUntil = 0
+
+export function beginSignOutWindow(durationMs = 10_000): void {
+  signOutWindowUntil = Date.now() + durationMs
+}
+
+export function endSignOutWindow(): void {
+  signOutWindowUntil = 0
+}
+
+function inSignOutWindow(): boolean {
+  return Date.now() < signOutWindowUntil
+}
+
 function redirectToSignIn(): void {
-  if (
-    typeof window !== 'undefined' &&
-    window.location.pathname !== '/sign-in'
-  ) {
-    window.location.replace('/sign-in')
-  }
+  if (typeof window === 'undefined') return
+  const { pathname, search } = window.location
+  // The dialog owns sign-in now; only reload when it cannot already be open.
+  if (pathname === '/' && search.includes('auth=')) return
+  window.location.replace('/?auth=signin')
+}
+
+/**
+ * Announce a passively expired session once. `id` makes sonner replace the
+ * previous toast instead of stacking one per failed request, and marking the
+ * cause as handled stops later `handleServerError` calls from double-toasting
+ * the same rejection.
+ */
+function notifySessionExpired(error: unknown): void {
+  markServerErrorHandled(error)
+  toast.info(t('Your session has expired. Please sign in again.'), {
+    id: 'session-expired',
+  })
 }
 
 api.interceptors.response.use(
@@ -113,6 +145,12 @@ api.interceptors.response.use(
     const status = error?.response?.status
 
     if (status === 401) {
+      // A logout is clearing the session right now: late 401s from requests
+      // that were already in flight are expected, not user-facing events.
+      if (inSignOutWindow()) {
+        throw error
+      }
+
       if (config && !config.skipAuthRefresh && !config.authRetry) {
         config.authRetry = true
         const outcome = await refreshAuthentication()
@@ -129,30 +167,18 @@ api.interceptors.response.use(
 
         if (outcome.kind === 'anonymous' || outcome.kind === 'out_of_sync') {
           if (!skipErrorHandler) {
-            handleServerError({
-              message: t('Session expired!'),
-              [safeServerErrorMessage]: true,
-              cause: error,
-            })
+            notifySessionExpired(error)
           }
           redirectToSignIn()
         }
       } else if (config?.authRetry) {
         clearAuthentication(false)
         if (!skipErrorHandler) {
-          handleServerError({
-            message: t('Session expired!'),
-            [safeServerErrorMessage]: true,
-            cause: error,
-          })
+          notifySessionExpired(error)
         }
         redirectToSignIn()
       } else if (!skipErrorHandler) {
-        handleServerError({
-          message: t('Session expired!'),
-          [safeServerErrorMessage]: true,
-          cause: error,
-        })
+        notifySessionExpired(error)
       }
     }
     if (axios.isAxiosError(error)) error.message = getServerErrorMessage(error)

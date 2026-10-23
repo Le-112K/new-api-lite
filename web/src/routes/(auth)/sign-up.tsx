@@ -18,17 +18,20 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { createFileRoute, redirect } from '@tanstack/react-router'
 
-import { SignUp } from '@/features/auth/sign-up'
 import { useAuthStore } from '@/stores/auth-store'
 
+/**
+ * `/sign-up` no longer renders a page: the landing dialog hosts both panes.
+ * Signed-in visitors keep being sent to the dashboard.
+ */
 export const Route = createFileRoute('/(auth)/sign-up')({
-  component: SignUp,
-  beforeLoad: async () => {
-    const { auth } = useAuthStore.getState()
+  beforeLoad: ({ preload }) => {
+    if (preload) return
 
-    // 如果已经有用户信息，说明已登录，注册页对其无意义，跳转到 dashboard
+    const { auth } = useAuthStore.getState()
     if (auth.user) {
-      throw redirect({ to: '/dashboard' })
+      throw redirect({ to: '/dashboard', replace: true })
     }
+    throw redirect({ href: '/?auth=signup', replace: true })
   },
 })

@@ -20,7 +20,6 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { z } from 'zod'
 
 import { sanitizeAuthRedirect } from '@/features/auth/lib/auth-redirect'
-import { SignIn } from '@/features/auth/sign-in'
 import { resolveAuthentication } from '@/lib/auth-session'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -28,8 +27,12 @@ const searchSchema = z.object({
   redirect: z.string().optional(),
 })
 
+/**
+ * `/sign-in` no longer renders a page: the landing dialog is the single
+ * sign-in surface. Direct links and bookmarks keep working — they land on the
+ * same dialog with the destination carried over.
+ */
 export const Route = createFileRoute('/(auth)/sign-in')({
-  component: SignIn,
   validateSearch: searchSchema,
   beforeLoad: async ({ search, preload }) => {
     // 悬停预载（defaultPreload: 'intent'）不得发起网络请求，更不得 throw
@@ -42,13 +45,16 @@ export const Route = createFileRoute('/(auth)/sign-in')({
     await resolveAuthentication()
 
     const { auth } = useAuthStore.getState()
+    const target = sanitizeAuthRedirect(search?.redirect, window.location.origin)
 
-    // 如果已经有用户信息，说明已登录
     if (auth.user) {
-      const target =
-        sanitizeAuthRedirect(search?.redirect, window.location.origin) ??
-        '/dashboard'
-      throw redirect({ href: target, replace: true })
+      throw redirect({ href: target ?? '/dashboard', replace: true })
     }
+
+    const params = new URLSearchParams({ auth: 'signin' })
+    if (target) {
+      params.set('redirect', target)
+    }
+    throw redirect({ href: `/?${params.toString()}`, replace: true })
   },
 })
