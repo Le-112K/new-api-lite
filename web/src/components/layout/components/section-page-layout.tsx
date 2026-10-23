@@ -72,6 +72,12 @@ export type SectionPageLayoutProps = {
   children: ReactNode
   fixedContent?: boolean
   stackActionsOnMobile?: boolean
+  /**
+   * Optional max-width for the header row and the scrolling content area.
+   * When set, both centre in the same column so the page title, the actions
+   * and the content stay on one alignment line (settings pages rely on this).
+   */
+  contentMaxWidth?: string
   variant?: SectionPageLayoutVariant
 }
 
@@ -120,7 +126,13 @@ export function SectionPageLayout(props: SectionPageLayoutProps) {
               {breadcrumb}
             </div>
           )}
-          <div className='flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:gap-x-4'>
+          <div
+            className={cn(
+              'flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:gap-x-4',
+              props.contentMaxWidth && 'mx-auto w-full',
+              props.contentMaxWidth
+            )}
+          >
             <div
               className={
                 props.stackActionsOnMobile
@@ -162,7 +174,14 @@ export function SectionPageLayout(props: SectionPageLayoutProps) {
               : 'px-3 pt-1 pb-3 sm:px-4 sm:pt-1.5 sm:pb-4'
           )}
         >
-          {content}
+          <div
+            className={cn(
+              props.contentMaxWidth && 'mx-auto h-full w-full',
+              props.contentMaxWidth
+            )}
+          >
+            {content}
+          </div>
         </div>
 
         <div

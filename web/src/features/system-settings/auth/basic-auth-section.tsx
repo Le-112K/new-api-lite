@@ -36,6 +36,7 @@ import { Textarea } from '@/components/ui/textarea'
 
 import {
   SettingsForm,
+  SettingsGroupLabel,
   SettingsSwitchContent,
   SettingsSwitchItem,
 } from '../components/settings-form-layout'
@@ -176,6 +177,10 @@ export function BasicAuthSection({ defaultValues }: BasicAuthSectionProps) {
               </SettingsSwitchItem>
             )}
           />
+
+          <SettingsGroupLabel>
+            {t('Email verification and restrictions')}
+          </SettingsGroupLabel>
 
           <FormField
             control={form.control}

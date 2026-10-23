@@ -46,7 +46,7 @@ type SettingsSwitchFieldProps = SettingsSwitchRowProps & {
 }
 
 const settingsSwitchRowClassName =
-  'flex min-w-0 flex-row items-center justify-between gap-4 py-2.5'
+  'flex min-w-0 flex-row items-center justify-between gap-4 -mx-2 rounded-lg px-2 py-3 transition-colors hover:bg-muted/40'
 
 export function SettingsFormGrid(props: SettingsFormGridProps) {
   return (
@@ -149,6 +149,21 @@ export function SettingsSwitchContent(props: SettingsFormGridProps) {
   return (
     <div className={cn('min-w-0 space-y-0.5', props.className)}>
       {props.children}
+    </div>
+  )
+}
+
+/**
+ * Quiet divider label between clusters inside one long settings form, so a
+ * wall of toggles reads as groups instead of a flat list.
+ */
+export function SettingsGroupLabel({ children }: { children: ReactNode }) {
+  return (
+    <div
+      data-settings-form-span='full'
+      className='text-muted-foreground/80 -mb-1 border-t border-border/40 pt-4 text-xs font-medium'
+    >
+      {children}
     </div>
   )
 }

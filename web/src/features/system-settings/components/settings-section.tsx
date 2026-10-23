@@ -38,7 +38,7 @@ export function SettingsSection({
   return (
     <section className={cn('flex flex-col gap-4', className)}>
       {!suppressHeader && (
-        <div className='flex flex-col gap-1'>
+        <div className='flex flex-col gap-1 border-b border-border/40 pb-3'>
           <h3
             {...titleProps}
             className={cn('text-base font-semibold', titleProps?.className)}

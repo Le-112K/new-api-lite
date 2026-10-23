@@ -67,7 +67,7 @@ function SettingsPageFrame(props: SettingsPageFrameProps) {
       actionsContainer={actionsContainer}
       titleStatusContainer={titleStatusContainer}
     >
-      <SectionPageLayout>
+      <SectionPageLayout contentMaxWidth='max-w-[880px]'>
         <SectionPageLayout.Title>
           <span className='inline-flex max-w-full min-w-0 items-center gap-2 align-middle'>
             <span className='truncate'>{props.title}</span>
@@ -84,6 +84,10 @@ function SettingsPageFrame(props: SettingsPageFrameProps) {
           />
         </SectionPageLayout.Actions>
         <SectionPageLayout.Content>
+          {/* One readable measure for every settings pane: fields, toggles and
+              lists centre in the same column as the page title, so labels and
+              their controls stay visually associated instead of drifting to
+              opposite edges of a full-bleed panel. */}
           <div className='flex h-full min-h-0 w-full flex-col gap-4'>
             {props.children}
           </div>
