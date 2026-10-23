@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Languages, Check } from 'lucide-react'
+import { Languages, Check, ChevronDown } from 'lucide-react'
 import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -35,7 +35,10 @@ import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 
-export function LanguageSwitcher() {
+/** 落地页导航上的短标签，和参考站一样只显示语言代码 */
+const SHORT_LABELS: Record<string, string> = { en: 'EN', zhCN: '中文' }
+
+export function LanguageSwitcher(props: { variant?: 'default' | 'landing' }) {
   const { i18n, t } = useTranslation()
   const user = useAuthStore((s) => s.auth.user)
   const currentLanguage = normalizeInterfaceLanguage(i18n.language)
@@ -55,12 +58,27 @@ export function LanguageSwitcher() {
 
   return (
     <DropdownMenu modal={false}>
-      <DropdownMenuTrigger
-        render={<Button variant='ghost' size='icon' className='h-9 w-9' />}
-      >
-        <Languages className='size-[1.2rem]' />
-        <span className='sr-only'>{t('Change language')}</span>
-      </DropdownMenuTrigger>
+      {props.variant === 'landing' ? (
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant='outline'
+              className='h-9 gap-1 rounded-[10px] border-black/[0.11] bg-transparent px-3 text-[13px] font-semibold text-foreground hover:bg-black/[0.03] dark:border-white/15 dark:hover:bg-white/[0.06]'
+            />
+          }
+        >
+          {SHORT_LABELS[currentLanguage] ?? currentLanguage.toUpperCase()}
+          <ChevronDown className='size-3.5 opacity-50' />
+          <span className='sr-only'>{t('Change language')}</span>
+        </DropdownMenuTrigger>
+      ) : (
+        <DropdownMenuTrigger
+          render={<Button variant='ghost' size='icon' className='h-9 w-9' />}
+        >
+          <Languages className='size-[1.2rem]' />
+          <span className='sr-only'>{t('Change language')}</span>
+        </DropdownMenuTrigger>
+      )}
       <DropdownMenuContent align='end'>
         {INTERFACE_LANGUAGE_OPTIONS.map((lang) => (
           <DropdownMenuItem

@@ -30,7 +30,7 @@ import {
 import { useTheme } from '@/context/theme-provider'
 import { cn } from '@/lib/utils'
 
-export function ThemeSwitch() {
+export function ThemeSwitch(props: { variant?: 'default' | 'landing' }) {
   const { t } = useTranslation()
   const { theme, setTheme } = useTheme()
 
@@ -45,10 +45,32 @@ export function ThemeSwitch() {
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger
-        render={<Button variant='ghost' size='icon' className='h-9 w-9' />}
+        render={
+          <Button
+            variant='outline'
+            size='icon'
+            className={
+              props.variant === 'landing'
+                ? 'size-9 rounded-[10px] border-black/[0.11] bg-transparent hover:bg-black/[0.03] dark:border-white/15 dark:hover:bg-white/[0.06]'
+                : 'h-9 w-9'
+            }
+          />
+        }
       >
-        <Sun className='size-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90' />
-        <Moon className='absolute size-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0' />
+        <Sun
+          className={
+            props.variant === 'landing'
+              ? 'size-[18px] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90'
+              : 'size-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90'
+          }
+        />
+        <Moon
+          className={
+            props.variant === 'landing'
+              ? 'absolute size-[18px] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0'
+              : 'absolute size-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0'
+          }
+        />
         <span className='sr-only'>{t('Toggle theme')}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align='end'>

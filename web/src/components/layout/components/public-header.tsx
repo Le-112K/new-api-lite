@@ -267,11 +267,21 @@ export function PublicHeader(props: PublicHeaderProps) {
                 to={homeUrl}
                 className='group flex min-w-0 items-center gap-2.5'
               >
-                <div className='flex size-7 shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105'>
+                <div
+                  className={cn(
+                    'flex shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105',
+                    isLanding ? 'h-[26px] w-[26px]' : 'size-7'
+                  )}
+                >
                   {logoContent}
                 </div>
                 <span
-                  className='max-w-48 truncate text-sm font-semibold tracking-tight'
+                  className={cn(
+                    'max-w-48 truncate',
+                    isLanding
+                      ? 'text-[15px] font-bold tracking-[-0.01em]'
+                      : 'text-sm font-semibold tracking-tight'
+                  )}
                   title={displaySiteName}
                 >
                   {loading ? (
@@ -287,7 +297,7 @@ export function PublicHeader(props: PublicHeaderProps) {
             <div
               className={cn(
                 'hidden min-w-0 items-center lg:flex',
-                isLanding && 'flex-1'
+                isLanding ? 'flex-1 gap-2' : ''
               )}
             >
               {/* 落地页把「链接」与「图标+登录」拆成两段：链接在导航条里居中，
@@ -354,9 +364,9 @@ export function PublicHeader(props: PublicHeaderProps) {
                   <div className='bg-border/40 mx-2 h-4 w-px' />
                 )}
 
-              {showLanguageSwitcher && <LanguageSwitcher />}
-              {showThemeSwitch && <ThemeSwitch />}
-              {showNotifications && (
+              {showLanguageSwitcher && <LanguageSwitcher variant={props.variant} />}
+              {showThemeSwitch && <ThemeSwitch variant={props.variant} />}
+              {showNotifications && !isLanding && (
                 <NotificationPopover
                   open={notifications.popoverOpen}
                   onOpenChange={notifications.setPopoverOpen}
@@ -374,14 +384,34 @@ export function PublicHeader(props: PublicHeaderProps) {
                   {!isLanding && (
                     <div className='bg-border/40 mx-1 h-4 w-px' />
                   )}
-                  {authContent}
+                  {/* 参考站这一对是「纯文字 Sign in + 黑底 Get started」，
+                      两者都通向登录；未登录时给两个入口，已登录仍走头像下拉。 */}
+                  {isLanding && !isAuthenticated && !loading ? (
+                    <>
+                      <Button
+                        variant='ghost'
+                        className='h-10 rounded-lg px-4 text-sm font-semibold text-foreground/75 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+                        onClick={openAuthDialog}
+                      >
+                        {t('Sign in')}
+                      </Button>
+                      <Button
+                        className='h-10 rounded-lg px-4 text-sm font-semibold'
+                        onClick={openAuthDialog}
+                      >
+                        {t('Get started')}
+                      </Button>
+                    </>
+                  ) : (
+                    authContent
+                  )}
                 </>
               )}
             </div>
 
             {/* Mobile: compact actions + hamburger */}
             <div className='flex shrink-0 items-center gap-2 lg:hidden'>
-              {showThemeSwitch && <ThemeSwitch />}
+              {showThemeSwitch && <ThemeSwitch variant={props.variant} />}
               {showAuthButtons && !loading && isAuthenticated && (
                 <ProfileDropdown />
               )}
