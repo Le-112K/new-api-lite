@@ -122,13 +122,19 @@ export function AuthDialog() {
       disablePointerDismissal
     >
       <DialogPortal>
-        <DialogOverlay className='bg-black/40' />
+        {/* A light veil instead of a dark scrim: the page keeps its airy
+            paper feel and the globe stays faintly visible underneath, so the
+            card reads as part of the page rather than a foreign sheet. */}
+        <DialogOverlay className='bg-background/70' />
         <DialogPrimitive.Popup
           data-slot='auth-dialog-content'
           className={cn(
             'bg-popover text-popover-foreground fixed inset-0 z-50 flex flex-col overflow-y-auto overscroll-contain p-6 outline-none',
             'data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 duration-150 motion-reduce:animate-none!',
-            'xl:inset-auto xl:top-1/2 xl:left-1/2 xl:max-h-[calc(100dvh-2rem)] xl:w-full xl:max-w-[26rem] xl:-translate-x-1/2 xl:-translate-y-1/2 xl:rounded-[20px] xl:shadow-[var(--shadow-hairline)] xl:ring-1 xl:ring-foreground/10'
+            // One fixed height at xl so switching sign-in / sign-up / reset
+            // never resizes the card; the tallest pane (sign-up) defines it and
+            // the shorter ones centre their content in the same frame.
+            'xl:inset-auto xl:top-1/2 xl:left-1/2 xl:max-h-[calc(100dvh-2rem)] xl:min-h-[38.75rem] xl:w-full xl:max-w-[26rem] xl:-translate-x-1/2 xl:-translate-y-1/2 xl:rounded-[20px] xl:shadow-[0_2px_10px_-4px_rgba(0,0,0,0.06),0_24px_64px_-32px_rgba(0,0,0,0.2)] xl:ring-1 xl:ring-foreground/10'
           )}
         >
           <div className='relative mx-auto my-auto flex w-full max-w-[26rem] flex-col gap-6'>

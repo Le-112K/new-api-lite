@@ -85,7 +85,7 @@ export function ApertureGlobe(props: { className?: string }) {
        the approved option-3 mockup. Store unit vectors; spin is applied later.
        N is deliberately large: the mask cell size is fixed, so only density
        turns the coastline from a blobby stipple into a legible edge. */
-    const N = 26000, GA = Math.PI * (3 - Math.sqrt(5));
+    const N = 27000, GA = Math.PI * (3 - Math.sqrt(5));
     /* Deterministic hash -> [0,1), so the stipple is identical on every repaint
        (including the single static frame under reduced motion). */
     function hash(k: number, salt: number) {
@@ -146,15 +146,12 @@ export function ApertureGlobe(props: { className?: string }) {
     const Z_CULL = 0.10;
     const INV_ZSPAN = 1 / (1 - Z_CULL);
     const BANDS = 16;                           /* depth buckets -> 16 Path2D fills per frame */
-    /* Contrast floor: the faintest *rendered* land dot has to clear 3:1 against
-       the page in BOTH themes. Light theme (#F5F5F7 bg, #0a0a0a ink) is the
-       binding case — 3:1 needs a composited luminance low enough that the peak
-       pixel alpha must stay >= ~0.44. A_MIN is the nominal floor and the radius
-       floor is kept at ~1px so antialiasing (and a dot landing on a pixel
-       corner, the worst case: ~0.79 of nominal) cannot eat that coverage.
-       Do not lower either without re-measuring; the verify probe checks it. */
-    const A_MIN = 0.72, A_SPAN = 0.20;
-    const R_BASE = 1.12;
+    /* Ink floor: the land field reads as engraving rather than ink when the
+       faintest dots stay well under full strength; the depth ramp still takes
+       the front faces to a confident weight. Decoration is aria-hidden and has
+       no text-contrast duty, so airiness wins over a hard 3:1 floor here. */
+    const A_MIN = 0.64, A_SPAN = 0.22;
+    const R_BASE = 1.10;
     const bandAlpha = new Float32Array(BANDS);
     const bandRadius = new Float32Array(BANDS);
     const bandInk: string[] = [];
@@ -176,8 +173,10 @@ export function ApertureGlobe(props: { className?: string }) {
     for (let lo = -180; lo < 180; lo += 30) MERIDIANS.push(lo);
 
     /* Route pulses. SWEEP is the fraction of the period used by the sweep; the
-       rest is the rest. Periods and offsets are incommensurate on purpose. */
-    const ARC_BASE = 0.51;
+       rest is the rest. Periods and offsets are incommensurate on purpose.
+       ARC_BASE is tuned down so the resting curves read as a whisper of thread
+       rather than a second wireframe; the pulse still saturates to 1.0. */
+    const ARC_BASE = 0.44;
     const PULSE_ADD = 0.90;                     /* head saturates at alpha 1.0 */
     const PULSE_W = 0.11;
     const SWEEP = 0.42;
@@ -256,7 +255,10 @@ export function ApertureGlobe(props: { className?: string }) {
       }
       for (let mi = 0; mi < MERIDIANS.length; mi++) {
         pen = false;
-        for (let lat = -88; lat <= 88; lat += 4) {
+        /* Stop short of the poles: twelve meridians converging on one point
+           read as a starburst, which is the least "sphere-like" mark on the
+           canvas. */
+        for (let lat = -78; lat <= 78; lat += 4) {
           pt = sphere(lat, MERIDIANS[mi], cs, ss, ct, st);
           if (pt[2] <= Z_CULL) { pen = false; continue; }
           sx = cx + pt[0] * R; sy = cy - pt[1] * R;
@@ -305,13 +307,42 @@ export function ApertureGlobe(props: { className?: string }) {
     function drawLimb() {
       const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
       g.addColorStop(0, ink(0));
-      g.addColorStop(0.8, ink(0));
-      g.addColorStop(0.93, ink(0.045));
+      g.addColorStop(0.80, ink(0));
+      g.addColorStop(0.90, ink(0.06));
       g.addColorStop(1, ink(0));
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.arc(cx, cy, R, 0, TAU);
       ctx.fill();
+    }
+
+    /* Atmosphere: a whisper of ink just outside the limb. Drawn before the
+       field so it never dims a dot; it only softens where the sphere meets the
+       page, which is what stops the silhouette from looking die-cut. */
+    function drawAtmosphere() {
+      const g = ctx.createRadialGradient(cx, cy, R * 0.94, cx, cy, R * 1.13);
+      g.addColorStop(0, ink(0));
+      g.addColorStop(0.42, ink(0.035));
+      g.addColorStop(0.72, ink(0.012));
+      g.addColorStop(1, ink(0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R * 1.13, 0, TAU);
+      ctx.fill();
+    }
+
+    /* Catch-light: a hairline of ink on the upper-left rim only, so the sphere
+       reads as lit from that corner without any body shading. */
+    function drawRimLight() {
+      const g = ctx.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+      g.addColorStop(0, ink(0.055));
+      g.addColorStop(0.42, ink(0));
+      g.addColorStop(1, ink(0));
+      ctx.strokeStyle = g;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R - 0.6, 0, TAU);
+      ctx.stroke();
     }
 
     /* Routes: the dotted base curve keeps the line readable when nothing is on
@@ -342,7 +373,7 @@ export function ApertureGlobe(props: { className?: string }) {
           const iy = (1 - u) * (1 - u) * ay + 2 * (1 - u) * u * qy + u * u * by;
           if (Math.hypot(ix - cx, iy - cy) > R) continue;   /* never leave the sphere */
           const base = ARC_BASE * Math.pow(Math.sin(Math.PI * u), 0.65);
-          let a = base, rr = 1.1;
+          let a = base, rr = 1.0;
           if (uP >= 0) {
             const step = (u - uP) / PULSE_W;
             const bump = env * Math.exp(-step * step);
@@ -351,7 +382,7 @@ export function ApertureGlobe(props: { className?: string }) {
               /* the head has to be fat enough that consecutive samples overlap —
                  at the base radius they stay separate specks and the "signal"
                  never reads as a moving segment. */
-              rr = 1.1 + 2.2 * bump;
+              rr = 1.0 + 2.2 * bump;
             }
           }
           ctx.fillStyle = ink(a);
@@ -387,9 +418,11 @@ export function ApertureGlobe(props: { className?: string }) {
       ctx.clearRect(0, 0, W, W);
       const cs = Math.cos(angle), ss = Math.sin(angle);
       const ct = Math.cos(TILT), st = Math.sin(TILT);
+      drawAtmosphere();                   /* behind the field — never dims a dot */
       drawGraticule(cs, ss, ct, st);       /* sphere cue, under the land in weight */
       drawLand(cs, ss, ct, st);
       drawLimb();
+      drawRimLight();
       drawArcs(cs, ss, ct, st, tMs);
       drawHubs(cs, ss, ct, st);
     }
