@@ -77,7 +77,10 @@ export function SettingsCluster({
   return (
     <AccordionItem
       value={value}
-      className={cn('rounded-xl border border-border/60 px-4', className)}
+      className={cn(
+        'bg-muted/20 rounded-xl border border-border px-4',
+        className
+      )}
     >
       <AccordionTrigger className='py-3 hover:no-underline'>
         <div className='flex min-w-0 flex-col gap-0.5 pr-3 text-left'>

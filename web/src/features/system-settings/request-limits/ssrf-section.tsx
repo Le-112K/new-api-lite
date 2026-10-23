@@ -289,15 +289,15 @@ export function SSRFSection({ defaultValues }: SSRFSectionProps) {
                       value={field.value ? 'true' : 'false'}
                     >
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent alignItemWithTrigger={false}>
-                        <SelectGroup>
-                          <SelectItem value='false'>
-                            {t('Blacklist (Block listed domains)')}
-                          </SelectItem>
+                    <SelectTrigger className='w-full'>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent alignItemWithTrigger={false}>
+                    <SelectGroup>
+                      <SelectItem value='false'>
+                        {t('Blacklist (Block listed domains)')}
+                      </SelectItem>
                           <SelectItem value='true'>
                             {t('Whitelist (Only allow listed domains)')}
                           </SelectItem>
@@ -358,15 +358,15 @@ export function SSRFSection({ defaultValues }: SSRFSectionProps) {
                       value={field.value ? 'true' : 'false'}
                     >
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent alignItemWithTrigger={false}>
-                        <SelectGroup>
-                          <SelectItem value='false'>
-                            {t('Blacklist (Block listed IPs)')}
-                          </SelectItem>
+                    <SelectTrigger className='w-full'>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent alignItemWithTrigger={false}>
+                    <SelectGroup>
+                      <SelectItem value='false'>
+                        {t('Blacklist (Block listed IPs)')}
+                      </SelectItem>
                           <SelectItem value='true'>
                             {t('Whitelist (Only allow listed IPs)')}
                           </SelectItem>
