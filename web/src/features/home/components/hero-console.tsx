@@ -40,7 +40,7 @@ export function HeroConsole(props: { className?: string }) {
   return (
     <div
       className={
-        'overflow-hidden rounded-2xl bg-[#0a0a0a] shadow-[0_1px_2px_rgba(0,0,0,0.3),0_28px_60px_-28px_rgba(0,0,0,0.5)] ' +
+        'overflow-hidden rounded-2xl bg-[#0a0a0a] dark:bg-[#141416] shadow-[0_1px_2px_rgba(0,0,0,0.3),0_28px_60px_-28px_rgba(0,0,0,0.5)] ' +
         (props.className ?? '')
       }
     >

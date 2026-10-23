@@ -119,7 +119,7 @@ function Snippet(props: { label: string; code: string }) {
   }
 
   return (
-    <div className='overflow-hidden rounded-xl bg-[#0a0a0a]'>
+    <div className='overflow-hidden rounded-xl bg-[#0a0a0a] dark:bg-[#141416]'>
       <div className='flex items-center justify-between border-b border-white/[0.08] px-5 py-2.5'>
         <span className='lp-mono text-[11.5px] text-white/45'>{props.label}</span>
         <button
