@@ -4234,7 +4234,6 @@
     "Self-hosted — your data stays on your own server": "Self-hosted — your data stays on your own server",
     "Every model you have switched on, in one catalog": "Every model you have switched on, in one catalog",
     "All models and prices": "All models and prices",
-    "And {{count}} more in the catalog.": "And {{count}} more in the catalog.",
     "Setup": "Setup",
     "Change two settings. Keep your tools.": "Change two settings. Keep your tools.",
     "For Claude Code and the Messages API": "For Claude Code and the Messages API",
@@ -4281,8 +4280,6 @@
     "See pricing": "See pricing",
     "Read the docs": "Read the docs",
     "Open source · deploy on your own server, no per-seat fee": "Open source · deploy on your own server, no per-seat fee",
-    "{{models}} models from {{vendors}} families, on one API key.": "{{models}} models from {{vendors}} families, on one API key.",
-    "{{models}} models, on one API key.": "{{models}} models, on one API key.",
     "Read from the live catalog — enable or retire a model in the console and this list follows.": "Read from the live catalog — enable or retire a model in the console and this list follows.",
     "Keep your tools. Change two settings.": "Keep your tools. Change two settings.",
     "Claude Code, Codex CLI, Cursor and the official SDKs all read a base URL and an API key. Point them here, and every model answers on the same key.": "Claude Code, Codex CLI, Cursor and the official SDKs all read a base URL and an API key. Point them here, and every model answers on the same key.",
@@ -4301,6 +4298,7 @@
     "Claude, GPT, Gemini, DeepSeek and Qwen,": "Claude, GPT, Gemini, DeepSeek and Qwen,",
     "on a single key and one invoice.": "on a single key and one invoice.",
     "For every model": "For every model",
-    "you run.": "you run."
+    "you run.": "you run.",
+    "{{vendors}} vendors, {{models}} models, all on one API key.": "{{vendors}} vendors, {{models}} models, all on one API key."
   }
 }

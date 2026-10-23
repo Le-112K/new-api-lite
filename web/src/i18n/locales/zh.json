@@ -4234,7 +4234,6 @@
     "Self-hosted — your data stays on your own server": "可自托管，数据留在自己的服务器",
     "Every model you have switched on, in one catalog": "所有已启用的模型，一处看全",
     "All models and prices": "全部模型与价格",
-    "And {{count}} more in the catalog.": "目录里还有 {{count}} 个模型。",
     "Setup": "接入",
     "Change two settings. Keep your tools.": "改两个设置，工具照用。",
     "For Claude Code and the Messages API": "适用于 Claude Code 与 Messages API",
@@ -4281,8 +4280,6 @@
     "See pricing": "查看价格",
     "Read the docs": "阅读文档",
     "Open source · deploy on your own server, no per-seat fee": "开源 · 部署在自己的服务器，不按席位收费",
-    "{{models}} models from {{vendors}} families, on one API key.": "{{models}} 个模型、{{vendors}} 家厂商，共用一个 API Key。",
-    "{{models}} models, on one API key.": "{{models}} 个模型，共用一个 API Key。",
     "Read from the live catalog — enable or retire a model in the console and this list follows.": "清单读的是线上目录 —— 在控制台启用或下线一个模型，这里立刻跟着变。",
     "Keep your tools. Change two settings.": "工具不用换，改两个设置。",
     "Claude Code, Codex CLI, Cursor and the official SDKs all read a base URL and an API key. Point them here, and every model answers on the same key.": "Claude Code、Codex CLI、Cursor 和各家官方 SDK，都只认一个 base URL 和一个 key。指向这里，所有模型共用同一把 key 应答。",
@@ -4301,6 +4298,7 @@
     "Claude, GPT, Gemini, DeepSeek and Qwen,": "Claude、GPT、Gemini、DeepSeek、通义千问，",
     "on a single key and one invoice.": "共用一把 key、一张账单。",
     "For every model": "跑通你在用的",
-    "you run.": "每个模型"
+    "you run.": "每个模型",
+    "{{vendors}} vendors, {{models}} models, all on one API key.": "{{vendors}} 家厂商、{{models}} 个模型，一个 API Key 全部调用。"
   }
 }

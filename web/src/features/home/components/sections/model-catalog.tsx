@@ -16,72 +16,81 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { getLobeIcon } from '@/lib/lobe-icon'
-import { pricingQueryOptions } from '@/features/pricing/queries'
-import type { PricingModel } from '@/features/pricing/types'
+import { usePricingData } from '@/features/pricing/hooks/use-pricing-data'
 
 import { SectionHeading, SectionShell } from '../section-shell'
 
-/** How many models the homepage shows before deferring to the full catalog. */
-const SHOWCASE_LIMIT = 8
-
-/** Endpoint slugs the backend can return, mapped to what a buyer recognises. */
-const ENDPOINT_LABELS: Record<string, string> = {
-  openai: 'OpenAI',
-  anthropic: 'Anthropic',
-  gemini: 'Gemini',
-  'jina-rerank': 'Rerank',
-  'image-generation': 'Image',
-  embeddings: 'Embed',
-  embedding: 'Embed',
-  rerank: 'Rerank',
+type VendorGroup = {
+  id: number
+  name: string
+  icon?: string
+  count: number
 }
 
 /**
  * The catalog block.
  *
- * Two constraints shaped it. First, the live catalog is small and will change
- * without a deploy, so the grid is `auto-fill` over a hairline mesh: four models
- * fill one tidy row, forty wrap into more rows, and neither state needs a
- * redesign or a hardcoded column count. Second, the tile shows what a buyer
- * actually compares — the model id, who serves it, and which protocol it speaks
- * — not marketing copy.
+ * It groups by vendor instead of listing SKUs. Two reasons: the console is the
+ * source of truth for what is on sale, and a raw model id (`deepseek-v4-flash-
+ * ga-260731`) means nothing to a buyer — "DeepSeek · 3 models" does. The grid is
+ * therefore derived, never hardcoded: enable a vendor in the console and it
+ * appears, retire one and the tile disappears with it.
  *
- * Prices are deliberately absent here: every ratio in the live catalog is still
- * the historical placeholder (37.5, ≈$75/1M), so printing currency would publish
- * a wrong number. The full pricing page owns that surface until repricing lands.
+ * Grouping happens on `vendor_id`, joined against `data.vendors` by
+ * `usePricingData`. Reading the raw query here would leave `vendor_name` empty
+ * (the API ships only `vendor_id` on each model), which is how the old tiles
+ * ended up labelling DeepSeek models as "OpenAI" — that tag was the protocol,
+ * not the vendor.
+ *
+ * Layout is `flex-wrap` + `min-w` rather than a fixed column count: two vendors
+ * fill the row edge to edge, twelve wrap into even rows of five, and the hairline
+ * mesh stays closed in both cases. Prices stay off this surface until the
+ * placeholder ratios are repriced.
  */
 export function ModelCatalog() {
   const { t } = useTranslation()
-  const { data, isPending } = useQuery(pricingQueryOptions())
+  const { models, isLoading } = usePricingData()
 
-  const models = data?.data ?? []
-  if (!isPending && models.length === 0) return null
+  const vendors = useMemo(() => {
+    const grouped = new Map<number, VendorGroup>()
+    for (const model of models) {
+      if (model.vendor_id == null) continue
+      const known = grouped.get(model.vendor_id)
+      if (known) {
+        known.count += 1
+        continue
+      }
+      grouped.set(model.vendor_id, {
+        id: model.vendor_id,
+        /* Fall back to the icon key (`DeepSeek.Color`) minus its variant so a
+           vendor without a translated name still gets a readable label. */
+        name: model.vendor_name || model.vendor_icon?.split('.')[0] || '—',
+        icon: model.vendor_icon,
+        count: 1,
+      })
+    }
+    return [...grouped.values()].sort(
+      (a, b) => b.count - a.count || a.name.localeCompare(b.name)
+    )
+  }, [models])
 
-  const shown = models.slice(0, SHOWCASE_LIMIT)
-  const remaining = models.length - shown.length
-  /* Families come from the vendor list, not from `vendor_name` on each model —
-     that field is not always filled in, and counting it would print "0". */
-  const vendorCount = data?.vendors?.length ?? 0
+  if (!isLoading && vendors.length === 0) return null
 
   return (
     <SectionShell id='models' tight>
       <SectionHeading
         compact
         label={t('Models')}
-        title={
-          vendorCount > 0
-            ? t('{{models}} models from {{vendors}} families, on one API key.', {
-                models: models.length,
-                vendors: vendorCount,
-              })
-            : t('{{models}} models, on one API key.', { models: models.length })
-        }
+        title={t('{{vendors}} vendors, {{models}} models, all on one API key.', {
+          vendors: vendors.length,
+          models: models.length,
+        })}
         lede={t(
           'Read from the live catalog — enable or retire a model in the console and this list follows.'
         )}
@@ -99,75 +108,52 @@ export function ModelCatalog() {
         }
       />
 
-      {isPending ? (
+      {isLoading ? (
         <div className='overflow-hidden rounded-xl border border-border'>
-          <div className='grid grid-cols-1 gap-px bg-border sm:grid-cols-2 lg:grid-cols-4'>
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className='bg-background p-5'>
-                <div className='h-3.5 w-2/3 animate-pulse rounded bg-secondary' />
-                <div className='mt-2.5 h-2.5 w-1/3 animate-pulse rounded bg-secondary' />
+          <div className='flex flex-wrap'>
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div
+                key={index}
+                className='-mt-px -ml-px flex min-w-[240px] flex-1 items-center gap-3 border-t border-l border-border bg-background px-5 py-4'
+              >
+                <div className='size-6 animate-pulse rounded-full bg-secondary' />
+                <div className='min-w-0 flex-1'>
+                  <div className='h-3 w-20 animate-pulse rounded bg-secondary' />
+                  <div className='mt-2 h-2.5 w-12 animate-pulse rounded bg-secondary' />
+                </div>
               </div>
             ))}
           </div>
         </div>
       ) : (
         <div className='overflow-hidden rounded-xl border border-border'>
-          <div className='grid grid-cols-1 gap-px bg-border sm:grid-cols-2 lg:grid-cols-4'>
-            {shown.map((model) => (
-              <ModelTile key={model.model_name} model={model} />
+          {/* Hairline mesh: every tile keeps its own top/left border and pulls
+              itself 1px up-left, so the seams collapse into single lines and the
+              first row/column sit exactly on the container border. */}
+          <div className='flex flex-wrap'>
+            {vendors.map((vendor) => (
+              <Link
+                key={vendor.id}
+                to='/pricing'
+                search={{ vendor: vendor.name }}
+                className='group -mt-px -ml-px flex min-w-[240px] flex-1 items-center gap-3 border-t border-l border-border bg-background px-5 py-4 transition-colors hover:bg-secondary/40'
+              >
+                <span className='flex size-6 shrink-0 items-center justify-center'>
+                  {getLobeIcon(vendor.icon, 24)}
+                </span>
+                <span className='min-w-0'>
+                  <span className='block truncate text-[14.5px] leading-tight font-semibold text-foreground'>
+                    {vendor.name}
+                  </span>
+                  <span className='mt-1 block text-[12px] leading-none text-muted-foreground'>
+                    {t('{{count}} models', { count: vendor.count })}
+                  </span>
+                </span>
+              </Link>
             ))}
           </div>
         </div>
       )}
-
-      {remaining > 0 ? (
-        <p className='mt-4 text-[13px] text-muted-foreground'>
-          {t('And {{count}} more in the catalog.', { count: remaining })}
-        </p>
-      ) : null}
     </SectionShell>
-  )
-}
-
-function ModelTile(props: { model: PricingModel }) {
-  const iconKey = props.model.icon || props.model.vendor_icon
-  const icon = iconKey ? getLobeIcon(iconKey, 18) : null
-  /* Vendor names are not always populated in the catalog; joining the parts and
-     dropping empties keeps a stray "—" out of the tile. */
-  const endpoints = (props.model.supported_endpoint_types ?? [])
-    .slice(0, 2)
-    .map((type) => ENDPOINT_LABELS[type] ?? type)
-
-  return (
-    /* Fixed height with the metadata pinned to the bottom: with a four-model
-       catalog the row is the whole section, and tiles that hug their content
-       read as a thin strip instead of a grid. */
-    <div className='flex min-h-[96px] flex-col justify-between gap-4 bg-background p-5 transition-colors hover:bg-secondary/40'>
-      <div className='flex items-center gap-2'>
-        {icon ? (
-          <span className='flex size-[18px] shrink-0 items-center justify-center'>
-            {icon}
-          </span>
-        ) : null}
-        <span className='lp-mono truncate text-[13px] font-medium text-foreground'>
-          {props.model.model_name}
-        </span>
-      </div>
-      <div className='flex flex-wrap items-center gap-1.5'>
-        {props.model.vendor_name ? (
-          <span className='text-[11.5px] text-muted-foreground'>
-            {props.model.vendor_name}
-          </span>
-        ) : null}
-        {endpoints.map((endpoint) => (
-          <span
-            key={endpoint}
-            className='lp-mono rounded border border-border px-1.5 py-0.5 text-[10.5px] text-muted-foreground'
-          >
-            {endpoint}
-          </span>
-        ))}
-      </div>
-    </div>
   )
 }
