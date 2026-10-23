@@ -70,7 +70,7 @@ export function ModelCatalog() {
   const vendorCount = data?.vendors?.length ?? 0
 
   return (
-    <SectionShell id='models'>
+    <SectionShell id='models' tight>
       <SectionHeading
         compact
         label={t('Models')}

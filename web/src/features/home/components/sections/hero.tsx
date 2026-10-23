@@ -81,16 +81,19 @@ export function Hero(props: HeroProps) {
 
   return (
     <section className={cn('lp bg-background', props.className)}>
-      <div className='mx-auto w-full max-w-[1424px] px-6 py-16 md:px-12 md:py-24'>
+      {/* 导航条是 fixed 且高 64px，所以首屏的上内边距要把这 64px 算进去，
+          最终内容距视口顶部 64 + 96 = 160px，与参考站一致。 */}
+      <div className='mx-auto w-full max-w-[1424px] px-6 pt-28 pb-16 md:px-12 md:pt-40 md:pb-24'>
         <div className='grid grid-cols-1 items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,751px)] lg:gap-6'>
           {/* Left — the claim. The copy column is 1fr against a fixed 751px
               terminal, not the reference's fixed 467px: the Chinese second line
               is nine characters wide and needs 540px at 60px type, which 467px
               cannot give without breaking the line after five characters. */}
           <div>
-            <h1 className='lp-display text-[clamp(2.3rem,3.6vw,3.4rem)] leading-[1.06] font-semibold text-foreground'>
+            <h1 className='lp-display text-[2.6rem] leading-[1.02] tracking-[-0.03em] md:text-[68px] font-semibold text-foreground'>
               <span className='block'>{t('One API key,')}</span>
-              <span className='block'>{t('For every model you run.')}</span>
+              <span className='block'>{t('For every model')}</span>
+              <span className='block'>{t('you run.')}</span>
             </h1>
 
             {/* Two sentences on two lines, like the reference: CJK has no word

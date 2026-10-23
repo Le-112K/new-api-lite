@@ -61,7 +61,7 @@ export function Home() {
 
   if (!isLoaded) {
     return (
-      <PublicLayout showMainContainer={false}>
+      <PublicLayout showMainContainer={false} headerProps={{ variant: 'landing' }} wrapperClassName='bg-white dark:bg-[#0a0a0a]'>
         <main className='flex min-h-screen items-center justify-center'>
           <div className='text-muted-foreground'>{t('Loading...')}</div>
         </main>
@@ -72,7 +72,7 @@ export function Home() {
   if (content) {
     if (isUrl) {
       return (
-        <PublicLayout showMainContainer={false}>
+        <PublicLayout showMainContainer={false} headerProps={{ variant: 'landing' }} wrapperClassName='bg-white dark:bg-[#0a0a0a]'>
           {/*
             allow-top-navigation-by-user-activation: the custom home page URL is
             admin-configured (trusted); this lets its target="_top" nav/menu links
@@ -97,7 +97,7 @@ export function Home() {
 
     if (contentIsHtml) {
       return (
-        <PublicLayout showMainContainer={false}>
+        <PublicLayout showMainContainer={false} headerProps={{ variant: 'landing' }} wrapperClassName='bg-white dark:bg-[#0a0a0a]'>
           <RichContent
             mode='html'
             htmlVariant='isolated'
@@ -109,7 +109,7 @@ export function Home() {
     }
 
     return (
-      <PublicLayout>
+      <PublicLayout headerProps={{ variant: 'landing' }} wrapperClassName='bg-white dark:bg-[#0a0a0a]'>
         <div className='mx-auto max-w-6xl px-4 py-8'>
           <RichContent
             mode='markdown'
@@ -122,7 +122,7 @@ export function Home() {
   }
 
   return (
-    <PublicLayout showMainContainer={false}>
+    <PublicLayout showMainContainer={false} headerProps={{ variant: 'landing' }} wrapperClassName='bg-white dark:bg-[#0a0a0a]'>
       {/* The landing page is a claim followed by four pieces of evidence:
           hero (what it is + the two export lines), the live catalog, the setup
           block, the four promises, the questions, then one ask. The rotating

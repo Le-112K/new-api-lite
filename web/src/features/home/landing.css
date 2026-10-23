@@ -54,13 +54,30 @@ For commercial licensing, please contact support@quantumnous.com
 .lp {
   font-family: 'Manrope', var(--font-sans);
   font-feature-settings: 'ss01', 'cv11';
+
+  /* 站内主题的 --background 是 #f5f5f7、--secondary 是 #f2f2f4、正文灰是
+     #6e6e73，参考站分别是 #ffffff / #f4f4f4 / #666666。落地页在 .lp 子树里
+     覆盖这四个令牌，其余页面不受影响 —— 前景色 #0a0a0a 本来就一致，不用动。 */
+  --background: #ffffff;
+  --card: #ffffff;
+  --secondary: #f4f4f4;
+  --muted-foreground: #666666;
+  --border: rgba(10, 10, 10, 0.08);
+}
+
+/* 深色下保持反色，整块黑底换成近黑，边框改成白 10% */
+.dark .lp {
+  --background: #0a0a0a;
+  --card: #0a0a0a;
+  --secondary: #17171a;
+  --muted-foreground: #9a9a9f;
+  --border: rgba(255, 255, 255, 0.1);
 }
 
 /* 中文没有 Sora 字形，会落到系统黑体；拉丁字与数字仍是 Sora，所以型号名、
    版本号、URL 这些"证据"部分的观感和参考站一致。 */
 .lp-display {
   font-family: 'Sora', var(--font-sans);
-  letter-spacing: -0.03em;
 }
 
 .lp-mono {

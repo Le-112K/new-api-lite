@@ -60,7 +60,7 @@ export function Connect() {
           <p className='mb-3 text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase'>
             {t('Setup')}
           </p>
-          <h2 className='lp-display text-[clamp(1.75rem,3vw,2.75rem)] leading-[1.15] font-semibold text-foreground'>
+          <h2 className='lp-display text-[32px] leading-[1.08] tracking-[-0.025em] md:text-[44px] font-semibold text-foreground'>
             {t('Keep your tools. Change two settings.')}
           </h2>
           <p className='mt-4 max-w-[30rem] text-[16px] leading-[1.62] text-muted-foreground'>
@@ -136,7 +136,7 @@ function Snippet(props: { label: string; code: string }) {
           {copied ? t('Copied') : t('Copy')}
         </button>
       </div>
-      <pre className='lp-mono overflow-x-auto px-5 py-4 text-[13.5px] leading-[1.75] text-white/85'>
+      <pre className='lp-mono overflow-x-auto px-5 py-4 text-[13.5px] leading-[1.9] text-white/85'>
         {props.code}
       </pre>
     </div>

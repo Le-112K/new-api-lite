@@ -61,6 +61,12 @@ export interface PublicHeaderProps {
   showAuthButtons?: boolean
   showNotifications?: boolean
   className?: string
+  /**
+   * `landing` 是落地页专用的扁平导航条：整条通栏、白底 80% + 12px 模糊、
+   * 1px 下发丝线、链接 14px/500 内边距 8×12、圆角 6px。默认样式是控制台用的
+   * 悬浮胶囊（滚动后收缩），两者共用同一套数据与交互，只换外框。
+   */
+  variant?: 'default' | 'landing'
 }
 
 export function PublicHeader(props: PublicHeaderProps) {
@@ -74,6 +80,8 @@ export function PublicHeader(props: PublicHeaderProps) {
     showAuthButtons = true,
     showNotifications = true,
   } = props
+
+  const isLanding = props.variant === 'landing'
 
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -124,7 +132,11 @@ export function PublicHeader(props: PublicHeaderProps) {
   let authContent = (
     <Button
       size='sm'
-      className='h-8 rounded-lg px-3.5 text-xs font-medium'
+      className={
+        isLanding
+          ? 'h-10 rounded-lg px-4 text-sm font-semibold'
+          : 'h-8 rounded-lg px-3.5 text-xs font-medium'
+      }
       onClick={openAuthDialog}
     >
       {t('Sign in')}
@@ -210,23 +222,47 @@ export function PublicHeader(props: PublicHeaderProps) {
 
   return (
     <>
-      <header className='pointer-events-none fixed inset-x-0 top-0 z-50'>
+      <header
+        className={cn(
+          'fixed inset-x-0 top-0 z-50',
+          isLanding
+            ? 'border-b border-black/[0.06] bg-white/80 backdrop-blur-[12px] dark:border-white/10 dark:bg-[#0a0a0a]/80'
+            : 'pointer-events-none'
+        )}
+      >
         <div
           className={cn(
-            'pointer-events-auto mx-auto transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]',
-            scrolled ? 'max-w-[52rem] px-3 pt-3' : 'max-w-7xl px-4 pt-0 md:px-6'
+            'mx-auto transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]',
+            isLanding
+              ? 'pointer-events-auto max-w-none px-6 md:px-12'
+              : cn(
+                  'pointer-events-auto',
+                  scrolled ? 'max-w-[52rem] px-3 pt-3' : 'max-w-7xl px-4 pt-0 md:px-6'
+                )
           )}
         >
           <nav
             className={cn(
-              'flex items-center justify-between gap-2 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]',
-              scrolled
-                ? 'bg-background/60 ring-border/50 h-12 rounded-2xl pr-1.5 pl-4 shadow-[0_2px_16px_-6px_rgba(0,0,0,0.08),0_0_0_0.5px_rgba(0,0,0,0.02)] ring-[0.5px] backdrop-blur-2xl dark:shadow-[0_2px_16px_-6px_rgba(0,0,0,0.4)]'
-                : 'h-16 px-2'
+              'flex items-center justify-between transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]',
+              isLanding
+                ? 'h-16 gap-6'
+                : cn(
+                    'gap-2',
+                    scrolled
+                      ? 'bg-background/60 ring-border/50 h-12 rounded-2xl pr-1.5 pl-4 shadow-[0_2px_16px_-6px_rgba(0,0,0,0.08),0_0_0_0.5px_rgba(0,0,0,0.02)] ring-[0.5px] backdrop-blur-2xl dark:shadow-[0_2px_16px_-6px_rgba(0,0,0,0.4)]'
+                      : 'h-16 px-2'
+                  )
             )}
           >
             {/* Logo */}
-            <div className='@container/system-brand flex min-w-0 flex-1 items-center gap-1 lg:min-w-36'>
+            {/* 落地页给品牌区固定宽度：设成 flex-none 会让容器查询把站名隐藏，
+                而 flex-1 又会和链接组平分空间、把链接挤到右边。固定宽度两头都避开了。 */}
+            <div
+              className={cn(
+                '@container/system-brand flex min-w-0 items-center gap-1',
+                isLanding ? 'w-[220px] shrink-0' : 'flex-1 lg:min-w-36'
+              )}
+            >
               <Link
                 to={homeUrl}
                 className='group flex min-w-0 items-center gap-2.5'
@@ -248,7 +284,20 @@ export function PublicHeader(props: PublicHeaderProps) {
             </div>
 
             {/* Desktop nav */}
-            <div className='hidden min-w-0 items-center gap-0.5 lg:flex'>
+            <div
+              className={cn(
+                'hidden min-w-0 items-center lg:flex',
+                isLanding && 'flex-1'
+              )}
+            >
+              {/* 落地页把「链接」与「图标+登录」拆成两段：链接在导航条里居中，
+                  图标与按钮贴右，和参考站的分布一致。默认样式仍是一个整体。 */}
+              <div
+                className={cn(
+                  'flex min-w-0 items-center',
+                  isLanding ? 'flex-1 justify-center gap-1' : 'gap-0.5'
+                )}
+              >
               {links.map((link) => {
                 const isActive = pathname === link.href
                 if (link.external) {
@@ -263,7 +312,10 @@ export function PublicHeader(props: PublicHeaderProps) {
                       tabIndex={link.disabled ? -1 : undefined}
                       onClick={(event) => handleNavLinkClick(event, link)}
                       className={cn(
-                        'text-muted-foreground hover:text-foreground min-w-0 truncate rounded-lg px-3 py-1.5 text-sm font-medium transition-colors duration-200',
+                        'text-muted-foreground hover:text-foreground min-w-0 truncate text-sm font-medium transition-colors duration-200',
+                        isLanding
+                          ? 'rounded-md px-3 py-2'
+                          : 'rounded-lg px-3 py-1.5',
                         link.disabled && 'pointer-events-none opacity-50'
                       )}
                     >
@@ -279,7 +331,10 @@ export function PublicHeader(props: PublicHeaderProps) {
                     disabled={link.disabled}
                     onClick={(event) => handleNavLinkClick(event, link)}
                     className={cn(
-                      'min-w-0 truncate rounded-lg px-3 py-1.5 text-sm font-medium transition-colors duration-200',
+                      'min-w-0 truncate text-sm font-medium transition-colors duration-200',
+                      isLanding
+                        ? 'rounded-md px-3 py-2'
+                        : 'rounded-lg px-3 py-1.5',
                       isActive
                         ? 'text-foreground'
                         : 'text-muted-foreground hover:text-foreground',
@@ -290,12 +345,14 @@ export function PublicHeader(props: PublicHeaderProps) {
                   </Link>
                 )
               })}
+              </div>
 
               {(showLanguageSwitcher ||
                 showThemeSwitch ||
-                showNotifications) && (
-                <div className='bg-border/40 mx-2 h-4 w-px' />
-              )}
+                showNotifications) &&
+                !isLanding && (
+                  <div className='bg-border/40 mx-2 h-4 w-px' />
+                )}
 
               {showLanguageSwitcher && <LanguageSwitcher />}
               {showThemeSwitch && <ThemeSwitch />}
@@ -314,7 +371,9 @@ export function PublicHeader(props: PublicHeaderProps) {
 
               {showAuthButtons && (
                 <>
-                  <div className='bg-border/40 mx-1 h-4 w-px' />
+                  {!isLanding && (
+                    <div className='bg-border/40 mx-1 h-4 w-px' />
+                  )}
                   {authContent}
                 </>
               )}

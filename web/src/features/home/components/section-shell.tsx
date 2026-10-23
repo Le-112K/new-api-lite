@@ -34,12 +34,15 @@ export function SectionShell(props: {
   className?: string
   innerClassName?: string
   id?: string
+  /** 参考站的模型段是 80px 上下留白，其余四段才是 112px */
+  tight?: boolean
 }) {
   return (
-    <section id={props.id} className={cn('lp', props.className)}>
+    <section id={props.id} className={cn('lp bg-background', props.className)}>
       <div
         className={cn(
-          'mx-auto w-full max-w-[1424px] px-6 py-20 md:px-12 md:py-28',
+          'mx-auto w-full max-w-[1424px] px-6 py-16 md:px-12',
+          props.tight ? 'md:py-20' : 'md:py-28',
           props.innerClassName
         )}
       >
@@ -67,7 +70,8 @@ export function SectionHeading(props: {
   return (
     <div
       className={cn(
-        'mb-10 flex flex-col gap-5 md:mb-14 md:flex-row md:items-end md:justify-between md:gap-10',
+        'flex flex-col gap-5 md:flex-row md:items-end md:justify-between md:gap-10',
+        props.compact ? 'mb-8' : 'mb-10 md:mb-14',
         props.className
       )}
     >
@@ -79,8 +83,8 @@ export function SectionHeading(props: {
           className={cn(
             'lp-display font-semibold text-foreground',
             props.compact
-              ? 'text-[clamp(1.25rem,1.9vw,1.75rem)] leading-[1.25] tracking-[-0.02em]'
-              : 'text-[clamp(1.75rem,3vw,2.75rem)] leading-[1.15]'
+              ? 'text-[24px] leading-[1.25] tracking-[-0.02em] md:text-[28px]'
+              : 'text-[32px] leading-[1.08] tracking-[-0.025em] md:text-[44px]'
           )}
         >
           {props.title}

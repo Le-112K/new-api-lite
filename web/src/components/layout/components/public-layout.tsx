@@ -16,6 +16,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { cn } from '@/lib/utils'
+
 import type { TopNavLink } from '../types'
 import { PublicHeader, type PublicHeaderProps } from './public-header'
 
@@ -24,6 +26,8 @@ type PublicLayoutProps = {
   showMainContainer?: boolean
   navContent?: React.ReactNode
   headerProps?: Omit<PublicHeaderProps, 'navContent'>
+  /** 覆盖最外层容器的底色；落地页用它把 #f5f5f7 换成纯白 */
+  wrapperClassName?: string
   navLinks?: TopNavLink[]
   showThemeSwitch?: boolean
   showAuthButtons?: boolean
@@ -34,7 +38,12 @@ type PublicLayoutProps = {
 
 export function PublicLayout(props: PublicLayoutProps) {
   return (
-    <div className='bg-background text-foreground relative min-h-svh overflow-x-clip'>
+    <div
+      className={cn(
+        'bg-background text-foreground relative min-h-svh overflow-x-clip',
+        props.wrapperClassName
+      )}
+    >
       <PublicHeader
         navContent={props.navContent}
         navLinks={props.navLinks}

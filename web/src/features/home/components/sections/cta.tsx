@@ -48,7 +48,7 @@ export function CTA(props: CTAProps) {
     <section className={cn('lp bg-foreground text-background', props.className)}>
       <div className='mx-auto flex w-full max-w-[1424px] flex-col items-start gap-8 px-6 py-14 md:flex-row md:items-center md:justify-between md:px-12 md:py-20'>
         <div>
-          <h2 className='lp-display max-w-[34rem] text-[clamp(1.75rem,3vw,2.75rem)] leading-[1.15] font-semibold'>
+          <h2 className='lp-display max-w-[34rem] text-[32px] leading-[1.08] tracking-[-0.025em] md:text-[44px] font-semibold'>
             <span className='block'>{t('Start with any model.')}</span>
             <span className='block'>{t('Change it whenever you like.')}</span>
           </h2>
