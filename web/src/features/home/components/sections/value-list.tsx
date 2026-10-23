@@ -95,16 +95,16 @@ export function ValueList() {
         {rows.map((row) => (
           <div
             key={row.label}
-            className='grid grid-cols-1 gap-3 border-b border-border py-7 md:grid-cols-12 md:gap-8'
+            className='grid grid-cols-1 gap-3 border-b border-border py-7 md:grid-cols-[208px_minmax(0,1fr)] md:gap-8'
           >
-            <dt className='text-[15px] font-semibold text-foreground md:col-span-3'>
+            <dt className='lp-display text-[17px] font-semibold text-foreground'>
               {row.label}
             </dt>
-            <dd className='md:col-span-9'>
-              <p className='max-w-[46rem] text-[14px] leading-[1.65] text-muted-foreground'>
+            <dd>
+              <p className='max-w-[42rem] text-[16px] leading-[1.62] text-muted-foreground'>
                 {row.body}
               </p>
-              <div className='mt-3 flex flex-wrap gap-1.5'>{row.example}</div>
+                      <div className='mt-3 flex flex-wrap gap-1.5'>{row.example}</div>
             </dd>
           </div>
         ))}
@@ -115,7 +115,7 @@ export function ValueList() {
 
 function Mono(props: { children: ReactNode }) {
   return (
-    <span className='rounded border border-border bg-secondary/60 px-1.5 py-0.5 font-mono text-[11.5px] text-muted-foreground'>
+    <span className='lp-mono rounded border border-border px-1.5 py-0.5 text-[12px] text-muted-foreground'>
       {props.children}
     </span>
   )

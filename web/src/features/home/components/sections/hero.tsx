@@ -16,8 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Link } from '@tanstack/react-router'
-import { Check } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -33,127 +32,118 @@ interface HeroProps {
 }
 
 /**
- * Hero — claim on the left, proof on the right.
+ * Hero — claim left, transcript right.
  *
- * The previous hero carried a rotating globe, which made the page memorable but
- * cost a full screen of vertical space and said nothing about the product. It is
- * replaced by a transcript of the two `export` lines a user actually types: the
- * claim ("one API") and the evidence ("here is the key, here is the base URL,
- * here is the answer") now sit side by side at the fold.
+ * Proportions are taken from the reference page: a 467px copy column, a 24px
+ * gutter, a 751px terminal, 96px of vertical padding, and a three-line 68px
+ * display headline set in Sora at -0.03em. The Chinese headline has no Sora
+ * glyphs and falls back to the system CJK face, so it is allowed to wrap to
+ * three lines on its own — the block's optical weight stays the same.
  *
- * Three checkmarks stand in for a feature list. They are the only claims on the
- * page that are not demonstrated elsewhere, so they stay short and concrete.
+ * The right-hand card is the page's only saturated surface. Everything else is
+ * ink on white with hairlines, which is what keeps a long page calm.
  */
 export function Hero(props: HeroProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { status } = useStatus()
 
   const docsBase = (
     (status?.docs_link as string | undefined) || 'https://docs.newapi.pro'
   ).replace(/\/+$/, '')
 
-  // `:lang(zh)` is unusable here (the document `lang` is a static "en"), so the
-  // tracking correction is derived in JS, mirroring the prototype: Latin gets a
-  // tighter headline, CJK gets zeroed letter-spacing.
-  const isZh = (i18n.resolvedLanguage || i18n.language || '')
-    .toLowerCase()
-    .startsWith('zh')
-
+  /* Both destinations are documentation URLs, so they always leave the app —
+     a plain anchor keeps this honest and skips the router. */
   const renderCta = (
     href: string,
     label: string,
     isPrimary: boolean
   ): ReactElement => {
-    const isExternal = href.startsWith('http')
-    const render: ReactElement = isExternal ? (
+    const render: ReactElement = (
       <a href={href} target='_blank' rel='noopener noreferrer' />
-    ) : (
-      <Link to={href} />
     )
 
     return (
       <Button
         variant={isPrimary ? 'default' : 'outline'}
         className={cn(
-          'h-11 rounded-full px-5 text-[13.5px] font-semibold tracking-[-0.01em]',
+          'lp h-12 rounded-lg px-5 text-[15px] font-medium tracking-normal',
           isPrimary
-            ? 'hover:bg-black dark:hover:bg-[#E8E8ED] dark:hover:text-[#0a0a0a]'
-            : 'border-border bg-transparent text-foreground hover:bg-secondary dark:hover:border-white/20'
+            ? 'bg-foreground text-background hover:bg-foreground/90'
+            : 'border-border bg-background text-foreground hover:bg-secondary'
         )}
         render={render}
       >
         {label}
+        {isPrimary ? <ArrowRight className='ml-1 size-4' aria-hidden /> : null}
       </Button>
     )
   }
 
-  const checks = [
-    t('OpenAI- and Anthropic-compatible endpoints'),
-    t('Works with Cherry Studio, Claude Code and Codex CLI'),
-    t('Self-hosted — your data stays on your own server'),
-  ]
-
   return (
-    <section
-      className={cn(
-        'relative overflow-hidden bg-background pt-14 pb-16 md:pt-20 md:pb-24',
-        props.className
-      )}
-    >
-      <div className='mx-auto grid w-full max-w-[1200px] grid-cols-1 items-center gap-12 px-6 md:px-12 lg:grid-cols-12 lg:gap-12'>
-        {/* Left — the claim. Half the grid, not 5/12: the Chinese second line is
-            nine characters wide and at 3.4rem it needs ~490px, which is exactly
-            what six columns give. At five columns it broke after seven
-            characters. */}
-        <div className='flex flex-col items-start lg:col-span-6'>
-          <div className='mb-6 inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase'>
-            <span className='size-1.5 rounded-full bg-[var(--live)]' aria-hidden />
-            {t('Open source · Self-hosted AI gateway')}
-          </div>
+    <section className={cn('lp bg-background', props.className)}>
+      <div className='mx-auto w-full max-w-[1424px] px-6 py-16 md:px-12 md:py-24'>
+        <div className='grid grid-cols-1 items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,751px)] lg:gap-6'>
+          {/* Left — the claim. The copy column is 1fr against a fixed 751px
+              terminal, not the reference's fixed 467px: the Chinese second line
+              is nine characters wide and needs 540px at 60px type, which 467px
+              cannot give without breaking the line after five characters. */}
+          <div>
+            <h1 className='lp-display text-[clamp(2.4rem,3.9vw,3.75rem)] leading-[1.05] font-semibold text-foreground'>
+              <span className='block'>{t('One API,')}</span>
+              <span className='block'>{t('The models you use')}</span>
+            </h1>
 
-          <h1
-            className={cn(
-              'text-[clamp(2.15rem,3.6vw,3.4rem)] leading-[1.06] font-semibold text-foreground',
-              isZh ? 'tracking-[-0.01em]' : 'tracking-[-0.04em]'
-            )}
-          >
-            <span className='block'>{t('One API,')}</span>
-            <span className='block text-muted-foreground'>
-              {t('The models you use')}
-            </span>
-          </h1>
+            <p className='mt-5 text-[18px] leading-[1.62] text-muted-foreground'>
+              {t(
+                'Point Claude Code, Codex CLI or your own code at this gateway. Claude, GPT, Gemini, DeepSeek and Qwen answer on one key and one bill.'
+              )}
+            </p>
 
-          <p className='mt-5 max-w-[32rem] text-[15.5px] leading-[1.6] text-muted-foreground'>
-            {t(
-              'Connect model services like Claude, GPT, Gemini, DeepSeek and Qwen through one OpenAI-compatible API.'
-            )}
-          </p>
+            <div className='mt-7 flex flex-wrap items-center gap-3'>
+              {renderCta(`${docsBase}/zh/docs/installation`, t('Deployment options'), true)}
+              {renderCta(`${docsBase}/zh/docs/api`, t('API reference'), false)}
+            </div>
 
-          <div className='mt-8 flex flex-wrap items-center gap-3'>
-            {renderCta(`${docsBase}/zh/docs/installation`, t('Deployment options'), true)}
-            {renderCta(`${docsBase}/zh/docs/api`, t('API reference'), false)}
-          </div>
+            {/* Hairline + micro bullets: the reference's way of adding three
+                facts without turning them into a card or an icon row. */}
+            <div className='mt-8 border-t border-border pt-5'>
+              <ul className='space-y-2'>
+                {[
+                  t('OpenAI- and Anthropic-compatible endpoints'),
+                  t('Works with Cherry Studio, Claude Code and Codex CLI'),
+                  t('Cancel any time — or self-host and pay no subscription'),
+                ].map((line) => (
+                  <li
+                    key={line}
+                    className='flex items-start gap-2 text-[13.5px] leading-[1.5] text-muted-foreground'
+                  >
+                    <span className='mt-[7px] size-1 shrink-0 rounded-full bg-muted-foreground/60' />
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          <ul className='mt-8 space-y-2.5'>
-            {checks.map((check) => (
-              <li
-                key={check}
-                className='flex items-start gap-2.5 text-[13.5px] leading-[1.5] text-muted-foreground'
+            <div className='mt-6 border-t border-border pt-5'>
+              <a
+                href={`${docsBase}/zh/docs/installation`}
+                target='_blank'
+                rel='noopener noreferrer'
+                className='inline-flex items-center gap-2 text-[13.5px] text-muted-foreground transition-colors hover:text-foreground'
               >
-                <Check
-                  className='mt-[3px] size-3.5 shrink-0 text-foreground'
-                  strokeWidth={2.5}
-                  aria-hidden
-                />
-                <span>{check}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+                <span className='rounded-md border border-border px-1.5 py-0.5 text-[11px] font-semibold text-foreground'>
+                  {t('Open source')}
+                </span>
+                {t('Self-host in one command, no subscription')}
+                <ArrowRight className='size-3.5' aria-hidden />
+              </a>
+            </div>
+          </div>
 
-        {/* Right — the evidence. */}
-        <div className='lg:col-span-6'>
-          <HeroConsole />
+          {/* Right — the evidence. */}
+          <div className='lg:pl-6'>
+            <HeroConsole />
+          </div>
         </div>
       </div>
     </section>

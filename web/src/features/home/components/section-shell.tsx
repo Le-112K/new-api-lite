@@ -23,11 +23,11 @@ import { cn } from '@/lib/utils'
 /**
  * Shared rhythm for every block below the hero.
  *
- * One container width (1200px), one vertical rhythm (py-24 on desktop) and one
- * hairline between blocks — the page reads as one grid rather than a stack of
- * separately-designed sections. Any block that needs to break the rhythm
- * (full-bleed terminal, dark CTA) passes `className` instead of forking the
- * container.
+ * Numbers come straight from the reference page: 1328px content width inside
+ * 48px gutters, 112px of vertical padding, and no borders between blocks —
+ * the bands (white / grey / inverted) do the separating. Alternating the band
+ * instead of drawing hairlines is what makes a long page read as sections
+ * rather than as a table.
  */
 export function SectionShell(props: {
   children: ReactNode
@@ -36,13 +36,10 @@ export function SectionShell(props: {
   id?: string
 }) {
   return (
-    <section
-      id={props.id}
-      className={cn('relative border-t border-border', props.className)}
-    >
+    <section id={props.id} className={cn('lp', props.className)}>
       <div
         className={cn(
-          'mx-auto w-full max-w-[1200px] px-6 py-16 md:px-12 md:py-24',
+          'mx-auto w-full max-w-[1424px] px-6 py-20 md:px-12 md:py-28',
           props.innerClassName
         )}
       >
@@ -53,10 +50,8 @@ export function SectionShell(props: {
 }
 
 /**
- * Section header. Deliberately boring: a micro label, one sentence of claim,
- * one sentence of evidence, and an optional link pushed to the right edge —
- * the same shape apmix uses, because repeating it is what makes a long page
- * feel edited instead of assembled.
+ * Section header. Same shape in every block: an 11px label, a 44px Sora
+ * sentence, one grey line of evidence, and an optional link pushed right.
  */
 export function SectionHeading(props: {
   label: string
@@ -68,19 +63,19 @@ export function SectionHeading(props: {
   return (
     <div
       className={cn(
-        'mb-10 flex flex-col gap-6 md:mb-14 md:flex-row md:items-end md:justify-between',
+        'mb-10 flex flex-col gap-5 md:mb-14 md:flex-row md:items-end md:justify-between md:gap-10',
         props.className
       )}
     >
-      <div className='max-w-[46rem]'>
-        <p className='mb-4 text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase'>
+      <div className='max-w-[36rem]'>
+        <p className='mb-3 text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase'>
           {props.label}
         </p>
-        <h2 className='text-[clamp(1.65rem,2.6vw,2.35rem)] leading-[1.12] font-semibold tracking-[-0.028em] text-foreground'>
+        <h2 className='lp-display text-[clamp(1.75rem,3vw,2.75rem)] leading-[1.15] font-semibold text-foreground'>
           {props.title}
         </h2>
         {props.lede ? (
-          <p className='mt-4 max-w-[38rem] text-[15px] leading-[1.6] text-muted-foreground'>
+          <p className='mt-3 max-w-[34rem] text-[16px] leading-[1.62] text-muted-foreground'>
             {props.lede}
           </p>
         ) : null}

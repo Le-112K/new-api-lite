@@ -20,15 +20,15 @@ import { Check, Copy } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { SectionHeading, SectionShell } from '../section-shell'
+import { SectionShell } from '../section-shell'
 
 /** Clients with a step-by-step guide in the docs; brand names stay untranslated. */
 const CLIENTS = [
-  'Cherry Studio',
   'Claude Code',
   'Codex CLI',
   'Cursor',
   'OpenCode',
+  'Cherry Studio',
   'DeepChat',
   'AionUi',
   'OpenClaw',
@@ -37,13 +37,16 @@ const CLIENTS = [
 /**
  * "Change two settings."
  *
- * Every other gateway page promises compatibility; this block is the only place
- * a visitor can verify it in ten seconds. So the two snippets are the section,
- * not an illustration of it: real base URLs, real export lines, and a copy
- * button that yields something pasteable.
+ * The one block on the page a visitor can verify in ten seconds, so it gets a
+ * grey band — the only non-white section above the closing block. That
+ * alternation does the separating work here instead of a border, which is what
+ * lets the two dark code cards sit on the page without another frame around
+ * them.
  *
- * The URLs are computed from `location.origin` because the gateway is
- * self-hosted — hardcoding a demo domain would produce copy that never works.
+ * Layout follows the reference: copy and the guide list on the left, the two
+ * snippets stacked on the right at 12px radius. The URLs are derived from
+ * `location.origin` because the gateway is self-hosted — a hardcoded demo
+ * domain would produce copy that never works.
  */
 export function Connect() {
   const { t } = useTranslation()
@@ -51,45 +54,44 @@ export function Connect() {
     typeof window === 'undefined' ? 'https://your-gateway.com' : window.location.origin
 
   return (
-    <SectionShell id='connect'>
-      <SectionHeading
-        label={t('Setup')}
-        title={t('Change two settings. Keep your tools.')}
-        lede={t(
-          'Claude Code, Codex CLI, Cursor and the official SDKs all read a base URL and a key. Point them here and every model answers on the same key.'
-        )}
-      />
+    <SectionShell id='connect' className='bg-secondary'>
+      <div className='grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,467px)_minmax(0,1fr)] lg:gap-10'>
+        <div>
+          <p className='mb-3 text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase'>
+            {t('Setup')}
+          </p>
+          <h2 className='lp-display text-[clamp(1.75rem,3vw,2.75rem)] leading-[1.15] font-semibold text-foreground'>
+            {t('Change two settings. Keep your tools.')}
+          </h2>
+          <p className='mt-4 max-w-[30rem] text-[16px] leading-[1.62] text-muted-foreground'>
+            {t(
+              'Claude Code, Codex CLI, Cursor and the official SDKs all read a base URL and a key. Point them here and every model answers on the same key.'
+            )}
+          </p>
 
-      <div className='overflow-hidden rounded-xl border border-border'>
-        <div className='grid grid-cols-1 gap-px bg-border lg:grid-cols-2'>
+          <p className='mt-9 mb-3 text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase'>
+            {t('Step-by-step guides')}
+          </p>
+          <div className='grid max-w-[30rem] grid-cols-2 gap-x-8 gap-y-2.5'>
+            {CLIENTS.map((client) => (
+              <span key={client} className='text-[14px] text-foreground'>
+                {client}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className='space-y-4'>
           <Snippet
-            protocol='Anthropic'
-            caption={t('For Claude Code and the Messages API')}
+            label={t('Anthropic format')}
             code={`export ANTHROPIC_BASE_URL="${origin}"
 export ANTHROPIC_AUTH_TOKEN="sk-your-key"`}
           />
           <Snippet
-            protocol='OpenAI'
-            caption={t('For Codex CLI, Cursor and Chat Completions')}
+            label={t('OpenAI format')}
             code={`export OPENAI_BASE_URL="${origin}/v1"
 export OPENAI_API_KEY="sk-your-key"`}
           />
-        </div>
-      </div>
-
-      <div className='mt-10'>
-        <p className='mb-3 text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase'>
-          {t('Apps with setup guides')}
-        </p>
-        <div className='flex flex-wrap gap-2'>
-          {CLIENTS.map((client) => (
-            <span
-              key={client}
-              className='rounded-full border border-border px-3 py-1 text-[12.5px] text-muted-foreground'
-            >
-              {client}
-            </span>
-          ))}
         </div>
       </div>
     </SectionShell>
@@ -99,9 +101,10 @@ export OPENAI_API_KEY="sk-your-key"`}
 /**
  * One copyable snippet. The copied state is local and self-reverting: a toast
  * would cover the button the user just pressed and is heavier than the action
- * deserves.
+ * deserves. Radius and surface match the hero terminal so the two dark objects
+ * on the page read as the same material.
  */
-function Snippet(props: { protocol: string; caption: string; code: string }) {
+function Snippet(props: { label: string; code: string }) {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
 
@@ -116,19 +119,13 @@ function Snippet(props: { protocol: string; caption: string; code: string }) {
   }
 
   return (
-    <div className='bg-background p-6'>
-      <div className='mb-4 flex items-baseline justify-between gap-3'>
-        <span className='font-mono text-[12.5px] font-medium text-foreground'>
-          {props.protocol}
-        </span>
-        <span className='text-[11.5px] text-muted-foreground'>{props.caption}</span>
-      </div>
-
-      <div className='relative overflow-hidden rounded-lg bg-[#0B0B0C] dark:bg-[#17171A]'>
+    <div className='overflow-hidden rounded-xl bg-[#0a0a0a]'>
+      <div className='flex items-center justify-between border-b border-white/[0.08] px-5 py-2.5'>
+        <span className='lp-mono text-[11.5px] text-white/45'>{props.label}</span>
         <button
           type='button'
           onClick={copy}
-          className='absolute top-2.5 right-2.5 inline-flex items-center gap-1.5 rounded-md border border-white/10 px-2 py-1 font-mono text-[10.5px] text-white/45 transition-colors hover:border-white/20 hover:text-white/80'
+          className='lp-mono inline-flex items-center gap-1.5 text-[11.5px] text-white/45 transition-colors hover:text-white/85'
           aria-label={t('Copy')}
         >
           {copied ? (
@@ -138,10 +135,10 @@ function Snippet(props: { protocol: string; caption: string; code: string }) {
           )}
           {copied ? t('Copied') : t('Copy')}
         </button>
-        <pre className='overflow-x-auto px-4 py-4 pr-20 font-mono text-[11.5px] leading-[1.9] text-white/70'>
-          {props.code}
-        </pre>
       </div>
+      <pre className='lp-mono overflow-x-auto px-5 py-4 text-[13.5px] leading-[1.75] text-white/85'>
+        {props.code}
+      </pre>
     </div>
   )
 }

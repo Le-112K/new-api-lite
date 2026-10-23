@@ -17,6 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { Link } from '@tanstack/react-router'
+import { ArrowRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
@@ -30,11 +31,11 @@ interface CTAProps {
 /**
  * Closing block.
  *
- * The previous version wrapped the ask in a 500px-tall black card with a
- * gradient, which competed with the hero for attention at the exact moment the
- * page should be quiet. It is now the same two-column rhythm as every other
- * block — claim on the left, actions on the right — so the page ends instead of
- * restarting.
+ * Full-bleed inverted band, 331px tall on the reference: two lines of 44px
+ * display type on the left, one grey line under them, two buttons on the right,
+ * everything vertically centred. Using `bg-foreground` / `text-background`
+ * instead of literal black keeps it inverted in dark mode too, so the page ends
+ * with the same contrast flip in either theme.
  *
  * Signed-in visitors get the only action that is useful to them: go to the
  * console. Previously the whole block disappeared, which left a signed-in
@@ -44,36 +45,39 @@ export function CTA(props: CTAProps) {
   const { t } = useTranslation()
 
   return (
-    <section
-      className={cn('relative border-t border-border bg-background', props.className)}
-    >
-      <div className='mx-auto flex w-full max-w-[1200px] flex-col gap-8 px-6 py-16 md:flex-row md:items-end md:justify-between md:px-12 md:py-24'>
-        <h2 className='max-w-[34rem] text-[clamp(1.9rem,3.6vw,2.9rem)] leading-[1.08] font-semibold tracking-[-0.03em] text-foreground'>
-          <span className='block'>{t('Send your first request,')}</span>
-          <span className='block text-muted-foreground'>
-            {t('it takes two environment variables.')}
-          </span>
-        </h2>
+    <section className={cn('lp bg-foreground text-background', props.className)}>
+      <div className='mx-auto flex w-full max-w-[1424px] flex-col items-start gap-8 px-6 py-14 md:flex-row md:items-center md:justify-between md:px-12 md:py-20'>
+        <div>
+          <h2 className='lp-display max-w-[34rem] text-[clamp(1.75rem,3vw,2.75rem)] leading-[1.15] font-semibold'>
+            <span className='block'>{t('Send your first request,')}</span>
+            <span className='block'>{t('it takes two environment variables.')}</span>
+          </h2>
+          <p className='mt-4 text-[16px] leading-[1.6] text-background/55'>
+            {t('Choose a model, create a key, and point your tools at the gateway.')}
+          </p>
+        </div>
 
-        <div className='flex flex-wrap items-center gap-3'>
+        <div className='flex shrink-0 flex-wrap items-center gap-3'>
           {props.isAuthenticated ? (
             <Button
-              className='h-11 rounded-full px-5 text-[13.5px] font-semibold'
+              className='h-12 rounded-lg bg-background px-5 text-[15px] font-medium text-foreground hover:bg-background/90'
               render={<Link to='/dashboard' />}
             >
               {t('Open the console')}
+              <ArrowRight className='ml-1 size-4' aria-hidden />
             </Button>
           ) : (
             <>
               <Button
-                className='h-11 rounded-full px-5 text-[13.5px] font-semibold'
+                className='h-12 rounded-lg bg-background px-5 text-[15px] font-medium text-foreground hover:bg-background/90'
                 render={<Link to='/pricing' />}
               >
                 {t('Browse the models')}
+                <ArrowRight className='ml-1 size-4' aria-hidden />
               </Button>
               <Button
                 variant='outline'
-                className='h-11 rounded-full border-border bg-transparent px-5 text-[13.5px] font-semibold text-foreground hover:bg-secondary'
+                className='h-12 rounded-lg border-background/25 bg-transparent px-5 text-[15px] font-medium text-background hover:border-background/40 hover:bg-background/10'
                 render={
                   <a
                     href='https://docs.newapi.pro/docs/installation'

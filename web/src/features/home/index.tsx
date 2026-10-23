@@ -27,6 +27,7 @@ import { isLikelyHtml } from '@/lib/content-format'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { CTA, Connect, Faq, Hero, ModelCatalog, ValueList } from './components'
+import './landing.css'
 import { useHomePageContent } from './hooks'
 
 export function Home() {

@@ -138,7 +138,7 @@ function ModelTile(props: { model: PricingModel }) {
             {icon}
           </span>
         ) : null}
-        <span className='truncate font-mono text-[12.5px] font-medium text-foreground'>
+        <span className='lp-mono truncate text-[13px] font-medium text-foreground'>
           {props.model.model_name}
         </span>
       </div>
@@ -151,7 +151,7 @@ function ModelTile(props: { model: PricingModel }) {
         {endpoints.map((endpoint) => (
           <span
             key={endpoint}
-            className='rounded border border-border px-1.5 py-0.5 text-[10.5px] text-muted-foreground'
+            className='lp-mono rounded border border-border px-1.5 py-0.5 text-[10.5px] text-muted-foreground'
           >
             {endpoint}
           </span>

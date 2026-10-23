@@ -4267,6 +4267,13 @@
     "One credential, one bill and one log stream. The gateway absorbs the protocol differences between OpenAI and Anthropic, so a single client can reach models from several vendors without changing code.": "一个凭证、一份账单、一套日志。网关抹平了 OpenAI 与 Anthropic 的协议差异，同一个客户端不改代码就能调多家厂商的模型。",
     "Through your own deployment and nowhere else. The software runs on your server, keeps its database there, and does not report usage to us or to any third party.": "只经过你自己部署的那套服务。软件跑在你的服务器上，数据库也在本机，不会把用量上报给我们或任何第三方。",
     "Per token, at a per-model multiplier the operator sets in the console. Users can be given quotas, rate limits and separate tokens, and every charge is written to the usage log.": "按 token 计量，倍率由部署者在后台按模型配置。可以给用户分配额度、限速和独立令牌，每一笔扣费都写进用量日志。",
-    "One Docker Compose file with PostgreSQL and Redis. The installation guide covers Compose, 1Panel and BaoTa, including the environment variables that must be set before the first start.": "一个 Docker Compose 文件，带上 PostgreSQL 和 Redis 就能跑。安装文档覆盖 Compose、1Panel 和宝塔，包括首次启动前必须设置的环境变量。"
+    "One Docker Compose file with PostgreSQL and Redis. The installation guide covers Compose, 1Panel and BaoTa, including the environment variables that must be set before the first start.": "一个 Docker Compose 文件，带上 PostgreSQL 和 Redis 就能跑。安装文档覆盖 Compose、1Panel 和宝塔，包括首次启动前必须设置的环境变量。",
+    "Point Claude Code, Codex CLI or your own code at this gateway. Claude, GPT, Gemini, DeepSeek and Qwen answer on one key and one bill.": "把 Claude Code、Codex CLI 或你自己的代码指向这个网关。Claude、GPT、Gemini、DeepSeek、通义千问，一个 key、一份账单。",
+    "Cancel any time — or self-host and pay no subscription": "随时可以走 —— 也可以自托管，不付订阅费",
+    "Self-host in one command, no subscription": "一条命令自托管，没有订阅费",
+    "Step-by-step guides": "逐步接入指南",
+    "Anthropic format": "Anthropic 格式",
+    "OpenAI format": "OpenAI 格式",
+    "Choose a model, create a key, and point your tools at the gateway.": "选一个模型，建一个 key，把工具指向网关。"
   }
 }

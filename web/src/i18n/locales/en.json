@@ -4267,6 +4267,13 @@
     "One credential, one bill and one log stream. The gateway absorbs the protocol differences between OpenAI and Anthropic, so a single client can reach models from several vendors without changing code.": "One credential, one bill and one log stream. The gateway absorbs the protocol differences between OpenAI and Anthropic, so a single client can reach models from several vendors without changing code.",
     "Through your own deployment and nowhere else. The software runs on your server, keeps its database there, and does not report usage to us or to any third party.": "Through your own deployment and nowhere else. The software runs on your server, keeps its database there, and does not report usage to us or to any third party.",
     "Per token, at a per-model multiplier the operator sets in the console. Users can be given quotas, rate limits and separate tokens, and every charge is written to the usage log.": "Per token, at a per-model multiplier the operator sets in the console. Users can be given quotas, rate limits and separate tokens, and every charge is written to the usage log.",
-    "One Docker Compose file with PostgreSQL and Redis. The installation guide covers Compose, 1Panel and BaoTa, including the environment variables that must be set before the first start.": "One Docker Compose file with PostgreSQL and Redis. The installation guide covers Compose, 1Panel and BaoTa, including the environment variables that must be set before the first start."
+    "One Docker Compose file with PostgreSQL and Redis. The installation guide covers Compose, 1Panel and BaoTa, including the environment variables that must be set before the first start.": "One Docker Compose file with PostgreSQL and Redis. The installation guide covers Compose, 1Panel and BaoTa, including the environment variables that must be set before the first start.",
+    "Point Claude Code, Codex CLI or your own code at this gateway. Claude, GPT, Gemini, DeepSeek and Qwen answer on one key and one bill.": "Point Claude Code, Codex CLI or your own code at this gateway. Claude, GPT, Gemini, DeepSeek and Qwen answer on one key and one bill.",
+    "Cancel any time — or self-host and pay no subscription": "Cancel any time — or self-host and pay no subscription",
+    "Self-host in one command, no subscription": "Self-host in one command, no subscription",
+    "Step-by-step guides": "Step-by-step guides",
+    "Anthropic format": "Anthropic format",
+    "OpenAI format": "OpenAI format",
+    "Choose a model, create a key, and point your tools at the gateway.": "Choose a model, create a key, and point your tools at the gateway."
   }
 }

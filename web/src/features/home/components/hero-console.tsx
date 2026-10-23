@@ -16,19 +16,22 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+
 /**
- * The hero's proof object: one dark console, two rows, two protocols.
+ * The hero's proof object: one terminal window, two CLI sessions side by side.
  *
- * A marketing page for an API gateway has exactly one thing to prove before
- * anyone reads a feature list — that pointing an existing CLI at this base URL
- * actually works. So the visual is not an illustration but a transcript: the
- * two `export` lines a user will really type, the agent that answers, and the
- * token count that comes back. The rows are the two protocols side by side
- * (Anthropic messages / OpenAI chat completions), which is the product's
- * single strongest claim, stated without a sentence of copy.
+ * Layout and colour follow the reference (apmix.ai) measurement for measurement
+ * — 16px radius, `#0a0a0a` surface, a `~/app — zsh` title bar, a hairline
+ * divider between the panes, and a shell's own colour language: green `$`,
+ * green tool bullets, green/red diff counts, dim metadata. A developer
+ * recognises this as a real transcript in about a second, which is the only
+ * claim a gateway page has to make before the fold.
  *
- * Everything is static: no timers, no fake streaming. A looping animation here
- * would read as a demo; a still transcript reads as a log.
+ * The split is ours: left runs the Anthropic protocol, right runs the OpenAI
+ * one, so the two-column layout doubles as the "both API formats" proof.
+ *
+ * Everything is static. A looping animation would read as a demo; a still
+ * transcript reads as a log.
  */
 export function HeroConsole(props: { className?: string }) {
   const origin =
@@ -37,118 +40,119 @@ export function HeroConsole(props: { className?: string }) {
   return (
     <div
       className={
-        'overflow-hidden rounded-2xl border border-white/10 bg-[#0B0B0C] dark:border-white/[0.07] dark:bg-[#141416] shadow-[0_24px_64px_-24px_rgba(0,0,0,0.45),0_2px_8px_rgba(0,0,0,0.16)] ' +
+        'overflow-hidden rounded-2xl bg-[#0a0a0a] shadow-[0_1px_2px_rgba(0,0,0,0.3),0_28px_60px_-28px_rgba(0,0,0,0.5)] ' +
         (props.className ?? '')
       }
     >
-      {/* Title bar — three dots, a caption, and the only saturated mark on the
-          card, which tells the eye the transcript ended successfully. */}
-      <div className='flex items-center justify-between border-b border-white/[0.08] px-5 py-3'>
-        <div className='flex items-center gap-3'>
-          <div className='flex gap-1.5'>
-            <span className='size-2 rounded-full bg-white/15' />
-            <span className='size-2 rounded-full bg-white/15' />
-            <span className='size-2 rounded-full bg-white/15' />
-          </div>
-          <span className='font-mono text-[11px] tracking-[0.06em] text-white/35'>
-            one key · two protocols
-          </span>
+      {/* Title bar */}
+      <div className='relative flex items-center justify-center border-b border-white/[0.08] px-4 py-2.5'>
+        <div className='absolute left-4 flex gap-1.5'>
+          <span className='size-2.5 rounded-full bg-white/[0.14]' />
+          <span className='size-2.5 rounded-full bg-white/[0.14]' />
+          <span className='size-2.5 rounded-full bg-white/[0.14]' />
         </div>
-        <span className='flex items-center gap-1.5 font-mono text-[11px] text-white/40'>
-          <span className='size-1.5 rounded-full bg-[#6EE7A8]' />
-          200 OK
-        </span>
+        <span className='lp-mono text-[11.5px] text-white/40'>~/app — zsh</span>
       </div>
 
-      <ConsoleRow
-        tool='claude'
-        protocol='Anthropic messages'
-        lines={[
-          ['export', 'ANTHROPIC_BASE_URL', `"${origin}"`],
-          ['export', 'ANTHROPIC_AUTH_TOKEN', '"sk-live-••••7f2a"'],
-        ]}
-        command='claude'
-        prompt='fix the failing login test'
-        steps={['read  src/routes/login.ts', 'edit  +38 −4', 'test  42 passed']}
-        meta='8.4k tokens · 1.2s'
-      />
-
-      <ConsoleRow
-        className='border-t border-white/[0.08]'
-        tool='codex'
-        protocol='OpenAI chat'
-        lines={[
-          ['export', 'OPENAI_BASE_URL', `"${origin}/v1"`],
-          ['export', 'OPENAI_API_KEY', '"sk-live-••••7f2a"'],
-        ]}
-        command='codex'
-        prompt='add soft delete to invoices'
-        steps={['edit  db/schema.ts', 'new   0042_soft_delete.sql', 'test  42 passed']}
-        meta='6.1k tokens · 0.9s'
-      />
+      <div className='grid grid-cols-1 divide-y divide-white/[0.08] md:grid-cols-2 md:divide-x md:divide-y-0'>
+        <Pane
+          tool='claude'
+          env={[
+            ['ANTHROPIC_BASE_URL', origin],
+            ['ANTHROPIC_AUTH_TOKEN', 'apx_live_••••d41e'],
+          ]}
+          run='claude'
+          meta='Claude Code · sonnet-5.5 · gateway'
+          ask='rate-limit /login and add tests'
+          steps={[
+            ['Read', 'src/routes/login.ts'],
+            ['Edit', 'src/routes/login.ts', '+38', '-4'],
+            ['Write', 'tests/login.test.ts', '+61'],
+          ]}
+          done='Done  ·  2 files  ·  48k tokens'
+        />
+        <Pane
+          tool='codex'
+          env={[
+            ['OPENAI_BASE_URL', `${origin}/v1`],
+            ['OPENAI_API_KEY', 'apx_live_••••d41e'],
+          ]}
+          run='codex "soft-delete invoices"'
+          meta='Codex · gpt-6-luna · gateway'
+          ask='add soft delete to invoices'
+          steps={[
+            ['Edit', 'db/schema.ts', '+12', '-2'],
+            ['Write', 'db/migrations/0042.sql', '+19'],
+            ['Run', 'pnpm test  42 passed'],
+          ]}
+          done='Done  ·  2 files  ·  31k tokens'
+        />
+      </div>
     </div>
   )
 }
 
-/**
- * One CLI session. The left gutter names the tool, the body is the transcript.
- * Keeping the tool name out of the transcript lines means the two rows line up
- * typographically even though one is an Anthropic client and one is an OpenAI
- * client.
- */
-function ConsoleRow(props: {
+/** One CLI session. Both panes share this shape so they line up row for row. */
+function Pane(props: {
   tool: string
-  protocol: string
-  lines: [string, string, string][]
-  command: string
-  prompt: string
-  steps: string[]
+  env: [string, string][]
+  run: string
   meta: string
-  className?: string
+  ask: string
+  steps: [string, string, string?, string?][]
+  done: string
 }) {
   return (
-    <div
-      className={
-        'grid grid-cols-[62px_1fr] gap-x-3 px-4 py-5 sm:px-5 md:grid-cols-[84px_1fr] md:gap-x-4 ' +
-        (props.className ?? '')
-      }
-    >
-      <div className='pt-0.5'>
-        <div className='font-mono text-[12.5px] text-white/80'>{props.tool}</div>
-        <div className='mt-1 font-mono text-[10px] leading-[1.4] text-white/25'>
-          {props.protocol}
-        </div>
+    <div className='min-w-0 px-4 py-3.5'>
+      <div className='lp-mono mb-3 flex items-center gap-1.5 text-[11.5px] text-white/50'>
+        <span className='text-[13px] leading-none'>✳</span>
+        <span>{props.tool}</span>
       </div>
 
-      <div className='min-w-0 font-mono text-[12px] leading-[1.85] text-white/55'>
-        {/* The export lines wrap instead of truncating: the base URL is the one
-            string on this card a visitor actually needs to read, and an ellipsis
-            that eats everything after `https://` would defeat the whole block on
-            a phone. */}
-        {props.lines.map((line) => (
-          <div key={line[1]} className='flex flex-wrap items-baseline gap-x-1'>
-            <span className='text-white/25'>$</span>
-            <span className='text-white/30'>{line[0]}</span>
-            <span className='text-white/55'>{line[1]}</span>
-            <span className='break-all text-white/80'>{`=${line[2]}`}</span>
+      <div className='lp-mono min-w-0 text-[11px] leading-[1.85]'>
+        {props.env.map(([key, value]) => (
+          <div key={key} className='flex flex-wrap items-baseline gap-x-1'>
+            <span className='text-[#3fb950]'>$</span>
+            <span className='break-all'>
+              <span className='text-[#7ee787]'>{key}</span>
+              <span className='text-white/30'>=</span>
+              <span className='text-white/85'>{value}</span>
+            </span>
           </div>
         ))}
-        <div className='mt-1 flex flex-wrap items-baseline gap-x-1.5'>
-          <span className='text-white/25'>$</span>
-          <span className='text-white/75'>{props.command}</span>
-          <span className='text-white/25'>›</span>
-          <span className='text-white/45'>{props.prompt}</span>
-          <span className='inline-block h-3 w-1.5 translate-y-[2px] bg-white/50 align-baseline motion-safe:animate-pulse' />
+        <div className='flex items-baseline gap-x-1'>
+          <span className='text-[#3fb950]'>$</span>
+          <span className='text-white/85'>{props.run}</span>
         </div>
-        <div className='mt-1.5 space-y-[1px]'>
-          {props.steps.map((step) => (
-            <div key={step} className='flex items-center gap-2 text-white/40'>
-              <span className='text-[#6EE7A8]'>✓</span>
-              <span className='truncate'>{step}</span>
+
+        <div className='mt-3 text-[10.5px] text-white/30'>{props.meta}</div>
+
+        <div className='mt-2.5 flex items-baseline gap-2'>
+          <span className='text-white/30'>›</span>
+          <span className='text-white/85'>{props.ask}</span>
+        </div>
+
+        <div className='mt-2 space-y-[3px]'>
+          {props.steps.map(([verb, file, add, del]) => (
+            <div key={file} className='flex flex-wrap items-baseline gap-x-2'>
+              <span className='text-[#3fb950]'>●</span>
+              <span className='w-10 shrink-0 text-white/60'>{verb}</span>
+              <span className='text-white/70'>{file}</span>
+              {add ? <span className='text-[#3fb950]'>{add}</span> : null}
+              {del ? <span className='text-[#f85149]'>{del}</span> : null}
             </div>
           ))}
         </div>
-        <div className='mt-2 text-[10.5px] text-white/30'>{props.meta}</div>
+
+        <div className='mt-3 flex items-center gap-2 text-white/55'>
+          <span className='text-[#3fb950]'>✓</span>
+          <span>{props.done}</span>
+        </div>
+
+        <div className='mt-2 flex items-center gap-2'>
+          <span className='text-[#3fb950]'>$</span>
+          <span className='inline-block h-3 w-1.5 bg-white/70 motion-safe:animate-pulse' />
+        </div>
       </div>
     </div>
   )

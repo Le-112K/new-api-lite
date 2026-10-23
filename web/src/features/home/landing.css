@@ -1,0 +1,69 @@
+/*
+Copyright (C) 2023-2026 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
+/* ==========================================================================
+ * landing.css — 落地页的字体层
+ * --------------------------------------------------------------------------
+ * 三款字体都是从参考站实测出来的（Sora 标题 / Manrope 正文 / JetBrains Mono
+ * 代码），文件随源码一起打包（./fonts/），不走 Google Fonts CDN：
+ * 一是不给自托管产品引入外部域名，二是避免国内访问 fonts.googleapis.com 被墙后
+ * 落到系统字体、版式全变。
+ *
+ * 只作用于 `.lp` 子树，控制台其余页面继续用 Public Sans，互不影响。
+ * ========================================================================== */
+
+@font-face {
+  font-family: 'Sora';
+  src: url('./fonts/sora-latin-wght-normal.woff2') format('woff2');
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Manrope';
+  src: url('./fonts/manrope-latin-wght-normal.woff2') format('woff2');
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('./fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2');
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+.lp {
+  font-family: 'Manrope', var(--font-sans);
+  font-feature-settings: 'ss01', 'cv11';
+}
+
+/* 中文没有 Sora 字形，会落到系统黑体；拉丁字与数字仍是 Sora，所以型号名、
+   版本号、URL 这些"证据"部分的观感和参考站一致。 */
+.lp-display {
+  font-family: 'Sora', var(--font-sans);
+  letter-spacing: -0.03em;
+}
+
+.lp-mono {
+  font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+  font-variant-ligatures: none;
+}
