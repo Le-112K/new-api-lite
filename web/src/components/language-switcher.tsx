@@ -63,7 +63,8 @@ export function LanguageSwitcher(props: { variant?: 'default' | 'landing' }) {
           render={
             <Button
               variant='outline'
-              className='h-9 gap-1 rounded-[10px] border-black/[0.11] bg-transparent px-3 text-[13px] font-semibold text-foreground hover:bg-black/[0.03] dark:border-white/15 dark:hover:bg-white/[0.06]'
+              data-shape='pill'
+              className='h-9 gap-1 rounded-full border-black/[0.11] bg-transparent px-3 text-[13px] font-semibold text-foreground hover:bg-black/[0.03] dark:border-white/15 dark:hover:bg-white/[0.06]'
             />
           }
         >

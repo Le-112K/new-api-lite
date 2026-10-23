@@ -279,7 +279,7 @@ export function PublicHeader(props: PublicHeaderProps) {
                   className={cn(
                     'max-w-48 truncate',
                     isLanding
-                      ? 'text-[15px] font-bold tracking-[-0.01em]'
+                      ? 'text-[15px] leading-none font-bold tracking-[-0.01em]'
                       : 'text-sm font-semibold tracking-tight'
                   )}
                   title={displaySiteName}

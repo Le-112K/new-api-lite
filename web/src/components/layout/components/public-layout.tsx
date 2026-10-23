@@ -41,6 +41,9 @@ export function PublicLayout(props: PublicLayoutProps) {
     <div
       className={cn(
         'bg-background text-foreground relative min-h-svh overflow-x-clip',
+        // 落地页外壳：让 landing.css 里的按钮圆角等覆盖能同时作用到 header
+        // 与 main（两者是兄弟节点，`.lp` 子树覆盖不到 header）
+        props.headerProps?.variant === 'landing' && 'lp-shell',
         props.wrapperClassName
       )}
     >

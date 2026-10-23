@@ -84,3 +84,16 @@ For commercial licensing, please contact support@quantumnous.com
   font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
   font-variant-ligatures: none;
 }
+
+/* 站点主题 theme-apple-bw.css 用 `[data-slot="button"]{border-radius:999px
+   !important}` 把所有按钮压成胶囊，控制台靠它统一气质，但落地页要贴参考站：
+   Sign in / Get started / hero CTA 在参考站实测都是 8px 圆角方块，`rounded-lg`
+   这种普通类斗不过 !important。所以在落地页外壳 `.lp-shell` 里改回 8px ——
+   注意 header 与 main 是兄弟节点，光靠 `.lp` 覆盖不到，故单独给外壳加 class。
+   语言胶囊在参考站是全圆（3.35544e+07px），用 data-shape="pill" 豁免。 */
+.lp-shell [data-slot='button'] {
+  border-radius: 8px !important;
+}
+.lp-shell [data-slot='button'][data-shape='pill'] {
+  border-radius: 9999px !important;
+}
