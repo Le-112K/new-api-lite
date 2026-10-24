@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" fill="currentColor">
+  <title>builin</title>
+  <!-- b -->
+  <path d="M0 8h16v104H0z"/>
+  <path d="M16 40h32v16H16zM48 40h16v72H48zM16 96h32v16H16z"/>
+  <!-- u -->
+  <path d="M80 40h16v56h32V40h16v72H80z"/>
+  <!-- i -->
+  <path d="M160 40h16v72h-16zM160 6h18v18h-18z"/>
+  <!-- l -->
+  <path d="M192 8h16v104h-16z"/>
+  <!-- i -->
+  <path d="M224 40h16v72h-16zM224 6h18v18h-18z"/>
+  <!-- n -->
+  <path d="M256 40h64v16h-48v56h-16z"/>
+</svg>

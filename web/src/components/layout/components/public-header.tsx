@@ -38,7 +38,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { defaultTopNavLinks } from '../config/top-nav.config'
 import type { TopNavLink } from '../types'
 import { HeaderLogo } from './header-logo'
-import { BrandMark } from '@/components/brand-mark'
+import { BuilinLogotype } from '@/components/brand-mark'
 
 const AUTH_PROMPT_SECONDS = 5
 
@@ -269,34 +269,31 @@ export function PublicHeader(props: PublicHeaderProps) {
                 className='group flex min-w-0 items-center gap-2.5'
               >
                 {isLanding ? (
-                  /* 参考站品牌区是 35×20 的单色几何标记 + 15px/700 字标，
-                     规避圆角图片；标记走 currentColor，随主题反色。 */
-                  <BrandMark className='h-5 w-[35px] shrink-0 text-foreground' />
+                  /* 品牌区是构造式几何字标（web/brand/IDENTITY.md），
+                     名字即标识，不再叠一层文本字标；currentColor 随主题反色。 */
+                  <BuilinLogotype className='h-[22px] w-auto shrink-0 text-foreground' />
                 ) : (
-                  <div
-                    className={cn(
-                      'flex shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105',
-                      'size-7'
-                    )}
-                  >
-                    {logoContent}
-                  </div>
+                  <>
+                    <div
+                      className={cn(
+                        'flex shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105',
+                        'size-7'
+                      )}
+                    >
+                      {logoContent}
+                    </div>
+                    <span
+                      className='max-w-48 truncate text-sm font-semibold tracking-tight'
+                      title={displaySiteName}
+                    >
+                      {loading ? (
+                        <Skeleton className='h-4 w-16' />
+                      ) : (
+                        displaySiteName
+                      )}
+                    </span>
+                  </>
                 )}
-                <span
-                  className={cn(
-                    'max-w-48 truncate',
-                    isLanding
-                      ? 'text-[15px] leading-none font-bold tracking-[-0.15px] uppercase'
-                      : 'text-sm font-semibold tracking-tight'
-                  )}
-                  title={displaySiteName}
-                >
-                  {loading ? (
-                    <Skeleton className='h-4 w-16' />
-                  ) : (
-                    displaySiteName
-                  )}
-                </span>
               </Link>
             </div>
 

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <title>builin monogram</title>
+  <rect width="200" height="200" rx="44" fill="#0A0A0A"/>
+  <g fill="#FFFFFF">
+    <path d="M56 40h20v120H56z"/>
+    <path d="M76 82h40v20H76zM116 82h20v88h-20zM76 150h40v20H76z"/>
+  </g>
+</svg>
