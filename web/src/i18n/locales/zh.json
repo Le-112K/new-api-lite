@@ -4234,7 +4234,6 @@
     "Self-hosted — your data stays on your own server": "可自托管，数据留在自己的服务器",
     "Every model you have switched on, in one catalog": "所有已启用的模型，一处看全",
     "All models and prices": "全部模型与价格",
-    "Setup": "接入",
     "Change two settings. Keep your tools.": "改两个设置，工具照用。",
     "For Claude Code and the Messages API": "适用于 Claude Code 与 Messages API",
     "For Codex CLI, Cursor and Chat Completions": "适用于 Codex CLI、Cursor 与 Chat Completions",
@@ -4299,6 +4298,9 @@
     "on a single key and one invoice.": "共用一把 key、一张账单。",
     "For every model": "跑通你在用的",
     "you run.": "每个模型",
-    "{{vendors}} vendors, {{models}} models, all on one API key.": "{{vendors}} 家厂商、{{models}} 个模型，一个 API Key 全部调用。"
+    "{{vendors}} vendors, {{models}} models, all on one API key.": "{{vendors}} 家厂商、{{models}} 个模型，一个 API Key 全部调用。",
+    "For Claude Code, the Anthropic SDKs and any client of the Messages API.": "适用于 Claude Code、Anthropic SDK，以及任何走 Messages API 的客户端。",
+    "For Codex CLI, Cursor, OpenCode, Cherry Studio and any client of Chat Completions or Responses.": "适用于 Codex CLI、Cursor、OpenCode、Cherry Studio，以及任何走 Chat Completions 或 Responses 的客户端。",
+    "Replace sk-your-key with a key from your console. Each guide names the exact file and setting for its tool, plus the model to start with.": "把 sk-your-key 换成控制台里创建的密钥。每份指南都写明该工具要改哪个文件、哪一项配置，以及起步用哪个模型。"
   }
 }

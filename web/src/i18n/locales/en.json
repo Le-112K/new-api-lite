@@ -4234,7 +4234,6 @@
     "Self-hosted — your data stays on your own server": "Self-hosted — your data stays on your own server",
     "Every model you have switched on, in one catalog": "Every model you have switched on, in one catalog",
     "All models and prices": "All models and prices",
-    "Setup": "Setup",
     "Change two settings. Keep your tools.": "Change two settings. Keep your tools.",
     "For Claude Code and the Messages API": "For Claude Code and the Messages API",
     "For Codex CLI, Cursor and Chat Completions": "For Codex CLI, Cursor and Chat Completions",
@@ -4299,6 +4298,9 @@
     "on a single key and one invoice.": "on a single key and one invoice.",
     "For every model": "For every model",
     "you run.": "you run.",
-    "{{vendors}} vendors, {{models}} models, all on one API key.": "{{vendors}} vendors, {{models}} models, all on one API key."
+    "{{vendors}} vendors, {{models}} models, all on one API key.": "{{vendors}} vendors, {{models}} models, all on one API key.",
+    "For Claude Code, the Anthropic SDKs and any client of the Messages API.": "For Claude Code, the Anthropic SDKs and any client of the Messages API.",
+    "For Codex CLI, Cursor, OpenCode, Cherry Studio and any client of Chat Completions or Responses.": "For Codex CLI, Cursor, OpenCode, Cherry Studio and any client of Chat Completions or Responses.",
+    "Replace sk-your-key with a key from your console. Each guide names the exact file and setting for its tool, plus the model to start with.": "Replace sk-your-key with a key from your console. Each guide names the exact file and setting for its tool, plus the model to start with."
   }
 }
