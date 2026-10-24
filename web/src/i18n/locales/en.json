@@ -4280,6 +4280,9 @@
     "Can I switch models without changing code?": "Can I switch models without changing code?",
     "Yes. Change the model name in the request; the key and the endpoint stay the same.": "Yes. Change the model name in the request; the key and the endpoint stay the same.",
     "Welcome to AperTurez...": "Welcome to AperTurez...",
-    "AperTurez &lt;noreply@example.com&gt;": "AperTurez &lt;noreply@example.com&gt;"
+    "AperTurez &lt;noreply@example.com&gt;": "AperTurez &lt;noreply@example.com&gt;",
+    "Welcome": "Welcome",
+    "One key.": "One key.",
+    "Every model.": "Every model."
   }
 }

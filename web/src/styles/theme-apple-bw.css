@@ -186,3 +186,9 @@ thead th{ border-bottom-color: var(--border) !important; letter-spacing: 0.08em 
 
 /* 10) 滚动条：更细更淡 */
 *{ scrollbar-color: var(--border) transparent; }
+
+/* 11) 登录弹窗：参考站表单用的是 8px 直角控件，不是全站胶囊。
+       作用域锁在弹窗内，页面其它按钮不受影响。 */
+[data-slot="auth-dialog-content"] [data-slot="button"][data-variant="default"]{
+  border-radius: 0.5rem !important;
+}

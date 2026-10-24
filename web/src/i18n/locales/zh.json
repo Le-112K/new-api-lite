@@ -4280,6 +4280,9 @@
     "Can I switch models without changing code?": "换模型需要改代码吗？",
     "Yes. Change the model name in the request; the key and the endpoint stay the same.": "不用。改请求里的模型名即可，key 和端点都保持不变。",
     "Welcome to AperTurez...": "欢迎使用 AperTurez……",
-    "AperTurez &lt;noreply@example.com&gt;": "AperTurez &lt;noreply@example.com&gt;"
+    "AperTurez &lt;noreply@example.com&gt;": "AperTurez &lt;noreply@example.com&gt;",
+    "Welcome": "欢迎",
+    "One key.": "一把密钥，",
+    "Every model.": "贯通所有模型。"
   }
 }

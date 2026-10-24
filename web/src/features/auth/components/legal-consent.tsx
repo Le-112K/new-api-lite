@@ -54,7 +54,7 @@ export function LegalConsent(props: LegalConsentProps) {
       />
       <Label
         htmlFor='legal-consent'
-        className='text-muted-foreground items-start gap-1 text-left text-xs leading-5 font-normal'
+        className='text-muted-foreground items-start gap-1 text-left text-[13px] leading-5 font-normal'
       >
         <span>
           {t('I have read and agree to the')}{' '}

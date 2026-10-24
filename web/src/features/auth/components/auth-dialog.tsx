@@ -20,9 +20,11 @@ import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { Cancel01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
+import { Check } from 'lucide-react'
 import { useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { BrandWordmark } from '@/components/brand-wordmark'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -122,28 +124,70 @@ export function AuthDialog() {
       disablePointerDismissal
     >
       <DialogPortal>
-        {/* A light veil instead of a dark scrim: the page keeps its airy
-            paper feel and the globe stays faintly visible underneath, so the
-            card reads as part of the page rather than a foreign sheet. */}
-        <DialogOverlay className='bg-background/70' />
+        {/* Light veil: keeps the page's paper feel and the aperture visible
+            underneath. Clicks on it stay inert (`disablePointerDismissal`), so
+            the only exits are the close button and Escape. */}
+        <DialogOverlay className='bg-background/80 backdrop-blur-[2px]' />
         <DialogPrimitive.Popup
           data-slot='auth-dialog-content'
           className={cn(
-            'bg-popover text-popover-foreground fixed inset-0 z-50 flex flex-col overflow-y-auto overscroll-contain p-6 outline-none',
-            'data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 duration-150 motion-reduce:animate-none!',
-            // One fixed height at xl so switching sign-in / sign-up / reset
-            // never resizes the card; the tallest pane (sign-up) defines it and
-            // the shorter ones centre their content in the same frame.
-            'xl:inset-auto xl:top-1/2 xl:left-1/2 xl:max-h-[calc(100dvh-2rem)] xl:min-h-[38.75rem] xl:w-full xl:max-w-[26rem] xl:-translate-x-1/2 xl:-translate-y-1/2 xl:rounded-[20px] xl:shadow-[0_2px_10px_-4px_rgba(0,0,0,0.06),0_24px_64px_-32px_rgba(0,0,0,0.2)] xl:ring-1 xl:ring-foreground/10'
+            'bg-background text-foreground fixed inset-0 z-50 flex flex-col overflow-y-auto overscroll-contain outline-none',
+            'data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.99] data-closed:animate-out data-closed:fade-out-0 duration-150 motion-reduce:animate-none!',
+            // Desktop: centred two-pane card. The left column is the brand
+            // panel; the right column owns the form and can scroll on its own.
+            'md:inset-auto md:top-1/2 md:left-1/2 md:max-h-[calc(100dvh-2rem)] md:min-h-[35rem] md:w-[min(56rem,calc(100vw-3rem))] md:-translate-x-1/2 md:-translate-y-1/2 md:flex-row md:overflow-hidden md:rounded-[24px] md:shadow-[0_2px_10px_-4px_rgba(0,0,0,0.06),0_32px_80px_-40px_rgba(0,0,0,0.28)] md:ring-1 md:ring-foreground/10'
           )}
         >
-          <div className='relative mx-auto my-auto flex w-full max-w-[26rem] flex-col gap-6'>
+          {/* Brand panel — hidden on mobile, where the sheet is the whole
+              screen and the form needs every pixel. */}
+          <aside className='relative hidden shrink-0 flex-col justify-between overflow-hidden bg-[#0a0a0a] p-8 text-white md:flex md:w-[19rem]'>
+            <div
+              aria-hidden
+              className='pointer-events-none absolute inset-0 opacity-[0.14]'
+              style={{
+                backgroundImage:
+                  'repeating-linear-gradient(60deg, rgba(255,255,255,0.55) 0 1px, transparent 1px 30px), repeating-linear-gradient(-60deg, rgba(255,255,255,0.55) 0 1px, transparent 1px 30px), repeating-linear-gradient(0deg, rgba(255,255,255,0.4) 0 1px, transparent 1px 26px)',
+              }}
+            />
+            <div className='relative'>
+              <BrandWordmark className='text-[17px] text-white' />
+            </div>
+            <div className='relative'>
+              <p className='text-[26px] leading-[1.08] font-semibold tracking-[-0.03em]'>
+                <span className='block'>{t('One key.')}</span>
+                <span className='block'>{t('Every model.')}</span>
+              </p>
+              <ul className='mt-6 space-y-2.5'>
+                {[
+                  t('OpenAI- and Anthropic-compatible endpoints'),
+                  t('Works with Claude Code, Codex CLI and Cursor'),
+                  t('Self-host in one command, no subscription'),
+                ].map((line) => (
+                  <li
+                    key={line}
+                    className='flex items-start gap-2 text-[12.5px] leading-5 text-white/60'
+                  >
+                    <Check className='mt-0.5 size-3.5 shrink-0 text-white/40' />
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </aside>
+
+          {/* Form column */}
+          <div className='relative flex min-h-[100dvh] flex-1 flex-col px-6 pt-6 pb-10 sm:px-8 md:min-h-0 md:justify-center md:overflow-y-auto md:px-10 md:py-10'>
+            {/* Mobile chrome: the sheet covers the page header, so the brand
+                and the close affordance move inside it. */}
+            <div className='mb-10 flex items-center md:hidden'>
+              <BrandWordmark className='text-[17px]' />
+            </div>
             <DialogClose
               render={
                 <Button
                   variant='ghost'
                   size='icon-sm'
-                  className='absolute top-0 right-0'
+                  className='absolute top-4 right-4 md:top-5 md:right-5'
                 />
               }
             >
@@ -151,53 +195,62 @@ export function AuthDialog() {
               <span className='sr-only'>{t('Close')}</span>
             </DialogClose>
 
-            <div className='flex flex-col gap-1.5 pr-10'>
-              <DialogTitle className='text-xl font-semibold tracking-tight'>
-                {title}
-              </DialogTitle>
-              <DialogDescription className='text-muted-foreground text-sm leading-relaxed'>
-                {subtitle}
-              </DialogDescription>
-            </div>
+            <div className='mx-auto w-full max-w-[25rem]'>
+              <div className='flex flex-col gap-2 pr-10'>
+                <p className='text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase'>
+                  {t('Welcome')}
+                </p>
+                <DialogTitle className='text-[30px] leading-[1.06] font-semibold tracking-[-0.03em] md:text-[34px]'>
+                  {title}
+                </DialogTitle>
+                <DialogDescription className='text-[15px] leading-relaxed text-muted-foreground'>
+                  {subtitle}
+                </DialogDescription>
+              </div>
 
-            {isForgotPassword && <ForgotPasswordForm />}
-            {isSignUp && <SignUpForm onSuccess={() => switchMode('sign-in')} />}
-            {!isForgotPassword && !isSignUp && (
-              <UserAuthForm
-                redirectTo={view.redirectTo}
-                onForgotPassword={() => switchMode('forgot-password')}
-              />
-            )}
+              <div className='mt-7 flex flex-col gap-5'>
+                {isForgotPassword && <ForgotPasswordForm />}
+                {isSignUp && (
+                  <SignUpForm onSuccess={() => switchMode('sign-in')} />
+                )}
+                {!isForgotPassword && !isSignUp && (
+                  <UserAuthForm
+                    redirectTo={view.redirectTo}
+                    onForgotPassword={() => switchMode('forgot-password')}
+                  />
+                )}
 
-            <div className='flex flex-col gap-3'>
-              {isForgotPassword && (
-                <SwitchLine
-                  lead={t('Remembered your password?')}
-                  action={t('Back to sign in')}
-                  onClick={() => switchMode('sign-in')}
-                />
-              )}
-              {isSignUp && (
-                <SwitchLine
-                  lead={t('Already have an account?')}
-                  action={t('Sign in')}
-                  onClick={() => switchMode('sign-in')}
-                />
-              )}
-              {!isSignUp && !isForgotPassword && canRegister && (
-                <SwitchLine
-                  lead={t("Don't have an account?")}
-                  action={t('Sign up')}
-                  onClick={() => switchMode('sign-up')}
-                />
-              )}
-              {!isForgotPassword && (
-                <TermsFooter
-                  variant={isSignUp ? 'sign-up' : 'sign-in'}
-                  status={status}
-                  className='text-center'
-                />
-              )}
+                <div className='flex flex-col gap-3'>
+                  {isForgotPassword && (
+                    <SwitchLine
+                      lead={t('Remembered your password?')}
+                      action={t('Back to sign in')}
+                      onClick={() => switchMode('sign-in')}
+                    />
+                  )}
+                  {isSignUp && (
+                    <SwitchLine
+                      lead={t('Already have an account?')}
+                      action={t('Sign in')}
+                      onClick={() => switchMode('sign-in')}
+                    />
+                  )}
+                  {!isSignUp && !isForgotPassword && canRegister && (
+                    <SwitchLine
+                      lead={t("Don't have an account?")}
+                      action={t('Sign up')}
+                      onClick={() => switchMode('sign-up')}
+                    />
+                  )}
+                  {!isForgotPassword && (
+                    <TermsFooter
+                      variant={isSignUp ? 'sign-up' : 'sign-in'}
+                      status={status}
+                      className='text-center'
+                    />
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </DialogPrimitive.Popup>

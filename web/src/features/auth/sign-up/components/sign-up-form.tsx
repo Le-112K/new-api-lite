@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2 } from 'lucide-react'
+import { ArrowRight, Loader2 } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -188,10 +188,10 @@ export function SignUpForm({
           name='username'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('Username')}</FormLabel>
+              <FormLabel className='text-[13.5px] font-semibold text-foreground'>{t('Username')}</FormLabel>
               <FormControl>
                 <Input
-                  className='h-11 rounded-xl'
+                  className='h-12 rounded-lg border-black/[0.11] px-4 text-[15px] shadow-none dark:border-white/15'
                   placeholder={t('Enter your username')}
                   {...field}
                 />
@@ -207,10 +207,10 @@ export function SignUpForm({
           name='password'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('Password')}</FormLabel>
+              <FormLabel className='text-[13.5px] font-semibold text-foreground'>{t('Password')}</FormLabel>
               <FormControl>
                 <PasswordInput
-                  className='[&_input]:h-11 [&_input]:rounded-xl'
+                  className='[&_input]:h-12 [&_input]:rounded-lg [&_input]:border-black/[0.11] [&_input]:px-4 [&_input]:text-[15px] [&_input]:shadow-none dark:[&_input]:border-white/15'
                   placeholder={t('Enter password (8–128 characters)')}
                   {...field}
                 />
@@ -226,10 +226,10 @@ export function SignUpForm({
           name='confirmPassword'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('Confirm password')}</FormLabel>
+              <FormLabel className='text-[13.5px] font-semibold text-foreground'>{t('Confirm password')}</FormLabel>
               <FormControl>
                 <PasswordInput
-                  className='[&_input]:h-11 [&_input]:rounded-xl'
+                  className='[&_input]:h-12 [&_input]:rounded-lg [&_input]:border-black/[0.11] [&_input]:px-4 [&_input]:text-[15px] [&_input]:shadow-none dark:[&_input]:border-white/15'
                   placeholder={t('Confirm password')}
                   {...field}
                 />
@@ -248,12 +248,12 @@ export function SignUpForm({
               name='email'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
+                  <FormLabel className='text-[13.5px] font-semibold text-foreground'>
                     {t('Email (required for verification)')}
                   </FormLabel>
                   <FormControl>
                     <Input
-                      className='h-11 rounded-xl'
+                      className='h-12 rounded-lg border-black/[0.11] px-4 text-[15px] shadow-none dark:border-white/15'
                       placeholder={t('name@example.com')}
                       type='email'
                       {...field}
@@ -268,7 +268,7 @@ export function SignUpForm({
             <div className='flex items-end gap-2'>
               <div className='flex-1'>
                 <Input
-                  className='h-11 rounded-xl'
+                  className='h-12 rounded-lg border-black/[0.11] px-4 text-[15px] shadow-none dark:border-white/15'
                   placeholder={t('Verification code')}
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value)}
@@ -313,15 +313,19 @@ export function SignUpForm({
         {/* Submit Button */}
         <Button
           type='submit'
-          className='mt-2 h-12 w-full justify-center gap-2 rounded-full'
+          className='mt-2 h-12 w-full justify-center gap-2 rounded-lg text-[15px] font-semibold'
           disabled={
             isLoading ||
             (requiresLegalConsent && !agreedToLegal) ||
             !turnstileReady
           }
         >
-          {isLoading ? <Loader2 className='h-4 w-4 animate-spin' /> : null}
           {t('Create account')}
+          {isLoading ? (
+            <Loader2 className='size-4 animate-spin' />
+          ) : (
+            <ArrowRight className='size-4' />
+          )}
         </Button>
 
       </form>

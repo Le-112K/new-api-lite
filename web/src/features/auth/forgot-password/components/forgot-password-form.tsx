@@ -109,10 +109,10 @@ export function ForgotPasswordForm({
           name='email'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('Email')}</FormLabel>
+              <FormLabel className='text-[13.5px] font-semibold text-foreground'>{t('Email')}</FormLabel>
               <FormControl>
                 <Input
-                  className='h-11 rounded-xl'
+                  className='h-12 rounded-lg border-black/[0.11] px-4 text-[15px] shadow-none dark:border-white/15'
                   placeholder={t('name@example.com')}
                   {...field}
                 />
@@ -124,13 +124,13 @@ export function ForgotPasswordForm({
 
         <Button
           type='submit'
-          className='mt-2 h-12 w-full justify-center gap-2 rounded-full'
+          className='mt-2 h-12 w-full justify-center gap-2 rounded-lg text-[15px] font-semibold'
           disabled={isLoading || isActive || !turnstileReady}
         >
           {isActive
             ? t('Resend ({{seconds}}s)', { seconds: secondsLeft })
             : t('Send reset email')}
-          {isLoading ? <Loader2 className='animate-spin' /> : <ArrowRight />}
+          {isLoading ? <Loader2 className='size-4 animate-spin' /> : <ArrowRight className='size-4' />}
         </Button>
 
         {isTurnstileEnabled && (

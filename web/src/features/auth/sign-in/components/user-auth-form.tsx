@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from '@tanstack/react-router'
-import { Loader2, LogIn } from 'lucide-react'
+import { ArrowRight, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -158,10 +158,10 @@ export function UserAuthForm({
           name='username'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('Username or Email')}</FormLabel>
+              <FormLabel className='text-[13.5px] font-semibold text-foreground'>{t('Username or Email')}</FormLabel>
               <FormControl>
                 <Input
-                  className='h-11 rounded-xl'
+                  className='h-12 rounded-lg border-black/[0.11] px-4 text-[15px] shadow-none dark:border-white/15'
                   placeholder={t('Enter your username or email')}
                   disabled={!passwordLoginEnabled}
                   {...field}
@@ -178,10 +178,10 @@ export function UserAuthForm({
           name='password'
           render={({ field }) => (
             <FormItem className='relative'>
-              <FormLabel>{t('Password')}</FormLabel>
+              <FormLabel className='text-[13.5px] font-semibold text-foreground'>{t('Password')}</FormLabel>
               <FormControl>
                 <PasswordInput
-                  className='[&_input]:h-11 [&_input]:rounded-xl'
+                  className='[&_input]:h-12 [&_input]:rounded-lg [&_input]:border-black/[0.11] [&_input]:px-4 [&_input]:text-[15px] [&_input]:shadow-none dark:[&_input]:border-white/15'
                   placeholder={t('Enter password')}
                   disabled={!passwordLoginEnabled}
                   {...field}
@@ -217,15 +217,19 @@ export function UserAuthForm({
         {/* Submit Button */}
         <Button
           type='submit'
-          className='mt-2 h-12 w-full justify-center gap-2 rounded-full'
+          className='mt-2 h-12 w-full justify-center gap-2 rounded-lg text-[15px] font-semibold'
           disabled={
             !passwordLoginEnabled ||
             isLoading ||
             (requiresLegalConsent && !agreedToLegal)
           }
         >
-          {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}
           {t('Sign in')}
+          {isLoading ? (
+            <Loader2 className='size-4 animate-spin' />
+          ) : (
+            <ArrowRight className='size-4' />
+          )}
         </Button>
 
         {/* Turnstile */}
