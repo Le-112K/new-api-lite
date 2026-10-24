@@ -33,6 +33,9 @@ type VendorGroup = {
   count: number
 }
 
+/** Reference marks are 28×28 with a 14px gap to the text. */
+const ICON_SIZE = 28
+
 /**
  * The catalog block.
  *
@@ -83,7 +86,7 @@ export function ModelCatalog() {
   if (!isLoading && vendors.length === 0) return null
 
   return (
-    <SectionShell id='models' tight>
+    <SectionShell id='models' tight divided>
       <SectionHeading
         compact
         label={t('Models')}
@@ -114,11 +117,11 @@ export function ModelCatalog() {
             {Array.from({ length: 3 }).map((_, index) => (
               <div
                 key={index}
-                className='-mt-px -ml-px flex min-w-[240px] flex-1 items-center gap-3 border-t border-l border-border bg-background px-5 py-4'
+                className='-mt-px -ml-px flex min-w-[240px] flex-1 items-center gap-3.5 border-t border-l border-border bg-background px-5 py-4'
               >
-                <div className='size-6 animate-pulse rounded-full bg-secondary' />
+                <div className='size-7 animate-pulse rounded-full bg-secondary' />
                 <div className='min-w-0 flex-1'>
-                  <div className='h-3 w-20 animate-pulse rounded bg-secondary' />
+                  <div className='h-3.5 w-20 animate-pulse rounded bg-secondary' />
                   <div className='mt-2 h-2.5 w-12 animate-pulse rounded bg-secondary' />
                 </div>
               </div>
@@ -136,16 +139,32 @@ export function ModelCatalog() {
                 key={vendor.id}
                 to='/pricing'
                 search={{ vendor: vendor.name }}
-                className='group -mt-px -ml-px flex min-w-[240px] flex-1 items-center gap-3 border-t border-l border-border bg-background px-5 py-4 transition-colors hover:bg-secondary/40'
+                className='group -mt-px -ml-px flex min-w-[240px] flex-1 items-center gap-3.5 border-t border-l border-border bg-background px-5 py-4 transition-colors hover:bg-secondary/40'
               >
-                <span className='flex size-6 shrink-0 items-center justify-center'>
-                  {getLobeIcon(vendor.icon, 24)}
+                {/* Two stacked marks, cross-faded on hover: the mono one is
+                    black at rest, the `*.Color` one takes over on hover. The
+                    reference ships both as `absolute` children of a size-7 box
+                    and flips their opacity, which is why no filter is involved
+                    (a grayscale filter would wash the brand colours out). */}
+                <span
+                  className='relative block size-7 shrink-0'
+                  aria-hidden
+                >
+                  <span className='absolute inset-0 opacity-100 transition-opacity duration-150 group-hover:opacity-0 motion-reduce:transition-none'>
+                    {getLobeIcon(
+                      vendor.icon?.split('.')[0] ?? undefined,
+                      ICON_SIZE
+                    )}
+                  </span>
+                  <span className='absolute inset-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100 motion-reduce:transition-none'>
+                    {getLobeIcon(vendor.icon, ICON_SIZE)}
+                  </span>
                 </span>
                 <span className='min-w-0'>
-                  <span className='block truncate text-[14.5px] leading-tight font-semibold text-foreground'>
+                  <span className='block truncate text-[17px] leading-[21px] font-semibold text-foreground'>
                     {vendor.name}
                   </span>
-                  <span className='mt-1 block text-[12px] leading-none text-muted-foreground'>
+                  <span className='mt-0.5 block text-[13px] leading-[16px] text-muted-foreground'>
                     {t('{{count}} models', { count: vendor.count })}
                   </span>
                 </span>

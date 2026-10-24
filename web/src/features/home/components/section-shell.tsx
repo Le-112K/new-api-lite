@@ -24,10 +24,11 @@ import { cn } from '@/lib/utils'
  * Shared rhythm for every block below the hero.
  *
  * Numbers come straight from the reference page: 1328px content width inside
- * 48px gutters, 112px of vertical padding, and no borders between blocks —
- * the bands (white / grey / inverted) do the separating. Alternating the band
- * instead of drawing hairlines is what makes a long page read as sections
- * rather than as a table.
+ * 48px gutters, 112px of vertical padding. Bands (white / grey / inverted) do
+ * most of the separating, but the catalog block is fenced by a full-bleed
+ * hairline top and bottom — `divided` reproduces that, and the line is the same
+ * rgb(227,227,227) the reference paints (measured off a screenshot, not guessed:
+ * it reads as "black" at 1px on white but is a light grey in the pixels).
  */
 export function SectionShell(props: {
   children: ReactNode
@@ -36,9 +37,19 @@ export function SectionShell(props: {
   id?: string
   /** 参考站的模型段是 80px 上下留白，其余四段才是 112px */
   tight?: boolean
+  /** 上下各一条通栏细线，与参考站的段落分隔一致 */
+  divided?: boolean
 }) {
   return (
-    <section id={props.id} className={cn('lp bg-background', props.className)}>
+    <section
+      id={props.id}
+      className={cn(
+        'lp bg-background',
+        props.divided &&
+          'border-y border-black/[0.11] dark:border-white/10',
+        props.className
+      )}
+    >
       <div
         className={cn(
           'mx-auto w-full max-w-[1424px] px-6 py-16 md:px-12',
