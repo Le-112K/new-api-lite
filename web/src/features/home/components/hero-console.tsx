@@ -36,6 +36,11 @@ For commercial licensing, please contact support@quantumnous.com
  * read as a demo; a still transcript reads as a log. The cursor blinks the way
  * a real shell cursor does — hard on/off via `visibility`, 1.4s — because a
  * soft fade reads as decoration.
+ *
+ * Height is not content-driven: the reference pins the body at `lg:min-h-[480px]`
+ * so the window keeps its presence even when a pane runs short. Reproducing
+ * that floor is what restores the 523px card — without it the same transcript
+ * renders 64px shorter and the hero reads as a thin strip.
  */
 
 /** VSCode Dark+ palette, keyed by the role each colour plays in a shell line. */
@@ -63,17 +68,18 @@ export function HeroConsole(props: { className?: string }) {
         (props.className ?? '')
       }
     >
-      {/* Title bar — 41px tall: 12px padding plus the 17px line box */}
+      {/* Title bar — 41px: 12px padding plus a 17px line box */}
       <div className='relative flex items-center justify-center border-b border-white/10 px-4 py-3'>
-        <div className='absolute left-4 flex gap-1.5'>
+        <div className='absolute left-4 flex gap-1.5' aria-hidden>
           <span className='size-2.5 rounded-full bg-white/25' />
           <span className='size-2.5 rounded-full bg-white/25' />
           <span className='size-2.5 rounded-full bg-white/25' />
         </div>
-        <span className='text-[12px] text-white/45'>~/app — zsh</span>
+        <span className='text-[12px] leading-[17px] text-white/45'>~/app — zsh</span>
       </div>
 
-      <div className='grid grid-cols-1 divide-y divide-white/10 md:grid-cols-2 md:divide-x md:divide-y-0'>
+      {/* Body floor: 380px on small screens, 480px from lg up. */}
+      <div className='grid min-h-[380px] grid-cols-1 divide-y divide-white/10 md:grid-cols-2 md:divide-x md:divide-y-0 lg:min-h-[480px]'>
         <Pane
           tool='claude'
           env={[
@@ -81,7 +87,7 @@ export function HeroConsole(props: { className?: string }) {
             ['ANTHROPIC_AUTH_TOKEN', 'apx_live_••••d41e'],
           ]}
           run='claude'
-          meta='Claude Code · sonnet-5.5 · gateway'
+          meta='Claude Code  ·  sonnet-5.5  ·  gateway'
           ask='Rate-limit /login and add tests'
           steps={[
             ['Read', 'src/routes/login.ts'],
@@ -97,7 +103,7 @@ export function HeroConsole(props: { className?: string }) {
             ['OPENAI_API_KEY', 'apx_live_••••d41e'],
           ]}
           run='codex "soft-delete invoices"'
-          meta='Codex · gpt-6-luna · gateway'
+          meta='Codex  ·  gpt-6-luna  ·  gateway'
           ask='Add soft delete to invoices'
           steps={[
             ['Edit', 'db/schema.ts', '+12', '−2'],
@@ -114,10 +120,13 @@ export function HeroConsole(props: { className?: string }) {
 /**
  * One CLI session. Both panes share this shape so they line up row for row.
  *
- * Diff counts sit on their own line, indented to a fixed column rather than to
- * the end of the filename: the reference keeps `+38` at the same x for every
- * verb, and a fixed indent is what makes the two panes read as aligned columns
- * instead of ragged text.
+ * The pane is `flex-col` with a bordered 41px header row and a 20px-padded
+ * transcript below; that split is what gives the window its proportions. Every
+ * transcript row is `flex gap-2.5` with a fixed 12px gutter, so `$`, `●`, `›`
+ * and `✓` all sit on one vertical rail and the text column lines up across
+ * rows. Diff counts go on their own row, indented a further 24px — the
+ * reference keeps `+38` at the same x for every verb, and a fixed indent is
+ * what makes the two panes read as aligned columns rather than ragged text.
  */
 function Pane(props: {
   tool: string
@@ -129,65 +138,90 @@ function Pane(props: {
   done: string
 }) {
   return (
-    <div className='min-w-0 px-4 py-3.5'>
-      <div className='mb-3 flex items-center gap-1.5 text-[12px] text-white/55'>
-        <span className='text-[13px] leading-none'>✳</span>
-        <span>{props.tool}</span>
+    <div className='flex min-w-0 flex-col'>
+      {/* Session header — 41px, its own hairline. */}
+      <div className='flex items-center gap-2 border-b border-white/10 px-5 py-3'>
+        <span className='text-[14px] leading-none text-white/55' aria-hidden>
+          ✳
+        </span>
+        <span className='truncate text-[12px] leading-4 text-white/55'>{props.tool}</span>
       </div>
 
-      <div className='min-w-0 text-[13.5px] leading-[25px]'>
-        {/* 整行是一个内联流，而不是「$ + key=value」两个 flex 子项：
-            flex-wrap 会在超宽时把 `$` 单独挤成一行，真实终端是 `$` 留在行首、
-            长 URL 在中间断开。用 break-all 让任意位置都能断。 */}
+      <div className='flex-1 overflow-hidden px-5 py-5 text-[13.5px] leading-[25px]'>
         {props.env.map(([key, value]) => (
-          <div key={key} className='break-all'>
-            <span style={{ color: SYNTAX.prompt }}>$</span>{' '}
+          <Row key={key} gutter='$' gutterColor={SYNTAX.prompt}>
             <span style={{ color: SYNTAX.key }}>{key}</span>
             <span style={{ color: SYNTAX.eq }}>=</span>
             <span style={{ color: SYNTAX.str }}>{value}</span>
+          </Row>
+        ))}
+        <Row gutter='$' gutterColor={SYNTAX.prompt}>
+          <span style={{ color: SYNTAX.cmd }}>{props.run}</span>
+        </Row>
+
+        {/* Empty gutter keeps the meta line on the same text rail. */}
+        <Row className='mt-2 mb-1'>
+          <span className='text-white/40'>{props.meta}</span>
+        </Row>
+
+        <Row className='mt-3' gutter='›' gutterColor='rgba(255,255,255,0.35)'>
+          <span className='text-white'>{props.ask}</span>
+        </Row>
+
+        {props.steps.map(([verb, file, add, del]) => (
+          <div key={file}>
+            <Row gutter='●' gutterColor={SYNTAX.step}>
+              <span style={{ color: SYNTAX.step }}>{verb}</span>{' '}
+              <span style={{ color: SYNTAX.file }}>{file}</span>
+            </Row>
+            {add || del ? (
+              <Row className='pl-6'>
+                {add ? <span style={{ color: SYNTAX.add }}>{add}</span> : null}
+                {del ? <span style={{ color: SYNTAX.del }}>{del}</span> : null}
+              </Row>
+            ) : null}
           </div>
         ))}
-        <div className='break-all'>
-          <span style={{ color: SYNTAX.prompt }}>$</span>{' '}
-          <span style={{ color: SYNTAX.cmd }}>{props.run}</span>
-        </div>
 
-        <div className='mt-3 text-white/40'>{props.meta}</div>
-
-        <div className='mt-2.5 flex items-baseline gap-2'>
-          <span className='text-white/35'>›</span>
-          <span className='text-white'>{props.ask}</span>
-        </div>
-
-        <div className='mt-2 space-y-[3px]'>
-          {props.steps.map(([verb, file, add, del]) => (
-            <div key={file}>
-              <div className='flex items-baseline gap-x-2'>
-                <span style={{ color: SYNTAX.step }}>●</span>
-                <span style={{ color: SYNTAX.step }}>{verb}</span>
-                <span style={{ color: SYNTAX.file }}>{file}</span>
-              </div>
-              {add || del ? (
-                <div className='flex items-baseline gap-x-3 pl-[46px]'>
-                  {add ? <span style={{ color: SYNTAX.add }}>{add}</span> : null}
-                  {del ? <span style={{ color: SYNTAX.del }}>{del}</span> : null}
-                </div>
-              ) : null}
-            </div>
-          ))}
-        </div>
-
-        <div className='mt-3 flex items-center gap-2'>
-          <span style={{ color: SYNTAX.ok }}>✓</span>
+        <Row className='mt-2.5' gutter='✓' gutterColor={SYNTAX.ok}>
           <span className='text-white'>{props.done}</span>
-        </div>
+        </Row>
 
-        <div className='mt-2 flex items-center gap-2'>
-          <span style={{ color: SYNTAX.prompt }}>$</span>
+        <Row className='mt-1' gutter='$' gutterColor={SYNTAX.prompt}>
           {/* Hard blink (visibility, not opacity) so it reads as a shell cursor. */}
           <span className='lp-cursor inline-block h-[14px] w-[7px] bg-white/75' />
-        </div>
+        </Row>
       </div>
+    </div>
+  )
+}
+
+/**
+ * One transcript row: a fixed 12px gutter for the prompt/bullet, then the text
+ * column. `whitespace-pre` keeps the double spaces in the metadata lines, and
+ * the text column truncates with an ellipsis rather than wrapping — a wrapped
+ * URL would break the column rail that makes the two panes readable.
+ */
+function Row(props: {
+  children: React.ReactNode
+  gutter?: string
+  gutterColor?: string
+  className?: string
+}) {
+  return (
+    <div
+      className={
+        'flex gap-2.5 whitespace-pre ' + (props.className ?? '')
+      }
+    >
+      <span
+        className='w-3 shrink-0 select-none text-center'
+        style={props.gutterColor ? { color: props.gutterColor } : undefined}
+        aria-hidden
+      >
+        {props.gutter ?? ''}
+      </span>
+      <span className='min-w-0 overflow-hidden text-ellipsis'>{props.children}</span>
     </div>
   )
 }

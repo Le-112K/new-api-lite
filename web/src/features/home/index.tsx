@@ -26,7 +26,7 @@ import { useTheme } from '@/context/theme-provider'
 import { isLikelyHtml } from '@/lib/content-format'
 import { useAuthStore } from '@/stores/auth-store'
 
-import { CTA, Connect, Faq, Hero, ModelCatalog, ValueList } from './components'
+import { CTA, Connect, Faq, Hero, ModelCatalog } from './components'
 import './landing.css'
 import { useHomePageContent } from './hooks'
 
@@ -132,7 +132,6 @@ export function Home() {
       <Hero isAuthenticated={isAuthenticated} />
       <ModelCatalog />
       <Connect />
-      <ValueList />
       <Faq />
       <CTA isAuthenticated={isAuthenticated} />
       <Footer />
