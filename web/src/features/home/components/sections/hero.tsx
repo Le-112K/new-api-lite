@@ -155,8 +155,10 @@ export function Hero(props: HeroProps) {
             </div>
           </div>
 
-          {/* Right — the evidence. */}
-          <div className='lg:pl-6'>
+          {/* Right — the evidence. The grid gap already spaces the two
+              columns; an extra left padding here would shave 24px off the
+              console and make long URLs wrap mid-token. */}
+          <div>
             <HeroConsole />
           </div>
         </div>

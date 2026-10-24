@@ -97,3 +97,24 @@ For commercial licensing, please contact support@quantumnous.com
 .lp-shell [data-slot='button'][data-shape='pill'] {
   border-radius: 9999px !important;
 }
+
+/* 终端光标：硬闪而非呼吸。
+   参考站的关键帧只有 `100% { visibility: hidden }`（1.4s linear 无限循环）。
+   visibility 是离散属性不插值，所以 0%→50% 可见、50%→100% 隐藏，等效 50%
+   占空比的硬闪。之前用的 Tailwind animate-pulse 是 opacity 1→0.5→1 连续
+   渐变，光标永远不消失，读起来像装饰而不是终端。 */
+@keyframes lp-blink {
+  100% {
+    visibility: hidden;
+  }
+}
+
+.lp-cursor {
+  animation: lp-blink 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-cursor {
+    animation: none;
+  }
+}
