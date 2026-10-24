@@ -19,8 +19,6 @@ For commercial licensing, please contact support@quantumnous.com
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useCallback } from 'react'
 
-import { DEFAULT_LOGO } from '@/lib/constants'
-import { applyFaviconToDom } from '@/lib/dom-utils'
 import { ensureStatus } from '@/lib/status-query'
 import { useSystemConfigStore } from '@/stores/system-config-store'
 
@@ -29,25 +27,12 @@ interface UseSystemConfigOptions {
   autoLoad?: boolean
 }
 
-/** Preload an image, returning a cleanup that detaches the pending handlers. */
-function preloadImage(
-  src: string,
-  onLoad: () => void,
-  onError: () => void
-): () => void {
-  const img = new Image()
-  img.onload = onLoad
-  img.onerror = onError
-  img.src = src
-
-  return () => {
-    img.onload = null
-    img.onerror = null
-  }
-}
-
 /**
- * System configuration hook with auto-loading and logo preloading
+ * System configuration hook.
+ *
+ * The product is text-branded and ships no logo asset, so there is no image
+ * preloading and no favicon rewriting here — only the status-backed config
+ * (name, footer HTML, currency) and its loading flag.
  *
  * @example
  * // Root component - auto-load from backend
@@ -55,13 +40,12 @@ function preloadImage(
  *
  * @example
  * // Other components - use cached config
- * const { systemName, logo, loading } = useSystemConfig()
+ * const { systemName, loading } = useSystemConfig()
  */
 export function useSystemConfig(options: UseSystemConfigOptions = {}) {
   const { autoLoad = false } = options
   const queryClient = useQueryClient()
-  const { config, loading, loadedLogoUrl, setLoadedLogoUrl, setLoading } =
-    useSystemConfigStore()
+  const { config, loading, setLoading } = useSystemConfigStore()
 
   // Load config from backend via the shared `/api/status` cache.
   // `ensureStatus` writes the mapped config into this store itself, so there is
@@ -82,35 +66,8 @@ export function useSystemConfig(options: UseSystemConfigOptions = {}) {
     if (autoLoad) loadConfig()
   }, [autoLoad, loadConfig])
 
-  // Preload logo image when URL changes
-  useEffect(() => {
-    const { logo } = config
-
-    // Skip if logo is already loaded
-    if (!logo || logo === loadedLogoUrl) return
-
-    // Preload new logo
-    return preloadImage(
-      logo,
-      () => {
-        setLoadedLogoUrl(logo)
-        applyFaviconToDom(logo)
-      },
-      () => {
-        if (logo !== DEFAULT_LOGO) {
-          // eslint-disable-next-line no-console
-          console.error('Failed to load logo:', logo)
-        }
-        // Mark as loaded even on error to prevent infinite retry
-        setLoadedLogoUrl(logo)
-      }
-    )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config.logo, loadedLogoUrl, setLoadedLogoUrl])
-
   return {
     ...config,
     loading,
-    logoLoaded: config.logo === loadedLogoUrl && !!loadedLogoUrl,
   }
 }

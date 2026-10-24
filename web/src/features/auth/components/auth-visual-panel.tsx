@@ -19,9 +19,8 @@ For commercial licensing, please contact support@quantumnous.com
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
-import { Skeleton } from '@/components/ui/skeleton'
+import { BrandWordmark } from '@/components/brand-wordmark'
 import { ApertureGlobe } from '@/features/auth/components/aperture-globe'
-import { useSystemConfig } from '@/hooks/use-system-config'
 import { cn } from '@/lib/utils'
 
 /* Upstream provider brand names — proper nouns, so they stay untranslated
@@ -41,14 +40,11 @@ const PROVIDER_NAMES = [
 ]
 
 /**
- * The brand lockup — logo plus wordmark, linking home. Extracted so the same
+ * The brand lockup — text-only wordmark, linking home. Extracted so the same
  * markup can serve both the panel (at lg and up) and the page chrome (below
  * lg, where the panel is hidden) without duplicating it.
  */
 export function AuthBrandMark(props: { className?: string }) {
-  const { t } = useTranslation()
-  const { systemName, logo, loading } = useSystemConfig()
-
   return (
     <Link
       to='/'
@@ -57,22 +53,7 @@ export function AuthBrandMark(props: { className?: string }) {
         props.className
       )}
     >
-      <div className='relative h-8 w-8'>
-        {loading ? (
-          <Skeleton className='absolute inset-0 rounded-full' />
-        ) : (
-          <img
-            src={logo}
-            alt={t('Logo')}
-            className='h-8 w-8 rounded-full object-cover'
-          />
-        )}
-      </div>
-      {loading ? (
-        <Skeleton className='h-6 w-24' />
-      ) : (
-        <h1 className='text-xl font-medium'>{systemName}</h1>
-      )}
+      <BrandWordmark className='text-xl' />
     </Link>
   )
 }

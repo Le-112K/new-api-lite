@@ -36,8 +36,6 @@ const SITE_SECTIONS = [
     build: (settings: SiteSettings) => (
       <SystemInfoSection
         defaultValues={{
-          SystemName: settings.SystemName,
-          Logo: settings.Logo,
           Footer: settings.Footer,
           HomePageContent: settings.HomePageContent,
           ServerAddress: settings.ServerAddress,

@@ -17,10 +17,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Dialog } from '@/components/dialog'
+import { BrandWordmark } from '@/components/brand-wordmark'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { NotificationPopover } from '@/components/notification-popover'
 import { ProfileDropdown } from '@/components/profile-dropdown'
@@ -37,8 +38,6 @@ import { useAuthStore } from '@/stores/auth-store'
 
 import { defaultTopNavLinks } from '../config/top-nav.config'
 import type { TopNavLink } from '../types'
-import { HeaderLogo } from './header-logo'
-import { BuilinLogotype } from '@/components/brand-mark'
 
 const AUTH_PROMPT_SECONDS = 5
 
@@ -53,8 +52,6 @@ export interface PublicHeaderProps {
   navContent?: React.ReactNode
   showThemeSwitch?: boolean
   showLanguageSwitcher?: boolean
-  logo?: React.ReactNode
-  siteName?: string
   homeUrl?: string
   leftContent?: React.ReactNode
   rightContent?: React.ReactNode
@@ -75,8 +72,6 @@ export function PublicHeader(props: PublicHeaderProps) {
     navLinks = defaultTopNavLinks,
     showThemeSwitch = true,
     showLanguageSwitcher = true,
-    logo: customLogo,
-    siteName: customSiteName,
     homeUrl = '/',
     showAuthButtons = true,
     showNotifications = true,
@@ -93,12 +88,7 @@ export function PublicHeader(props: PublicHeaderProps) {
   const [authPromptSecondsLeft, setAuthPromptSecondsLeft] =
     useState(AUTH_PROMPT_SECONDS)
   const { auth } = useAuthStore()
-  const {
-    systemName,
-    logo: systemLogo,
-    loading,
-    logoLoaded,
-  } = useSystemConfig()
+  const { loading } = useSystemConfig()
   const dynamicLinks = useTopNavLinks()
   const notifications = useNotifications()
   const routerState = useRouterState()
@@ -116,19 +106,7 @@ export function PublicHeader(props: PublicHeaderProps) {
 
   const user = auth.user
   const isAuthenticated = !!user
-  const displaySiteName = customSiteName || systemName
   const links = dynamicLinks.length > 0 ? dynamicLinks : navLinks
-
-  let logoContent: ReactNode = (
-    <HeaderLogo
-      src={systemLogo}
-      loading={loading}
-      logoLoaded={logoLoaded}
-      className='size-full rounded-lg object-contain'
-    />
-  )
-  if (customLogo) logoContent = customLogo
-  if (loading) logoContent = <Skeleton className='size-full rounded-lg' />
 
   let authContent = (
     <Button
@@ -268,32 +246,8 @@ export function PublicHeader(props: PublicHeaderProps) {
                 to={homeUrl}
                 className='group flex min-w-0 items-center gap-2.5'
               >
-                {isLanding ? (
-                  /* 品牌区是构造式几何字标（web/brand/IDENTITY.md），
-                     名字即标识，不再叠一层文本字标；currentColor 随主题反色。 */
-                  <BuilinLogotype className='h-[22px] w-auto shrink-0 text-foreground' />
-                ) : (
-                  <>
-                    <div
-                      className={cn(
-                        'flex shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105',
-                        'size-7'
-                      )}
-                    >
-                      {logoContent}
-                    </div>
-                    <span
-                      className='max-w-48 truncate text-sm font-semibold tracking-tight'
-                      title={displaySiteName}
-                    >
-                      {loading ? (
-                        <Skeleton className='h-4 w-16' />
-                      ) : (
-                        displaySiteName
-                      )}
-                    </span>
-                  </>
-                )}
+                {/* 品牌名统一为纯文字：无 logo 图片，落地页与控制台同一套字标。 */}
+                <BrandWordmark className='shrink-0' />
               </Link>
             </div>
 

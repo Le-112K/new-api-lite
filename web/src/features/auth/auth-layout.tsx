@@ -16,12 +16,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useTranslation } from 'react-i18next'
-
 import { Footer } from '@/components/layout/components/footer'
-import { Skeleton } from '@/components/ui/skeleton'
 import { HeroBackdrop } from '@/features/auth/components/hero-backdrop'
-import { useSystemConfig } from '@/hooks/use-system-config'
 import { cn } from '@/lib/utils'
 
 import { AuthBrandMark, AuthVisualPanel } from './components/auth-visual-panel'
@@ -40,8 +36,6 @@ type AuthLayoutProps = {
 }
 
 export function AuthLayout(props: AuthLayoutProps) {
-  const { t } = useTranslation()
-  const { logo, loading } = useSystemConfig()
   const isSplit = props.variant === 'split'
 
   /* The brand mark is page chrome below `lg`; at `lg`+ in the split layout the
@@ -53,22 +47,6 @@ export function AuthLayout(props: AuthLayoutProps) {
         isSplit && 'lg:hidden'
       )}
     />
-  )
-
-  /* The small centred mark above the heading — part of the approved card
-     language, so it stays in both variants. */
-  const logoBadge = (
-    <div className='mb-6 flex justify-center'>
-      {loading ? (
-        <Skeleton className='size-10 rounded-xl' />
-      ) : (
-        <img
-          src={logo}
-          alt={t('Logo')}
-          className='size-10 rounded-xl object-cover'
-        />
-      )}
-    </div>
   )
 
   return (
@@ -99,7 +77,6 @@ export function AuthLayout(props: AuthLayoutProps) {
                 head, pill submit) is untouched; only the outer frame goes. */}
             <div className='flex flex-col items-center justify-center px-4 py-16 sm:py-24'>
               <div data-auth-card className='w-full max-w-[400px]'>
-                {logoBadge}
                 {props.children}
               </div>
             </div>
@@ -115,7 +92,6 @@ export function AuthLayout(props: AuthLayoutProps) {
               data-auth-card
               className='bg-card border-border w-full rounded-3xl border p-6 shadow-[var(--shadow-hairline)] sm:w-[480px] sm:p-8'
             >
-              {logoBadge}
               {props.children}
             </div>
           </div>

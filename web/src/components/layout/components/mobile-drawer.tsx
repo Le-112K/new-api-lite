@@ -22,6 +22,7 @@ import { AnimatePresence, motion, type Variants } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 
 import { SignOutDialog } from '@/components/sign-out-dialog'
+import { BrandWordmark } from '@/components/brand-wordmark'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -34,38 +35,21 @@ import { MOBILE_DRAWER_ANIMATION, MOBILE_DRAWER_CONFIG } from '../constants'
 import type { TopNavLink } from '../types'
 
 /**
- * Brand logo component with skeleton loading
+ * Text-only brand wordmark. No logo image anywhere in the product.
  */
 interface BrandLogoProps {
   homeUrl: string
-  displayLogo: React.ReactNode
-  displaySiteName: string
-  loading: boolean
-  logoLoaded: boolean
   onClick?: () => void
 }
 
-function BrandLogo({
-  homeUrl,
-  displayLogo,
-  displaySiteName,
-  loading,
-  logoLoaded,
-  onClick,
-}: BrandLogoProps) {
+function BrandLogo({ homeUrl, onClick }: BrandLogoProps) {
   return (
     <Link
       to={homeUrl}
-      className='flex items-center gap-2 text-xl font-bold'
+      className='flex items-center gap-2'
       onClick={onClick}
     >
-      <div className='relative h-6 w-6'>
-        {loading || !logoLoaded ? (
-          <Skeleton className='absolute inset-0 rounded-full' />
-        ) : null}
-        {displayLogo}
-      </div>
-      {loading ? <Skeleton className='h-5 w-20' /> : displaySiteName}
+      <BrandWordmark className='text-xl' />
     </Link>
   )
 }
@@ -188,10 +172,7 @@ export interface MobileDrawerProps {
   isOpen: boolean
   onClose: () => void
   homeUrl: string
-  displayLogo: React.ReactNode
-  displaySiteName: string
   loading: boolean
-  logoLoaded: boolean
   mobileLinksList: TopNavLink[]
   showAuthButtons: boolean
   user: AuthUser | null
@@ -205,10 +186,7 @@ export function MobileDrawer({
   isOpen,
   onClose,
   homeUrl,
-  displayLogo,
-  displaySiteName,
   loading,
-  logoLoaded,
   mobileLinksList,
   showAuthButtons,
   user,
@@ -242,14 +220,7 @@ export function MobileDrawer({
             <div className='flex flex-col gap-4'>
               {/* Header with logo and close button */}
               <div className='flex items-center justify-between'>
-                <BrandLogo
-                  homeUrl={homeUrl}
-                  displayLogo={displayLogo}
-                  displaySiteName={displaySiteName}
-                  loading={loading}
-                  logoLoaded={logoLoaded}
-                  onClick={onClose}
-                />
+                <BrandLogo homeUrl={homeUrl} onClick={onClose} />
                 <Button
                   variant='ghost'
                   size='icon-sm'
