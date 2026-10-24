@@ -53,7 +53,7 @@ export function AuthBrandMark(props: { className?: string }) {
         props.className
       )}
     >
-      <BrandWordmark className='text-xl' />
+      <BrandWordmark className='text-[22px]' />
     </Link>
   )
 }

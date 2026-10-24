@@ -26,13 +26,16 @@ import { cn } from '@/lib/utils'
  * keeps it legible in both themes without a second asset.
  *
  * Sizes are contextual — pass `text-[…]` to override; `cn` merges so the last
- * size wins.
+ * size wins. Scale (light/dark identical):
+ *   header 17 · footer 16 · sidebar 15 · auth 22 · setup 28
+ * The header value sits one step above the 14px nav links, which is what makes
+ * the name read as the primary mark without competing with the page title.
  */
 export function BrandWordmark(props: { className?: string }) {
   return (
     <span
       className={cn(
-        'text-foreground block select-none text-[15px] leading-none font-bold tracking-[-0.02em] whitespace-nowrap',
+        'text-foreground block select-none text-[17px] leading-none font-bold tracking-[-0.02em] whitespace-nowrap',
         props.className
       )}
     >
