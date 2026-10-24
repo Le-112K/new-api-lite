@@ -26,7 +26,7 @@ type PublicLayoutProps = {
   showMainContainer?: boolean
   navContent?: React.ReactNode
   headerProps?: Omit<PublicHeaderProps, 'navContent'>
-  /** 覆盖最外层容器的底色；落地页用它把 #f5f5f7 换成纯白 */
+  /** 覆盖最外层容器的底色；主题画布已是纯白，落地页显式再钉一次 */
   wrapperClassName?: string
   navLinks?: TopNavLink[]
   showThemeSwitch?: boolean

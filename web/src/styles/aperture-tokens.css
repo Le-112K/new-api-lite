@@ -22,8 +22,9 @@ For commercial licensing, please contact support@quantumnous.com
  * WHY THIS FILE IS *ADDITIVE ONLY*: the project already ships an Apple
  * grayscale theme (`theme-apple-bw.css`) whose values are, token for token,
  * the same as the ones this design language specifies — `--background`
- * #F5F5F7, `--border` #E8E8ED, `--primary` #0a0a0a, `--muted-foreground`
- * #6E6E73, `--sidebar` rgba(255,255,255,0.72). Re-declaring them here would
+ * #FFFFFF (page canvas; the original spec's #F5F5F7 gray was retired so every
+ * route matches the landing page), `--border` #E8E8ED, `--primary` #0a0a0a,
+ * `--muted-foreground` #6E6E73, `--sidebar` rgba(255,255,255,0.72). Re-declaring them here would
  * create a second source of truth for the same value, so this file only
  * declares what the project does NOT already have.
  *

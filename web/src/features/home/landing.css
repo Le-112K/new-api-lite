@@ -55,9 +55,9 @@ For commercial licensing, please contact support@quantumnous.com
   font-family: 'Manrope', var(--font-sans);
   font-feature-settings: 'ss01', 'cv11';
 
-  /* 站内主题的 --background 是 #f5f5f7、--secondary 是 #f2f2f4、正文灰是
-     #6e6e73，参考站分别是 #ffffff / #f4f4f4 / #666666。落地页在 .lp 子树里
-     覆盖这四个令牌，其余页面不受影响 —— 前景色 #0a0a0a 本来就一致，不用动。 */
+  /* 全局 --background 已是纯白（theme-apple-bw.css）；这里保留 --background /
+     --card 的显式值，作为落地页在任意主题预设下都保持纯白的兜底。
+     --secondary / --muted-foreground / --border 是参考站更细的取值。 */
   --background: #ffffff;
   --card: #ffffff;
   --secondary: #f4f4f4;

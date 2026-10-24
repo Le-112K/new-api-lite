@@ -3,7 +3,9 @@
 
 /* 1) 锁死三色 + Apple 灰阶。覆盖 :root 与 .dark 的关键 token，但保留原有 radius 体系 */
 :root{
-  --background: #F5F5F7;
+  /* 画布纯白：与首页 `bg-white` 完全一致。灰阶只做层级填充（--muted /
+     --secondary / --table-header），不再作为页面底色。 */
+  --background: #FFFFFF;
   --foreground: #0a0a0a;
   --card: #FFFFFF;
   --card-foreground: #0a0a0a;
@@ -18,7 +20,8 @@
 
   --muted: #F5F5F7;
   --muted-foreground: #6E6E73;
-  --accent: #FFFFFF;
+  /* hover / 选中态填充：页面已是纯白，accent 若仍为白会失去反馈 */
+  --accent: #F5F5F7;
   --accent-foreground: #0a0a0a;
 
   --border: #E8E8ED;
@@ -30,7 +33,7 @@
   --sidebar-foreground: #0a0a0a;
   --sidebar-primary: #0a0a0a;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #FFFFFF;
+  --sidebar-accent: #F5F5F7;
   --sidebar-accent-foreground: #0a0a0a;
   --sidebar-border: #E8E8ED;
   --sidebar-ring: #0a0a0a;
