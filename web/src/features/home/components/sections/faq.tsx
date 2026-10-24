@@ -34,21 +34,19 @@ export function Faq() {
 
   const items = [
     {
-      q: t('Which clients work out of the box?'),
+      q: t('Can I keep using my current tools?'),
       a: t(
-        'Any client that lets you set a base URL: Cherry Studio, Claude Code, Codex CLI, Cursor, OpenCode, AionUi and the official OpenAI and Anthropic SDKs. The setup guides list the exact field for each one.'
+        'Yes. Set the Anthropic or OpenAI base URL to your gateway and use your API key. Cursor, official SDKs and curl work the same way.'
       ),
     },
     {
-      q: t('What is the difference from calling each provider directly?'),
-      a: t(
-        'One credential, one bill and one log stream. The gateway absorbs the protocol differences between OpenAI and Anthropic, so a single client can reach models from several vendors without changing code.'
-      ),
+      q: t('Do I need a key per model?'),
+      a: t('No. One key covers every model on this gateway.'),
     },
     {
-      q: t('Where does my data go?'),
+      q: t('Can I switch models without changing code?'),
       a: t(
-        'Through your own deployment and nowhere else. The software runs on your server, keeps its database there, and does not report usage to us or to any third party.'
+        'Yes. Change the model name in the request; the key and the endpoint stay the same.'
       ),
     },
     {

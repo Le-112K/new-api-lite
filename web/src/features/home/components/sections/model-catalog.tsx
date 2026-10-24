@@ -90,7 +90,7 @@ export function ModelCatalog() {
       <SectionHeading
         compact
         label={t('Models')}
-        title={t('{{vendors}} vendors, {{models}} models, all on one API key.', {
+        title={t('{{models}} models from {{vendors}} families, on one API key.', {
           vendors: vendors.length,
           models: models.length,
         })}

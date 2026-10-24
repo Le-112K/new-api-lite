@@ -38,6 +38,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { defaultTopNavLinks } from '../config/top-nav.config'
 import type { TopNavLink } from '../types'
 import { HeaderLogo } from './header-logo'
+import { BrandMark } from '@/components/brand-mark'
 
 const AUTH_PROMPT_SECONDS = 5
 
@@ -267,19 +268,25 @@ export function PublicHeader(props: PublicHeaderProps) {
                 to={homeUrl}
                 className='group flex min-w-0 items-center gap-2.5'
               >
-                <div
-                  className={cn(
-                    'flex shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105',
-                    isLanding ? 'h-[26px] w-[26px]' : 'size-7'
-                  )}
-                >
-                  {logoContent}
-                </div>
+                {isLanding ? (
+                  /* 参考站品牌区是 35×20 的单色几何标记 + 15px/700 字标，
+                     规避圆角图片；标记走 currentColor，随主题反色。 */
+                  <BrandMark className='h-5 w-[35px] shrink-0 text-foreground' />
+                ) : (
+                  <div
+                    className={cn(
+                      'flex shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105',
+                      'size-7'
+                    )}
+                  >
+                    {logoContent}
+                  </div>
+                )}
                 <span
                   className={cn(
                     'max-w-48 truncate',
                     isLanding
-                      ? 'text-[15px] leading-none font-bold tracking-[-0.01em]'
+                      ? 'text-[15px] leading-none font-bold tracking-[-0.15px] uppercase'
                       : 'text-sm font-semibold tracking-tight'
                   )}
                   title={displaySiteName}

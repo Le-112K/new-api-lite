@@ -118,3 +118,41 @@ For commercial licensing, please contact support@quantumnous.com
     animation: none;
   }
 }
+
+/* 入场位移：opacity 0→1 + 上移 14px 归位。
+   参考站的 `rise` 关键帧就是这两个值。用 animation 而不是 transition，
+   这样元素首帧就是隐藏态，不会闪一下再淡入。 */
+@keyframes lp-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lp-rise {
+  animation: lp-rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* 按顺序入场，标题先、副文案次、按钮与列表依次跟上 */
+.lp-rise-2 {
+  animation-delay: 0.08s;
+}
+.lp-rise-3 {
+  animation-delay: 0.16s;
+}
+.lp-rise-4 {
+  animation-delay: 0.24s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-rise,
+  .lp-rise-2,
+  .lp-rise-3,
+  .lp-rise-4 {
+    animation: none;
+  }
+}

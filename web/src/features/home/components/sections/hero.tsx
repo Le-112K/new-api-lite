@@ -66,7 +66,7 @@ export function Hero(props: HeroProps) {
       <Button
         variant={isPrimary ? 'default' : 'outline'}
         className={cn(
-          'lp h-12 rounded-lg px-5 text-[15px] font-medium tracking-normal',
+          'lp h-12 gap-2 rounded-lg px-5 text-[15px] font-semibold tracking-normal',
           isPrimary
             ? 'bg-foreground text-background hover:bg-foreground/90'
             : 'border-border bg-background text-foreground hover:bg-secondary'
@@ -74,7 +74,7 @@ export function Hero(props: HeroProps) {
         render={render}
       >
         {label}
-        {isPrimary ? <ArrowRight className='ml-1 size-4' aria-hidden /> : null}
+        {isPrimary ? <ArrowRight className='ml-2 size-4' aria-hidden /> : null}
       </Button>
     )
   }
@@ -84,55 +84,50 @@ export function Hero(props: HeroProps) {
       {/* 导航条是 fixed 且高 64px，所以首屏的上内边距要把这 64px 算进去，
           最终内容距视口顶部 64 + 96 = 160px，与参考站一致。 */}
       <div className='mx-auto w-full max-w-[1424px] px-6 pt-28 pb-16 md:px-12 md:pt-40 md:pb-24'>
-        <div className='grid grid-cols-1 items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,751px)] lg:gap-6'>
-          {/* Left — the claim. The copy column is 1fr against a fixed 751px
-              terminal, not the reference's fixed 467px: the Chinese second line
-              is nine characters wide and needs 540px at 60px type, which 467px
-              cannot give without breaking the line after five characters. */}
-          <div>
-            <h1 className='lp-display text-[2.6rem] leading-[1.02] tracking-[-0.03em] md:text-[68px] font-semibold text-foreground'>
-              <span className='block'>{t('One API key,')}</span>
-              <span className='block'>{t('For every model')}</span>
-              <span className='block'>{t('you run.')}</span>
+        {/* 12 栅格 5/7 分栏（左 521 / 右 751），gap 56px —— 与参考站一致。
+            之前用的 [1fr_751px] + gap 24px 让左栏过宽（553px），中文三行断句
+            就得靠手拆；换成 5/7 后左栏 521px，断句位置也自然了。 */}
+        <div className='grid grid-cols-1 items-center gap-12 lg:grid-cols-12 lg:gap-14'>
+          {/* Left — the claim. H1 断行按参考站实测：「One API key / for every top /
+              AI model.」三行，宽 521px 时 68px 字号正好落成这三段。 */}
+          <div className='lg:col-span-5'>
+            <h1 className='lp-display lp-rise text-[2.6rem] leading-[1.02] tracking-[-0.03em] md:text-[68px] font-semibold text-foreground'>
+              <span className='block'>{t('One API key')}</span>
+              <span className='block'>{t('for every top')}</span>
+              <span className='block'>{t('AI model.')}</span>
             </h1>
 
-            {/* Two sentences on two lines, like the reference: CJK has no word
-                boundaries, so a soft wrap here lands in the middle of a phrase
-                and leaves a two-character orphan on the last line. */}
-            <p className='mt-5 text-[18px] leading-[1.62] text-muted-foreground'>
-              <span className='block'>
-                {t('Point Claude Code, Codex CLI or your own code at this gateway.')}
-              </span>
-              {/* Third line split by hand: at 18px the model list + benefit
-                  sentence is ~607px and the copy column is 553px, so a soft wrap
-                  drops 「张账单。」 alone on a fourth line. */}
-              <span className='block'>
-                {t('Claude, GPT, Gemini, DeepSeek and Qwen,')}
-              </span>
-              <span className='block'>
-                {t('on a single key and one invoice.')}
-              </span>
+            {/* 参考站是一整段自然折成三行；中文用 \n 把断点定在短语边界，
+                避免「一张账单。」被甩成孤行（whitespace-pre-line 只影响带
+                换行的译文，英文原文仍自然折行）。 */}
+            <p className='lp-rise lp-rise-2 mt-6 max-w-[36rem] text-[18px] leading-[1.62] whitespace-pre-line text-muted-foreground'>
+              {t(
+                'Point Claude Code, Codex CLI or your own code at this gateway. GPT, Claude, Gemini, DeepSeek and Qwen run on a single key and one invoice.'
+              )}
             </p>
 
-            <div className='mt-7 flex flex-wrap items-center gap-3'>
+            <div className='lp-rise lp-rise-3 mt-7 flex flex-wrap items-center gap-3'>
               {renderCta('/pricing', t('See pricing'), true)}
               {renderCta(`${docsBase}/zh/docs`, t('Read the docs'), false)}
             </div>
 
             {/* Hairline + micro bullets: the reference's way of adding three
-                facts without turning them into a card or an icon row. */}
-            <div className='mt-8 border-t border-border pt-5'>
+                facts without turning them into a card or an icon row.
+                14px / 20px 行高 / 8px 条目间距 = 28px 节距，与参考站一致。
+                参考站第三条是「Cancel any time」——那是订阅制主张，自托管没有
+                可取消的订阅，换成同为收尾安抚的开源事实。 */}
+            <div className='lp-rise lp-rise-4 mt-8 border-t border-border pt-5'>
               <ul className='space-y-2'>
                 {[
                   t('OpenAI- and Anthropic-compatible endpoints'),
-                  t('Works with Cherry Studio, Claude Code and Codex CLI'),
+                  t('Works with Claude Code, Codex CLI and Cursor'),
                   t('Self-host in one command, no subscription'),
                 ].map((line) => (
                   <li
                     key={line}
-                    className='flex items-start gap-2 text-[13.5px] leading-[1.5] text-muted-foreground'
+                    className='flex items-start gap-2 text-[14px] leading-5 text-muted-foreground'
                   >
-                    <span className='mt-[7px] size-1 shrink-0 rounded-full bg-muted-foreground/60' />
+                    <span className='mt-2 size-1 shrink-0 rounded-full bg-muted-foreground/60' />
                     <span>{line}</span>
                   </li>
                 ))}
@@ -144,7 +139,7 @@ export function Hero(props: HeroProps) {
                 href={`${docsBase}/zh/docs/installation`}
                 target='_blank'
                 rel='noopener noreferrer'
-                className='inline-flex items-center gap-2 text-[13.5px] text-muted-foreground transition-colors hover:text-foreground'
+                className='inline-flex items-center gap-2 text-[14px] leading-5 text-muted-foreground transition-colors hover:text-foreground'
               >
                 <span className='rounded-md border border-border px-1.5 py-0.5 text-[11px] font-semibold text-foreground'>
                   {t('Open source')}
@@ -158,7 +153,7 @@ export function Hero(props: HeroProps) {
           {/* Right — the evidence. The grid gap already spaces the two
               columns; an extra left padding here would shave 24px off the
               console and make long URLs wrap mid-token. */}
-          <div>
+          <div className='lg:col-span-7'>
             <HeroConsole />
           </div>
         </div>

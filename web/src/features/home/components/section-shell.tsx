@@ -52,7 +52,7 @@ export function SectionShell(props: {
     >
       <div
         className={cn(
-          'mx-auto w-full max-w-[1424px] px-6 py-16 md:px-12',
+          'mx-auto w-full max-w-[1424px] px-6 py-20 md:px-12',
           props.tight ? 'md:py-20' : 'md:py-28',
           props.innerClassName
         )}

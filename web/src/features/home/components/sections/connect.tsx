@@ -101,7 +101,7 @@ export function Connect() {
         { key: 'OPENAI_API_KEY', value: 'sk-your-key' },
       ],
       caption: t(
-        'For Codex CLI, Cursor, OpenCode, Cherry Studio and any client of Chat Completions or Responses.'
+        'For Codex, Cursor, OpenCode, Cherry Studio, the OpenAI SDKs and any client of Chat Completions or Responses.'
       ),
     },
   ]
@@ -118,7 +118,7 @@ export function Connect() {
           </h2>
           <p className='mt-4 max-w-[30rem] text-[16px] leading-[1.62] text-muted-foreground'>
             {t(
-              'Claude Code, Codex CLI, Cursor and the official SDKs all read a base URL and an API key. Point them here, and every model answers on the same key.'
+              'Claude Code, Codex, Cursor and the official SDKs all read a base URL and an API key. Point them at this gateway, and every model answers on the same key.'
             )}
           </p>
 
@@ -166,7 +166,7 @@ export function Connect() {
           </div>
           <p className='mt-4 text-[14px] leading-[1.62] text-muted-foreground'>
             {t(
-              'Replace sk-your-key with a key from your console. Each guide names the exact file and setting for its tool, plus the model to start with.'
+              'Replace sk-your-key with a key from your console. Each guide has the exact file and setting for its tool, and the model to start with.'
             )}
           </p>
         </div>
