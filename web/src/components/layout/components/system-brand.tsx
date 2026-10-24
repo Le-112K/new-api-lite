@@ -63,7 +63,7 @@ export function SystemBrand(props: SystemBrandProps) {
           'hover:bg-accent focus-visible:ring-ring/40 focus-visible:ring-2'
         )}
       >
-        <BrandWordmark className='text-[15px]' />
+        <BrandWordmark className='text-[16px]' />
       </Link>
     )
   }
@@ -77,7 +77,7 @@ export function SystemBrand(props: SystemBrandProps) {
           render={<div />}
         >
           <div className='grid flex-1 text-start text-sm leading-tight group-data-[collapsible=icon]:hidden'>
-            <BrandWordmark className='text-[15px]' />
+            <BrandWordmark className='text-[16px]' />
             <span className='text-muted-foreground truncate text-xs'>
               {version}
             </span>

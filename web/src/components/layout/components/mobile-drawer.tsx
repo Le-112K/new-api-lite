@@ -49,7 +49,7 @@ function BrandLogo({ homeUrl, onClick }: BrandLogoProps) {
       className='flex items-center gap-2'
       onClick={onClick}
     >
-      <BrandWordmark className='text-[22px]' />
+      <BrandWordmark className='text-[24px]' />
     </Link>
   )
 }

@@ -241,7 +241,7 @@ export function SetupWizard() {
       </div>
       <div className='container mx-auto flex max-w-5xl flex-col gap-8 px-4 sm:px-6'>
         <div className='flex flex-col items-center gap-3'>
-          <BrandWordmark className='text-[28px]' />
+          <BrandWordmark className='text-[32px]' />
           <p className='text-muted-foreground text-center text-sm sm:text-base'>
             {t(
               'Follow the guided steps to prepare your workspace before the first login.'
