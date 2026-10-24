@@ -23,17 +23,22 @@ import { cn } from '@/lib/utils'
 /**
  * AuthMesh — the animated dot mesh behind the login panel.
  *
- * A hex-offset lattice that breathes on a slow travelling wave and bends away
- * from the pointer inside a 120px radius. Neighbour links are drawn at very low
- * alpha so the field reads as a surface rather than confetti; the point nearest
- * the cursor gains size and ink, which is what makes the panel feel responsive
- * without any chrome.
+ * A hex-offset lattice with three layers of motion:
+ *  1. two travelling sine waves (different speed and pitch) so the drift never
+ *     reads as a single loop;
+ *  2. a per-point breathing phase that modulates both dot size and ink, which
+ *     is what gives the field a slow "surface" rather than a static grid;
+ *  3. a smoothed pointer repulsion — the cursor sets a target, the field eases
+ *     toward it at 14%/frame, so the bend glides instead of snapping.
  *
- * Engineering contract (same as ApertureGlobe):
- * - DPR capped at 2; canvas resized through ResizeObserver.
- * - `prefers-reduced-motion` renders one static frame and stops the RAF loop.
- * - The loop pauses while the document is hidden.
- * - The canvas is decorative: `aria-hidden`, pointer events stay with the panel.
+ * A soft radial halo follows the same smoothed pointer, and a centre-weighted
+ * alpha falloff keeps the edges quiet without relying on the CSS mask alone.
+ *
+ * Engineering contract:
+ * - DPR capped at 2; canvas rebuilt through ResizeObserver.
+ * - prefers-reduced-motion renders one static frame and stops the RAF loop.
+ * - RAF pauses while the document is hidden.
+ * - Decorative: aria-hidden, no pointer capture.
  */
 export function AuthMesh(props: { className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -48,19 +53,27 @@ export function AuthMesh(props: { className?: string }) {
       '(prefers-reduced-motion: reduce)'
     ).matches
 
-    const GAP = 26 // lattice pitch in css px
-    const WAVE_AMP = 4 // vertical breathing amplitude
-    const WAVE_SPEED = 0.8 // radians per second
-    const INFLUENCE = 120 // pointer radius
-    const PUSH = 18 // max displacement away from the pointer
+    const GAP = 22 // lattice pitch, css px
+    const WAVE_A = 3.2 // primary wave amplitude
+    const WAVE_B = 1.8 // secondary wave amplitude
+    const INFLUENCE = 130 // pointer radius
+    const PUSH = 20 // max displacement away from the pointer
+    const EASE = 0.14 // pointer smoothing per frame
 
     let raf = 0
     let width = 0
     let height = 0
     let cols = 0
     let rows = 0
-    let points: { x: number; y: number; ox: number; oy: number }[] = []
-    let pointer = { x: -9999, y: -9999, active: false }
+    let points: {
+      x: number
+      y: number
+      ox: number
+      oy: number
+      phase: number
+    }[] = []
+    const target = { x: -9999, y: -9999, strength: 0 }
+    const pointer = { x: -9999, y: -9999, strength: 0 }
 
     const build = () => {
       const rect = canvas.getBoundingClientRect()
@@ -76,31 +89,48 @@ export function AuthMesh(props: { className?: string }) {
       points = []
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
-          // Hex offset on odd rows — a square lattice looks like graph paper.
           const x = c * GAP + (r % 2 ? GAP / 2 : 0)
           const y = r * GAP
-          points.push({ x, y, ox: x, oy: y })
+          // Deterministic per-point phase so the breathing never syncs up.
+          const phase = Math.sin((r * cols + c) * 12.9898) * 43758.5453
+          points.push({ x, y, ox: x, oy: y, phase: phase - Math.floor(phase) })
         }
       }
     }
 
     const draw = (time: number) => {
-      ctx.clearRect(0, 0, width, height)
       const t = time / 1000
+      ctx.clearRect(0, 0, width, height)
+
+      if (!reduce) {
+        pointer.x += (target.x - pointer.x) * EASE
+        pointer.y += (target.y - pointer.y) * EASE
+        pointer.strength += (target.strength - pointer.strength) * 0.1
+      } else {
+        pointer.x = target.x
+        pointer.y = target.y
+        pointer.strength = target.strength
+      }
+
+      const cx = width / 2
+      const cy = height / 2
+      const maxR = Math.hypot(cx, cy) || 1
 
       for (const p of points) {
         let x = p.ox
         let y = p.oy
         if (!reduce) {
           y +=
-            Math.sin(p.ox * 0.018 + p.oy * 0.012 - t * WAVE_SPEED) * WAVE_AMP
+            Math.sin(p.ox * 0.018 + p.oy * 0.013 - t * 0.7) * WAVE_A +
+            Math.sin(p.ox * 0.007 - t * 0.35) * WAVE_B
+          x += Math.sin(p.oy * 0.011 + t * 0.22) * 1.1
         }
-        if (pointer.active) {
+        if (pointer.strength > 0.01) {
           const dx = x - pointer.x
           const dy = y - pointer.y
           const dist = Math.hypot(dx, dy)
           if (dist < INFLUENCE && dist > 0.01) {
-            const force = 1 - dist / INFLUENCE
+            const force = (1 - dist / INFLUENCE) * pointer.strength
             x += (dx / dist) * force * PUSH
             y += (dy / dist) * force * PUSH
           }
@@ -109,9 +139,9 @@ export function AuthMesh(props: { className?: string }) {
         p.y = y
       }
 
-      // Links first, points on top — the lattice reads as a surface.
-      ctx.lineWidth = 0.75
-      ctx.strokeStyle = 'rgba(255,255,255,0.095)'
+      // Links first — a faint weave, never a net.
+      ctx.lineWidth = 0.7
+      ctx.strokeStyle = 'rgba(255,255,255,0.07)'
       ctx.beginPath()
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
@@ -132,15 +162,39 @@ export function AuthMesh(props: { className?: string }) {
       }
       ctx.stroke()
 
+      // Cursor halo: a soft bloom that makes the bend legible on ink.
+      if (pointer.strength > 0.02) {
+        const halo = ctx.createRadialGradient(
+          pointer.x,
+          pointer.y,
+          0,
+          pointer.x,
+          pointer.y,
+          INFLUENCE * 1.4
+        )
+        halo.addColorStop(0, `rgba(255,255,255,${0.07 * pointer.strength})`)
+        halo.addColorStop(1, 'rgba(255,255,255,0)')
+        ctx.fillStyle = halo
+        ctx.fillRect(0, 0, width, height)
+      }
+
       for (const p of points) {
+        const radial = 1 - (Math.hypot(p.ox - cx, p.oy - cy) / maxR) * 0.45
+        const breath = reduce
+          ? 0.75
+          : 0.62 + 0.38 * Math.sin(t * 0.7 + p.phase * Math.PI * 2)
         let near = 0
-        if (pointer.active) {
+        if (pointer.strength > 0.01) {
           const d = Math.hypot(p.x - pointer.x, p.y - pointer.y)
-          if (d < INFLUENCE) near = 1 - d / INFLUENCE
+          if (d < INFLUENCE) near = (1 - d / INFLUENCE) * pointer.strength
         }
-        ctx.fillStyle = `rgba(255,255,255,${(0.26 + near * 0.55).toFixed(3)})`
+        const alpha = Math.min(
+          0.82,
+          (0.1 + 0.18 * breath) * radial + near * 0.55
+        )
+        ctx.fillStyle = `rgba(255,255,255,${alpha.toFixed(3)})`
         ctx.beginPath()
-        ctx.arc(p.x, p.y, 1.15 + near * 0.95, 0, Math.PI * 2)
+        ctx.arc(p.x, p.y, 0.95 + breath * 0.35 + near * 1.05, 0, Math.PI * 2)
         ctx.fill()
       }
     }
@@ -154,16 +208,16 @@ export function AuthMesh(props: { className?: string }) {
       const rect = canvas.getBoundingClientRect()
       const x = event.clientX - rect.left
       const y = event.clientY - rect.top
-      pointer = {
-        x,
-        y,
-        active: x >= 0 && y >= 0 && x <= rect.width && y <= rect.height,
-      }
+      const inside =
+        x >= -40 && y >= -40 && x <= rect.width + 40 && y <= rect.height + 40
+      target.x = x
+      target.y = y
+      target.strength = inside ? 1 : 0
       if (reduce) draw(0)
     }
 
     const onPointerLeave = () => {
-      pointer = { x: -9999, y: -9999, active: false }
+      target.strength = 0
       if (reduce) draw(0)
     }
 

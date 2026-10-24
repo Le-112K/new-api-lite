@@ -50,6 +50,8 @@ import { SignUpForm } from '../sign-up/components/sign-up-form'
 import { AuthMesh } from './auth-mesh'
 import { TermsFooter } from './terms-footer'
 
+import './auth-dialog.css'
+
 /**
  * The sign-in / sign-up / password-reset modal.
  *
@@ -133,7 +135,7 @@ export function AuthDialog() {
           data-slot='auth-dialog-content'
           className={cn(
             'bg-background text-foreground fixed inset-0 z-50 flex flex-col overflow-y-auto overscroll-contain outline-none',
-            'data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.99] data-closed:animate-out data-closed:fade-out-0 duration-150 motion-reduce:animate-none!',
+            'data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.97] data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-[0.98] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:animate-none!',
             // Desktop: centred two-pane card. The left column is the brand
             // panel; the right column owns the form and can scroll on its own.
             'md:inset-auto md:top-1/2 md:left-1/2 md:max-h-[calc(100dvh-2rem)] md:min-h-[35rem] md:w-[min(56rem,calc(100vw-3rem))] md:-translate-x-1/2 md:-translate-y-1/2 md:flex-row md:overflow-hidden md:rounded-[24px] md:shadow-[0_2px_10px_-4px_rgba(0,0,0,0.06),0_32px_80px_-40px_rgba(0,0,0,0.28)] md:ring-1 md:ring-foreground/10'
@@ -141,21 +143,24 @@ export function AuthDialog() {
         >
           {/* Brand panel — hidden on mobile, where the sheet is the whole
               screen and the form needs every pixel. */}
-          <aside className='relative hidden shrink-0 flex-col justify-between overflow-hidden bg-[#0a0a0a] p-8 text-white dark:bg-[#111113] md:flex md:w-[42%] md:min-w-[19rem] md:p-10'>
+          <aside className='relative hidden shrink-0 flex-col overflow-hidden bg-[#0a0a0a] p-10 text-white dark:bg-[#111113] md:flex md:w-1/2'>
             {/* Animated dot mesh, masked to a soft ellipse so the lattice fades
                 out before it reaches the panel edges. */}
             <div className='pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,#000_35%,transparent_92%)]'>
               <AuthMesh />
             </div>
-            <div className='relative'>
+            <div className='relative' data-auth-rise>
               <BrandWordmark className='text-[17px] text-white' />
             </div>
-            <div className='relative'>
+            <div
+              className='relative flex flex-1 flex-col justify-center'
+              data-auth-rise='2'
+            >
               <p className='text-[28px] leading-[1.06] font-semibold tracking-[-0.03em]'>
                 <span className='block'>{t('One key.')}</span>
                 <span className='block'>{t('Every model.')}</span>
               </p>
-              <ul className='mt-6 space-y-2.5'>
+              <ul className='mt-6 space-y-2.5' data-auth-rise='3'>
                 {[
                   t('OpenAI- and Anthropic-compatible endpoints'),
                   t('Works with Claude Code, Codex CLI and Cursor'),
@@ -193,7 +198,7 @@ export function AuthDialog() {
               <span className='sr-only'>{t('Close')}</span>
             </DialogClose>
 
-            <div className='mx-auto w-full max-w-[25rem]'>
+            <div className='mx-auto flex w-full max-w-[23rem] flex-1 flex-col justify-center md:flex-none'>
               <div className='flex flex-col gap-2 pr-10'>
                 <p className='text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase'>
                   {t('Welcome')}

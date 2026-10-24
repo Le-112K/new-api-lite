@@ -1,0 +1,31 @@
+/* Auth dialog motion — panel content rise + reduced-motion opt-out.
+   Scoped to the dialog so no other surface inherits the keyframes. */
+
+@keyframes auth-panel-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+[data-slot='auth-dialog-content'] [data-auth-rise] {
+  animation: auth-panel-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+[data-slot='auth-dialog-content'] [data-auth-rise='2'] {
+  animation-delay: 0.08s;
+}
+
+[data-slot='auth-dialog-content'] [data-auth-rise='3'] {
+  animation-delay: 0.16s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot='auth-dialog-content'] [data-auth-rise] {
+    animation: none;
+  }
+}
