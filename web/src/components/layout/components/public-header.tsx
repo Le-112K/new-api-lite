@@ -95,18 +95,44 @@ export function PublicHeader(props: PublicHeaderProps) {
   const pathname = routerState.location.pathname
   const locationHref = routerState.location.href
 
-  // Sign in opens the auth dialog in place: the pathname must not change, so we
-  // only add `?auth=signin` to the current URL.
-  const openAuthDialog = useCallback(() => {
-    const url = new URL(locationHref, window.location.origin)
-    navigate({
-      href: buildAuthDialogHref(url.pathname, url.search, 'sign-in'),
-    })
-  }, [navigate, locationHref])
+  // Sign in / sign up open the auth dialog in place: the pathname must not
+  // change, so we only add `?auth=signin|signup` to the current URL.
+  const openAuthDialog = useCallback(
+    (mode: 'sign-in' | 'sign-up' = 'sign-in') => {
+      const url = new URL(locationHref, window.location.origin)
+      navigate({
+        href: buildAuthDialogHref(url.pathname, url.search, mode),
+      })
+    },
+    [navigate, locationHref]
+  )
 
   const user = auth.user
   const isAuthenticated = !!user
   const links = dynamicLinks.length > 0 ? dynamicLinks : navLinks
+
+  /* Landing header contract: the two buttons look the same in both states.
+     Signed-out → sign-in / sign-up dialog. Signed-in → straight to the console,
+     because the header deliberately hides the avatar on the public page. */
+  const goToConsole = useCallback(() => {
+    navigate({ to: '/dashboard' })
+  }, [navigate])
+
+  const handleHeaderSignIn = useCallback(() => {
+    if (isAuthenticated) {
+      goToConsole()
+      return
+    }
+    openAuthDialog('sign-in')
+  }, [isAuthenticated, goToConsole, openAuthDialog])
+
+  const handleHeaderSignUp = useCallback(() => {
+    if (isAuthenticated) {
+      goToConsole()
+      return
+    }
+    openAuthDialog('sign-up')
+  }, [isAuthenticated, goToConsole, openAuthDialog])
 
   let authContent = (
     <Button
@@ -116,7 +142,7 @@ export function PublicHeader(props: PublicHeaderProps) {
           ? 'h-10 rounded-lg px-4 text-sm font-semibold'
           : 'h-8 rounded-lg px-3.5 text-xs font-medium'
       }
-      onClick={openAuthDialog}
+      onClick={() => openAuthDialog('sign-in')}
     >
       {t('Sign in')}
     </Button>
@@ -342,20 +368,20 @@ export function PublicHeader(props: PublicHeaderProps) {
                   {!isLanding && (
                     <div className='bg-border/40 mx-1 h-4 w-px' />
                   )}
-                  {/* 参考站这一对是「纯文字 Sign in + 黑底 Get started」，
-                      两者都通向登录；未登录时给两个入口，已登录仍走头像下拉。 */}
-                  {isLanding && !isAuthenticated && !loading ? (
+                  {/* 首页右上角恒定一对按钮：未登录 → 登录 / 注册弹窗；
+                      已登录 → 两个按钮都直接进控制台（公开页不露头像）。 */}
+                  {isLanding ? (
                     <>
                       <Button
                         variant='ghost'
                         className='h-10 rounded-lg px-4 text-sm font-semibold text-foreground/75 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
-                        onClick={openAuthDialog}
+                        onClick={handleHeaderSignIn}
                       >
                         {t('Sign in')}
                       </Button>
                       <Button
                         className='h-10 rounded-lg px-4 text-sm font-semibold'
-                        onClick={openAuthDialog}
+                        onClick={handleHeaderSignUp}
                       >
                         {t('Get started')}
                       </Button>
@@ -370,9 +396,10 @@ export function PublicHeader(props: PublicHeaderProps) {
             {/* Mobile: compact actions + hamburger */}
             <div className='flex shrink-0 items-center gap-2 lg:hidden'>
               {showThemeSwitch && <ThemeSwitch variant={props.variant} />}
-              {showAuthButtons && !loading && isAuthenticated && (
-                <ProfileDropdown />
-              )}
+              {showAuthButtons &&
+                !loading &&
+                isAuthenticated &&
+                !isLanding && <ProfileDropdown />}
               <Button
                 type='button'
                 variant='ghost'
@@ -472,7 +499,31 @@ export function PublicHeader(props: PublicHeaderProps) {
             )}
             style={{ transitionDelay: mobileOpen ? '250ms' : '0ms' }}
           >
-            {showAuthButtons && isAuthenticated && (
+            {/* 首页移动端与桌面同规则：恒定一对按钮，登录态只改去向。 */}
+            {showAuthButtons && isLanding && (
+              <div className='flex flex-col gap-2'>
+                <Button
+                  variant='outline'
+                  onClick={() => {
+                    setMobileOpen(false)
+                    handleHeaderSignIn()
+                  }}
+                  className='h-10 w-full justify-center rounded-lg text-sm font-medium'
+                >
+                  {t('Sign in')}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setMobileOpen(false)
+                    handleHeaderSignUp()
+                  }}
+                  className='bg-foreground text-background hover:bg-foreground/90 active:opacity-80 h-10 w-full justify-center rounded-lg text-sm font-medium transition-opacity'
+                >
+                  {t('Get started')}
+                </Button>
+              </div>
+            )}
+            {showAuthButtons && !isLanding && isAuthenticated && (
               <Link
                 to='/dashboard'
                 onClick={() => setMobileOpen(false)}
@@ -481,7 +532,7 @@ export function PublicHeader(props: PublicHeaderProps) {
                 {t('Go to Dashboard')}
               </Link>
             )}
-            {showAuthButtons && !isAuthenticated && (
+            {showAuthButtons && !isLanding && !isAuthenticated && (
               <Button
                 onClick={() => {
                   setMobileOpen(false)
