@@ -21,53 +21,52 @@ import { cn } from '@/lib/utils'
 /**
  * builin brand system — see web/brand/IDENTITY.md.
  *
- * The wordmark is a constructed geometric lowercase, not typeset text: fixed
- * 16u stem width, 72u x-height, 104u ascender, flat terminals. The signature
- * detail is the two square i-dots (18×18) — they read as gateway nodes and
- * carry the "routing" half of the brand story while the word itself says
- * built-in (builin = built-in minus one t).
+ * Uppercase constructed logotype: 16u stems, 104u cap height, 20u tracking,
+ * flat terminals, no curves. The drawing is original — the only thing it shares
+ * with any other gateway brand is the category convention (monochrome
+ * geometric caps), which is a style, not an identity.
  *
- * Everything is `currentColor`, so a single asset inverts with the theme and
- * works in one-colour print. No gradients, no strokes, no shadows — that is a
- * hard rule of the identity, not a preference.
+ * `currentColor` throughout, so one asset inverts with the theme and works in
+ * single-colour print. No gradients, strokes or shadows — hard rules of the
+ * identity.
  */
 
-/** Primary logotype. 320×120 viewBox, content spans y=6…112. */
+/** Primary logotype. 370×120 viewBox, caps span y=8…112, 14u stems, 24u tracking. */
 export function BuilinLogotype(props: { className?: string }) {
   return (
     <svg
-      viewBox='0 0 320 120'
+      viewBox='0 0 370 120'
       fill='currentColor'
       className={cn('block', props.className)}
       role='img'
-      aria-label='builin'
+      aria-label='BUILIN'
       focusable='false'
     >
-      {/* b */}
-      <path d='M0 8h16v104H0z' />
-      <path d='M16 40h32v16H16zM48 40h16v72H48zM16 96h32v16H16z' />
-      {/* u */}
-      <path d='M80 40h16v56h32V40h16v72H80z' />
-      {/* i — square node dot */}
-      <path d='M160 40h16v72h-16zM160 6h18v18h-18z' />
-      {/* l */}
-      <path d='M192 8h16v104h-16z' />
-      {/* i — square node dot */}
-      <path d='M224 40h16v72h-16zM224 6h18v18h-18z' />
-      {/* n */}
-      <path d='M256 40h64v16h-48v56h-16z' />
+      {/* B */}
+      <path d='M0 8h14v104H0z' />
+      <path d='M14 8h28v14H14zM42 8h14v50H42zM14 51h28v14H14zM42 51h14v61H42zM14 98h28v14H14z' />
+      {/* U */}
+      <path d='M80 8h14v104H80zM124 8h14v104h-14zM80 98h58v14H80z' />
+      {/* I */}
+      <path d='M162 8h14v104h-14z' />
+      {/* L */}
+      <path d='M200 8h14v104h-14zM200 98h50v14h-50z' />
+      {/* I */}
+      <path d='M274 8h14v104h-14z' />
+      {/* N */}
+      <path d='M312 8h14v104h-14zM356 8h14v104h-14z' />
+      <path d='M326 8h14l16 104h-14z' />
     </svg>
   )
 }
 
 /**
- * Monogram for app icons, avatars and favicons at 24px and above. The
- * container is a squircle (22% radius) in Ink with the letter in Paper; at
- * 16px use the simplified flat version instead — see IDENTITY.md §2.2.
+ * Monogram for app icons, avatars and favicons at 24px and above. Squircle
+ * container at 22% radius, letter carved in Paper.
  */
 export function BuilinMonogram(props: {
   className?: string
-  /** Background colour class; defaults to ink. */
+  /** Background tone; defaults to ink. */
   tone?: 'ink' | 'paper'
 }) {
   const isInk = props.tone !== 'paper'
@@ -76,13 +75,18 @@ export function BuilinMonogram(props: {
       viewBox='0 0 200 200'
       className={cn('block', props.className)}
       role='img'
-      aria-label='builin'
+      aria-label='BUILIN'
       focusable='false'
     >
-      <rect width='200' height='200' rx='44' fill={isInk ? 'currentColor' : 'none'} />
+      <rect
+        width='200'
+        height='200'
+        rx='44'
+        fill={isInk ? 'currentColor' : 'none'}
+      />
       <g fill={isInk ? 'var(--color-background-primary, #fff)' : 'currentColor'}>
-        <path d='M56 40h20v120H56z' />
-        <path d='M76 82h40v20H76zM116 82h20v88h-20zM76 150h40v20H76z' />
+        <path d='M56 40h18v120H56z' />
+        <path d='M74 40h36v18H74zM110 40h18v58h-18zM74 90h36v18H74zM110 90h18v70h-18zM74 142h36v18H74z' />
       </g>
     </svg>
   )
@@ -98,7 +102,7 @@ export function BuilinModule(props: { className?: string }) {
       viewBox='0 0 200 200'
       className={cn('block', props.className)}
       role='img'
-      aria-label='builin module'
+      aria-label='BUILIN module'
       focusable='false'
     >
       <rect width='200' height='200' rx='44' fill='currentColor' />
