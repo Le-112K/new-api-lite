@@ -47,6 +47,7 @@ import {
 } from '../lib/auth-dialog'
 import { UserAuthForm } from '../sign-in/components/user-auth-form'
 import { SignUpForm } from '../sign-up/components/sign-up-form'
+import { AuthMesh } from './auth-mesh'
 import { TermsFooter } from './terms-footer'
 
 /**
@@ -140,20 +141,17 @@ export function AuthDialog() {
         >
           {/* Brand panel — hidden on mobile, where the sheet is the whole
               screen and the form needs every pixel. */}
-          <aside className='relative hidden shrink-0 flex-col justify-between overflow-hidden bg-[#0a0a0a] p-8 text-white md:flex md:w-[19rem]'>
-            <div
-              aria-hidden
-              className='pointer-events-none absolute inset-0 opacity-[0.14]'
-              style={{
-                backgroundImage:
-                  'repeating-linear-gradient(60deg, rgba(255,255,255,0.55) 0 1px, transparent 1px 30px), repeating-linear-gradient(-60deg, rgba(255,255,255,0.55) 0 1px, transparent 1px 30px), repeating-linear-gradient(0deg, rgba(255,255,255,0.4) 0 1px, transparent 1px 26px)',
-              }}
-            />
+          <aside className='relative hidden shrink-0 flex-col justify-between overflow-hidden bg-[#0a0a0a] p-8 text-white dark:bg-[#111113] md:flex md:w-[42%] md:min-w-[19rem] md:p-10'>
+            {/* Animated dot mesh, masked to a soft ellipse so the lattice fades
+                out before it reaches the panel edges. */}
+            <div className='pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,#000_35%,transparent_92%)]'>
+              <AuthMesh />
+            </div>
             <div className='relative'>
               <BrandWordmark className='text-[17px] text-white' />
             </div>
             <div className='relative'>
-              <p className='text-[26px] leading-[1.08] font-semibold tracking-[-0.03em]'>
+              <p className='text-[28px] leading-[1.06] font-semibold tracking-[-0.03em]'>
                 <span className='block'>{t('One key.')}</span>
                 <span className='block'>{t('Every model.')}</span>
               </p>
