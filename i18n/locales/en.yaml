@@ -76,8 +76,13 @@ user.disabled: "This user has been disabled"
 user.session_save_failed: "Failed to save session, please try again"
 user.require_2fa: "Please enter two-factor authentication code"
 user.email_verification_required: "Email verification is enabled, please enter email address and verification code"
+user.email_required: "Please enter your email address"
 user.verification_code_error: "Verification code is incorrect or has expired"
 user.email_already_taken: "Email address is already in use"
+user.legal_consent_required: "Please read and accept the terms of service and privacy policy first"
+user.verification_link_invalid: "This verification link is invalid or has already been used"
+user.verification_link_expired: "This verification link has expired. Send a new one."
+user.verification_email_failed: "Could not send the verification email. Please try again."
 user.password_unset: "This account has no password set. Please use password reset or contact an administrator to reset it."
 user.password_reset_link_invalid: "Password reset link is invalid or has expired"
 user.input_invalid: "Invalid input {{.Error}}"
@@ -223,3 +228,12 @@ distributor.no_available_channel: "No available channel for model {{.Model}} und
 distributor.invalid_request_parse_model: "Invalid request, unable to parse model"
 
 # Custom OAuth provider messages
+
+# Signup verification email
+email.signup_subject: "Verify your {{.SystemName}} email"
+email.signup_title: "Confirm and create your account"
+email.signup_body: "We received a request to create a {{.SystemName}} account with this address. Click the button below to verify it — your account goes live immediately."
+email.signup_button: "Verify email and continue"
+email.signup_fallback: "Button not working? Copy this link into your browser:"
+email.signup_expiry: "This link is valid for 24 hours and can be used once."
+email.signup_ignore: "If this wasn't you, just ignore this email — no account will be created."

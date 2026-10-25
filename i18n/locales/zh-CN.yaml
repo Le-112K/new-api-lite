@@ -77,8 +77,13 @@ user.disabled: "该用户已被禁用"
 user.session_save_failed: "无法保存会话信息，请重试"
 user.require_2fa: "请输入两步验证码"
 user.email_verification_required: "管理员开启了邮箱验证，请输入邮箱地址和验证码"
+user.email_required: "请输入邮箱地址"
 user.verification_code_error: "验证码错误或已过期"
 user.email_already_taken: "邮箱地址已被占用"
+user.legal_consent_required: "请先阅读并同意服务条款与隐私政策"
+user.verification_link_invalid: "验证链接无效或已被使用，请重新获取"
+user.verification_link_expired: "验证链接已过期，请重新发送验证邮件"
+user.verification_email_failed: "验证邮件发送失败，请稍后重试"
 user.password_unset: "当前账号未设置密码，请使用密码重置或联系管理员重置密码"
 user.password_reset_link_invalid: "重置链接非法或已过期"
 user.input_invalid: "输入不合法 {{.Error}}"
@@ -224,3 +229,12 @@ distributor.no_available_channel: "分组 {{.Group}} 下模型 {{.Model}} 无可
 distributor.invalid_request_parse_model: "无效的请求，无法解析模型"
 
 # Custom OAuth provider messages
+
+# Signup verification email
+email.signup_subject: "验证你的 {{.SystemName}} 邮箱"
+email.signup_title: "确认并创建账户"
+email.signup_body: "我们收到了使用这个邮箱创建 {{.SystemName}} 账户的请求。点击下方按钮完成验证，账户即刻生效。"
+email.signup_button: "验证邮箱并进入"
+email.signup_fallback: "按钮打不开？把下面的链接复制到浏览器打开："
+email.signup_expiry: "链接 24 小时内有效，且只能使用一次。"
+email.signup_ignore: "如果这不是你本人的操作，忽略这封邮件即可，不会有任何账户被创建。"
