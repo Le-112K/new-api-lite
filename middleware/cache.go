@@ -19,6 +19,12 @@ func Cache() func(c *gin.Context) {
 			// rebuild produces a new URL. Making it immutable removes the
 			// conditional revalidation that used to run once a week per file.
 			c.Header("Cache-Control", "public, max-age=31536000, immutable")
+		case strings.HasPrefix(uri, "/fonts/"):
+			// Brand fonts under public/fonts are addressed by fixed URLs that
+			// index.html preloads, so they would otherwise revalidate weekly
+			// per visitor. They only change together with a release; replacing
+			// one requires renaming the file (same contract as /static).
+			c.Header("Cache-Control", "public, max-age=31536000, immutable")
 		default:
 			c.Header("Cache-Control", "max-age=604800") // one week
 		}

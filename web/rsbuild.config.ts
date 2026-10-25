@@ -25,32 +25,15 @@ export default defineConfig(({ envMode }) => {
 
   return {
     plugins: [pluginReact(), pluginTailwindcss({ optimize: false })],
-    // Rsbuild 2: replaces deprecated `performance.chunkSplit` (RSPack 2 aligned)
+    // Rsbuild 2: replaces deprecated `performance.chunkSplit` (RSPack 2 aligned).
+    // Custom per-package vendor groups were removed on purpose: with
+    // `chunks: 'all'` they merged libraries that only admin routes use
+    // (react-table, react-virtual, settings-dialog primitives) into the same
+    // files as the router/query bundles every page needs, dragging them into
+    // the initial load. The default preset splits by actual usage instead,
+    // keeping route-only dependencies inside their async chunks.
     splitChunks: {
       preset: 'default',
-      cacheGroups: {
-        'vendor-react': {
-          test: /node_modules[\\/](react|react-dom)[\\/]/,
-          name: 'vendor-react',
-          chunks: 'all',
-          priority: 0,
-          enforce: true,
-        },
-        'vendor-ui-primitives': {
-          test: /node_modules[\\/](@base-ui|@radix-ui)[\\/]/,
-          name: 'vendor-ui-primitives',
-          chunks: 'all',
-          priority: 0,
-          enforce: true,
-        },
-        'vendor-tanstack': {
-          test: /node_modules[\\/]@tanstack[\\/]/,
-          name: 'vendor-tanstack',
-          chunks: 'all',
-          priority: 0,
-          enforce: true,
-        },
-      },
     },
     source: {
       entry: {

@@ -21,19 +21,38 @@ import LanguageDetector from 'i18next-browser-languagedetector'
 import { initReactI18next } from 'react-i18next'
 
 import { convertDetectedLanguage } from './languages'
-import en from './locales/en.json'
-import zhCN from './locales/zh.json'
 
-export const resources = {
-  en,
-  zhCN,
-} as const
+// Locales load through a backend instead of inline `resources`: en.json and
+// zh.json together are over half a megabyte of JSON and used to make up more
+// than half of the entry chunk, on the critical path of every visitor. The
+// dynamic import below turns each locale into its own async chunk, fetched in
+// parallel with the other initial chunks; main.tsx gates the first render on
+// `i18nReady` so components never mount with raw keys.
+const lazyLocaleBackend = {
+  type: 'backend' as const,
+  init() {},
+  read(
+    language: string,
+    _namespace: string,
+    callback: (err: unknown, data?: unknown) => void
+  ) {
+    void (async () => {
+      const file = language === 'zhCN' ? 'zh' : 'en'
+      try {
+        const module = await import(`./locales/${file}.json`)
+        callback(null, module.default)
+      } catch (error) {
+        callback(error)
+      }
+    })()
+  },
+}
 
-i18n
+export const i18nReady = i18n
   .use(LanguageDetector)
   .use(initReactI18next)
+  .use(lazyLocaleBackend)
   .init({
-    resources,
     fallbackLng: 'en',
     supportedLngs: ['en', 'zhCN'],
     load: 'currentOnly',

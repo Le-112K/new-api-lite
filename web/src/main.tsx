@@ -32,7 +32,7 @@ import { statusQueryOptions } from '@/lib/status-query'
 import { DirectionProvider } from './context/direction-provider'
 import { FontProvider } from './context/font-provider'
 import { ThemeProvider } from './context/theme-provider'
-import './i18n/config'
+import { i18nReady } from './i18n/config'
 // Generated Routes
 import { routeTree } from './routeTree.gen'
 
@@ -53,7 +53,9 @@ const router = createRouter({
   routeTree,
   context: { queryClient },
   defaultPreload: 'intent',
-  defaultPreloadStaleTime: 0,
+  // 0 made every hover re-run loaders/renderers before the click; a short
+  // freshness window lets an intent preload serve the actual navigation.
+  defaultPreloadStaleTime: 30_000,
 })
 
 // Register the router instance for type safety
@@ -68,6 +70,8 @@ const rootElement = document.querySelector<HTMLElement>('#root')
 if (!rootElement) {
   throw new Error('Root element not found')
 }
+// Aliased so the null check keeps narrowing inside the async closures below.
+const rootEl = rootElement
 // Fixed text brand: title comes from the constant, never from a configurable
 // name or a logo URL. There is no image asset to preload or swap.
 ;(function initBrandTitle() {
@@ -97,19 +101,27 @@ if (!rootElement) {
     /* empty */
   }
 })()
-if (!rootElement.innerHTML) {
-  const root = ReactDOM.createRoot(rootElement)
-  root.render(
-    <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <FontProvider>
-            <DirectionProvider>
-              <RouterProvider router={router} />
-            </DirectionProvider>
-          </FontProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </StrictMode>
-  )
+function renderApp() {
+  if (!rootEl.innerHTML) {
+    const root = ReactDOM.createRoot(rootEl)
+    root.render(
+      <StrictMode>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <FontProvider>
+              <DirectionProvider>
+                <RouterProvider router={router} />
+              </DirectionProvider>
+            </FontProvider>
+          </ThemeProvider>
+        </QueryClientProvider>
+      </StrictMode>
+    )
+  }
 }
+
+// The locale chunk resolves in parallel with the other initial chunks; waiting
+// for it (the boot screen covers the gap) keeps components from mounting with
+// raw keys. A failed locale load still renders — i18next keeps the fallback
+// language and retries on demand, which beats never painting at all.
+void i18nReady.catch(() => {}).then(renderApp)

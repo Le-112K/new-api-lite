@@ -16,6 +16,7 @@ func TestCacheControlByPath(t *testing.T) {
 	engine.GET("/", handler)
 	engine.GET("/static/js/index.abc123.js", handler)
 	engine.GET("/static/font/sora.woff2", handler)
+	engine.GET("/fonts/sora-latin-wght-normal.woff2", handler)
 	engine.GET("/pricing", handler)
 	engine.GET("/favicon.ico", handler)
 
@@ -28,6 +29,8 @@ func TestCacheControlByPath(t *testing.T) {
 		// Content-hashed: safe to keep forever.
 		{"/static/js/index.abc123.js", "public, max-age=31536000, immutable"},
 		{"/static/font/sora.woff2", "public, max-age=31536000, immutable"},
+		// Fixed-name brand fonts: immutable, renaming a font busts the cache.
+		{"/fonts/sora-latin-wght-normal.woff2", "public, max-age=31536000, immutable"},
 		// SPA fallbacks and unhashed files keep the shorter window.
 		{"/pricing", "max-age=604800"},
 		{"/favicon.ico", "max-age=604800"},
