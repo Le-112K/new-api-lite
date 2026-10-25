@@ -27,46 +27,26 @@ import {
   useDataTable,
 } from '@/components/data-table'
 
-import { DEFAULT_PRICING_PAGE_SIZE, DEFAULT_TOKEN_UNIT } from '../constants'
-import type { PricingModel, TokenUnit } from '../types'
+import { DEFAULT_PRICING_PAGE_SIZE } from '../constants'
+import type { PricingModel } from '../types'
 import { usePricingColumns } from './pricing-columns'
 
 export interface PricingTableProps {
   models: PricingModel[]
   isLoading?: boolean
-  priceRate?: number
-  usdExchangeRate?: number
-  tokenUnit?: TokenUnit
-  showRechargePrice?: boolean
-  selectedGroup?: string
   onModelClick?: (modelName: string) => void
 }
 
 export function PricingTable(props: PricingTableProps) {
   const { t } = useTranslation()
-  const {
-    models,
-    isLoading = false,
-    priceRate = 1,
-    usdExchangeRate = 1,
-    tokenUnit = DEFAULT_TOKEN_UNIT,
-    showRechargePrice = false,
-    selectedGroup,
-    onModelClick,
-  } = props
+  const { models, isLoading = false, onModelClick } = props
 
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: DEFAULT_PRICING_PAGE_SIZE,
   })
 
-  const columns = usePricingColumns({
-    tokenUnit,
-    priceRate,
-    usdExchangeRate,
-    showRechargePrice,
-    selectedGroup,
-  })
+  const columns = usePricingColumns()
 
   const { table } = useDataTable({
     data: models,

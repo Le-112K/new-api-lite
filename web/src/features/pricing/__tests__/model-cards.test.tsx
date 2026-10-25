@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createJSONStorage } from 'zustand/middleware'
@@ -27,7 +27,6 @@ import {
   useSystemConfigStore,
 } from '@/stores/system-config-store'
 
-import { CachedPriceCell } from '../components/cached-price-cell'
 import { ModelCard } from '../components/model-card'
 import { ModelCardGrid } from '../components/model-card-grid'
 import type { PricingModel } from '../types'
@@ -80,28 +79,83 @@ afterEach(() => {
 })
 
 describe('model cards', () => {
-  it('renders the cached input price derived from the configured cache ratio', () => {
+  it('carries no pay-per-use price anywhere on the card', () => {
     render(
-      <CachedPriceCell
-        model={pricingModel({ cache_ratio: 0.25 })}
-        options={{ tokenUnit: 'M' }}
+      <ModelCard
+        model={pricingModel({
+          model_ratio: 37.5,
+          completion_ratio: 3,
+          cache_ratio: 0.1,
+          model_price: 0.01,
+          context_length: 200000,
+        })}
+        onClick={vi.fn()}
       />
     )
-    expect(screen.getByText(/\$0\.5/)).toBeVisible()
-    expect(screen.getByText(/\/ 1M/)).toBeVisible()
+    // Input/output/cache rates, per-request prices and their units are gone.
+    expect(screen.queryByText('Input')).not.toBeInTheDocument()
+    expect(screen.queryByText('Output')).not.toBeInTheDocument()
+    expect(screen.queryByText('Cache')).not.toBeInTheDocument()
+    expect(screen.queryByText(/\/1M|\/1K|\/request/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/\$/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Per Request')).not.toBeInTheDocument()
   })
 
-  it('shows fixed prices per request in both token display units', () => {
-    const model = pricingModel({ quota_type: 1, model_price: 0.01 })
-    const { rerender } = render(
-      <ModelCard model={model} onClick={vi.fn()} tokenUnit='K' />
+  it('keeps the spec numbers off the card (they live in the details drawer)', () => {
+    render(
+      <ModelCard
+        model={pricingModel({
+          context_length: 1000000,
+          max_output_tokens: 384000,
+          thinking_strength: 'high',
+        })}
+        onClick={vi.fn()}
+      />
     )
-    expect(screen.getByText('$0.01')).toBeVisible()
-    expect(screen.getByText('/request')).toBeVisible()
-    rerender(<ModelCard model={model} onClick={vi.fn()} tokenUnit='M' />)
-    expect(screen.getByText('$0.01')).toBeVisible()
-    expect(screen.queryByText('/1M')).not.toBeInTheDocument()
+    expect(screen.queryByText('Context')).not.toBeInTheDocument()
+    expect(screen.queryByText('Max output')).not.toBeInTheDocument()
+    expect(screen.queryByText('Thinking Strength')).not.toBeInTheDocument()
+    expect(screen.queryByText('1M')).not.toBeInTheDocument()
+    expect(screen.queryByText('384K')).not.toBeInTheDocument()
   })
+
+  it('leaves capabilities to the details drawer', () => {
+    render(
+      <ModelCard
+        model={pricingModel({
+          capabilities: ['vision', 'tools', 'reasoning'],
+        })}
+        onClick={vi.fn()}
+      />
+    )
+    expect(screen.queryByText('Vision')).not.toBeInTheDocument()
+    expect(screen.queryByText('Tools')).not.toBeInTheDocument()
+    expect(screen.queryByText('Reasoning')).not.toBeInTheDocument()
+  })
+
+  it('shows which plans already include the model', () => {
+    render(
+      <ModelCard
+        model={pricingModel({ enable_groups: ['default', 'premium'] })}
+        groupLabels={{ default: '默认分组', premium: 'Starter' }}
+        onClick={vi.fn()}
+      />
+    )
+    expect(screen.getByText('默认分组')).toBeVisible()
+    expect(screen.getByText('Starter')).toBeVisible()
+  })
+
+  it('falls back to the raw group key when a label is unknown', () => {
+    render(
+      <ModelCard
+        model={pricingModel({ enable_groups: ['vip'] })}
+        groupLabels={{ default: '默认分组' }}
+        onClick={vi.fn()}
+      />
+    )
+    expect(screen.getByText('vip')).toBeVisible()
+  })
+
   it('copies the complete long model name without opening details', async () => {
     const user = userEvent.setup()
     const onClick = vi.fn()
@@ -120,80 +174,32 @@ describe('model cards', () => {
     await user.click(screen.getByRole('button', { name: 'Copy model name' }))
     expect(await navigator.clipboard.readText()).toBe(name)
     expect(onClick).not.toHaveBeenCalled()
-    await user.click(screen.getByRole('button', { name: 'Details' }))
+    // The whole card is the click target (the reference has no details button).
+    await user.click(
+      screen.getByRole('button', { name: heading.textContent || '' })
+    )
     expect(onClick).toHaveBeenCalledOnce()
     expect(onClick).toHaveBeenCalledWith(name)
   })
 
-  it('always renders four fixed spec columns in order, dashing the cache slot without a cache price', () => {
+  it('puts the vendor on its own row and the raw id in a mono well', () => {
     render(
-      <ModelCard
-        model={pricingModel({ context_length: 128000, cache_ratio: null })}
-        onClick={vi.fn()}
-      />
-    )
-    const specRow = screen.getByText('Input').closest('dl')
-    if (!specRow) {
-      throw new Error('Expected a spec row')
-    }
-    expect(
-      within(specRow)
-        .getAllByRole('term')
-        .map((el) => el.textContent)
-    ).toEqual(['Context', 'Input', 'Output', 'Cache'])
-    expect(within(specRow).getAllByRole('definition')).toHaveLength(4)
-    expect(screen.getByText('Context').parentElement).toHaveTextContent('128K')
-    expect(screen.getByText('Input').parentElement).toHaveTextContent('$2')
-    expect(screen.getByText('Output').parentElement).toHaveTextContent('$6')
-    // The cache slot must never be dropped: a missing column would silently
-    // shift its neighbours, so an unconfigured cache stays as an em dash.
-    expect(screen.getByText('Cache').parentElement).toHaveTextContent('—')
-  })
-
-  it('keeps the vendor on the meta line and the context size in the spec row', () => {
-    const { rerender } = render(
-      <ModelCard
-        model={pricingModel({
-          vendor_name: 'Anthropic',
-          context_length: 200000,
-        })}
-        onClick={vi.fn()}
-      />
-    )
-    // The meta line carries the vendor alone; the context size reads as a spec.
-    const meta = screen.getByText('Anthropic')
-    expect(meta).not.toHaveTextContent('Context')
-    expect(screen.getByText('Context').parentElement).toHaveTextContent('200K')
-    rerender(
       <ModelCard
         model={pricingModel({ vendor_name: 'Anthropic' })}
         onClick={vi.fn()}
       />
     )
-    // A missing context length must not fabricate a value, and must not drop
-    // the column — it dashes in place so its neighbours keep their positions.
-    expect(screen.getByText('Context').parentElement).toHaveTextContent('—')
+    expect(screen.getByText('Anthropic')).toBeVisible()
+    const id = screen.getByText('example-model')
+    expect(id).toHaveClass('font-mono')
+    expect(id.tagName.toLowerCase()).toBe('code')
   })
 
-  it('keeps the spec row intact for a model with no vendor', () => {
-    render(
-      <ModelCard
-        model={pricingModel({ vendor_name: '', context_length: 200000 })}
-        onClick={vi.fn()}
-      />
-    )
-    // No vendor means no meta line at all — never an empty row or a dangling
-    // separator. The context size is unaffected: it lives in the spec row.
-    expect(screen.queryByText('·')).not.toBeInTheDocument()
-    expect(screen.getByText('Context').parentElement).toHaveTextContent('200K')
-  })
-
-  it('keeps description, tags, groups and endpoints off the card', () => {
+  it('keeps description, endpoints and tags off the card', () => {
     render(
       <ModelCard
         model={pricingModel({
           description: 'Flagship multimodal model.',
-          enable_groups: ['default', 'premium'],
           supported_endpoint_types: ['openai-response', 'openai', 'claude'],
           tags: 'vision,tools',
         })}
@@ -203,13 +209,13 @@ describe('model cards', () => {
     expect(
       screen.queryByText('Flagship multimodal model.')
     ).not.toBeInTheDocument()
-    expect(screen.queryByText('Groups')).not.toBeInTheDocument()
     expect(screen.queryByText('Endpoints')).not.toBeInTheDocument()
-    expect(screen.queryByRole('group', { name: 'Tags' })).not.toBeInTheDocument()
-    expect(screen.getByText('vision')).toBeVisible()
+    // Tags live in the details drawer; the card stays as sparse as the reference.
+    expect(screen.queryByText('vision')).not.toBeInTheDocument()
+    expect(screen.queryByText('tools')).not.toBeInTheDocument()
   })
 
-  it('renders the brand-cased display name in sans, keeping the raw id in mono on the meta line', () => {
+  it('renders the brand-cased display name in sans, keeping the raw id in mono', () => {
     const name = 'deepseek-reasoner'
     render(
       <ModelCard
@@ -222,55 +228,6 @@ describe('model cards', () => {
     expect(heading).toHaveAttribute('title', name)
     expect(heading).not.toHaveClass('font-mono')
     expect(screen.getByText(name)).toHaveClass('font-mono')
-  })
-
-  it('keeps group and recharge pricing correct when changing the token unit, including a free cache price', () => {
-    const props = {
-      model: pricingModel({ cache_ratio: 0 }),
-      onClick: vi.fn(),
-      selectedGroup: 'premium',
-      showRechargePrice: true,
-      priceRate: 3,
-      usdExchangeRate: 6,
-    }
-    const { rerender } = render(<ModelCard {...props} tokenUnit='M' />)
-    expect(screen.getByText('Input').parentElement).toHaveTextContent(
-      /\$3\s*\/\s*1M/
-    )
-    expect(screen.getByText('Output').parentElement).toHaveTextContent(
-      /\$9\s*\/\s*1M/
-    )
-    expect(screen.getByText('Cache').parentElement).toHaveTextContent(
-      /\$0\s*\/\s*1M/
-    )
-    rerender(<ModelCard {...props} tokenUnit='K' />)
-    expect(screen.getByText('Input').parentElement).toHaveTextContent(
-      /\$0.003\s*\/\s*1K/
-    )
-    expect(screen.getByText('Output').parentElement).toHaveTextContent(
-      /\$0.009\s*\/\s*1K/
-    )
-    expect(screen.getByText('Cache').parentElement).toHaveTextContent(
-      /\$0\s*\/\s*1K/
-    )
-  })
-
-  it('shows a per-request price with the selected group and recharge multiplier without a token unit', () => {
-    render(
-      <ModelCard
-        model={pricingModel({ quota_type: 1, model_price: 0.4 })}
-        onClick={vi.fn()}
-        selectedGroup='premium'
-        showRechargePrice
-        priceRate={3}
-        usdExchangeRate={6}
-        tokenUnit='K'
-      />
-    )
-    expect(screen.getByText(/\$0.6/)).toHaveTextContent(/\$0.6\s*\/\s*request/)
-    expect(screen.queryByText(/1K|1M/)).not.toBeInTheDocument()
-    expect(screen.getAllByText('Per Request')).toHaveLength(1)
-    expect(screen.queryByText('Per-request')).not.toBeInTheDocument()
   })
 
   it('paginates the model cards and disables navigation at both boundaries', async () => {
@@ -297,7 +254,7 @@ describe('model cards', () => {
     expect(screen.getByRole('heading', { name: 'Model 1' })).toBeVisible()
   })
 
-  it('switches the card grid to three columns at the xl breakpoint instead of 2xl', () => {
+  it('keeps every card inside the 320–360px target width band', () => {
     queryClient.setQueryData(['perf-metrics-summary', 24], {
       success: true,
       data: { models: [] },
@@ -309,9 +266,11 @@ describe('model cards', () => {
     )
     const grid = screen
       .getByRole('heading', { name: 'Example Model' })
-      .closest('.grid-cols-1')
-    expect(grid).toHaveClass('xl:grid-cols-3')
-    expect(grid).not.toHaveClass('2xl:grid-cols-3')
-    expect(grid).not.toHaveClass('min-[1440px]:grid-cols-3')
+      .closest('[data-slot="card"]')?.parentElement
+    // auto-fill with a 320px floor: cards never stretch into wide columns,
+    // and `min(100%, …)` keeps narrow screens from overflowing.
+    expect(grid).toHaveClass(
+      'grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))]'
+    )
   })
 })

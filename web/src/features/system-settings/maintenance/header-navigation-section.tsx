@@ -50,7 +50,6 @@ import {
 
 const headerNavSchema = z.object({
   home: z.boolean(),
-  console: z.boolean(),
   pricingEnabled: z.boolean(),
   pricingRequireAuth: z.boolean(),
   docs: z.boolean(),
@@ -66,10 +65,6 @@ type HeaderNavigationSectionProps = {
 const toFormValues = (config: HeaderNavModulesConfig): HeaderNavFormValues => ({
   home:
     config.home === undefined ? HEADER_NAV_DEFAULT.home : Boolean(config.home),
-  console:
-    config.console === undefined
-      ? HEADER_NAV_DEFAULT.console
-      : Boolean(config.console),
   pricingEnabled:
     config.pricing?.enabled === undefined
       ? HEADER_NAV_DEFAULT.pricing.enabled
@@ -103,7 +98,6 @@ export function HeaderNavigationSection({
     const payload: HeaderNavModulesConfig = {
       ...config,
       home: values.home,
-      console: values.console,
       docs: values.docs,
       pricing: {
         ...(config.pricing ?? HEADER_NAV_DEFAULT.pricing),
@@ -136,11 +130,6 @@ export function HeaderNavigationSection({
       key: 'home',
       title: t('Home'),
       description: t('Landing page with system overview.'),
-    },
-    {
-      key: 'console',
-      title: t('Console'),
-      description: t('User dashboard and quota controls.'),
     },
     {
       key: 'docs',

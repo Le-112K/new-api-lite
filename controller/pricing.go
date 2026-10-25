@@ -6,6 +6,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 
 	"github.com/gin-gonic/gin"
@@ -54,6 +55,43 @@ func filterPricingByConfiguredPrice(pricing []model.Pricing) []model.Pricing {
 	return filtered
 }
 
+// Public subscription plan summary carried on the pricing payload so the
+// anonymous model square can group models by subscription tier. Only
+// marketing fields are exposed; purchase limits and quota internals stay on
+// the authenticated subscription APIs.
+type publicSubscriptionPlan struct {
+	Title         string  `json:"title"`
+	Subtitle      string  `json:"subtitle,omitempty"`
+	PriceAmount   float64 `json:"price_amount"`
+	Currency      string  `json:"currency"`
+	DurationUnit  string  `json:"duration_unit"`
+	DurationValue int     `json:"duration_value"`
+	UpgradeGroup  string  `json:"upgrade_group,omitempty"`
+}
+
+func getPublicSubscriptionPlans() []publicSubscriptionPlan {
+	if !operation_setting.IsPaymentComplianceConfirmed() {
+		return []publicSubscriptionPlan{}
+	}
+	var plans []model.SubscriptionPlan
+	if err := model.DB.Where("enabled = ?", true).Order("sort_order desc, id desc").Find(&plans).Error; err != nil {
+		return []publicSubscriptionPlan{}
+	}
+	result := make([]publicSubscriptionPlan, 0, len(plans))
+	for _, p := range plans {
+		result = append(result, publicSubscriptionPlan{
+			Title:         p.Title,
+			Subtitle:      p.Subtitle,
+			PriceAmount:   p.PriceAmount,
+			Currency:      p.Currency,
+			DurationUnit:  p.DurationUnit,
+			DurationValue: p.DurationValue,
+			UpgradeGroup:  p.UpgradeGroup,
+		})
+	}
+	return result
+}
+
 func GetPricing(c *gin.Context) {
 	pricing := model.GetPricing()
 	userId, exists := c.Get("id")
@@ -92,6 +130,7 @@ func GetPricing(c *gin.Context) {
 		"usable_group":       usableGroup,
 		"supported_endpoint": model.GetSupportedEndpointMap(),
 		"auto_groups":        service.GetUserAutoGroup(group),
+		"subscription_plans": getPublicSubscriptionPlans(),
 		"pricing_version":    "a42d372ccf0b5dd13ecf71203521f9d2",
 	})
 }

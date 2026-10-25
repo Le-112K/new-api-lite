@@ -223,3 +223,21 @@ export function getLobeIconNames(): string[] {
   )
   return [...new Set([...names, ...Object.keys(CUSTOM_ICONS)])].sort()
 }
+
+/**
+ * Monochrome brand mark.
+ *
+ * Vendor rows store keys such as `DeepSeek.Color`. Dropping the variant segment
+ * makes the renderer pick the package's Mono SVG, which paints with
+ * `currentColor` — so the mark follows the surrounding text colour (black on
+ * light, white in dark) like the marks on apmix.ai/models, instead of carrying
+ * the brand's own palette.
+ */
+export function getMonoLobeIcon(
+  iconName: string | undefined | null,
+  size: number = 20
+): ReactNode {
+  const base =
+    typeof iconName === 'string' ? iconName.trim().split('.')[0] : ''
+  return getLobeIcon(base || iconName, size)
+}

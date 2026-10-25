@@ -58,6 +58,8 @@ export type PricingModel = {
    */
   context_length?: number
   max_output_tokens?: number
+  /** '' | none | low | medium | high，与中继层 reasoning effort 对齐。 */
+  thinking_strength?: string
   knowledge_cutoff?: string
   release_date?: string
   parameter_count?: string
@@ -83,6 +85,20 @@ export type ModelCapability =
   | 'code_interpreter'
   | 'caching'
 
+/**
+ * Public subscription plan summary exposed on the pricing payload. The model
+ * square uses it to group models by subscription tier (via `upgrade_group`).
+ */
+export type PricingSubscriptionPlan = {
+  title: string
+  subtitle?: string
+  price_amount: number
+  currency: string
+  duration_unit: string
+  duration_value: number
+  upgrade_group?: string
+}
+
 export type PricingData = {
   success: boolean
   message?: string
@@ -92,6 +108,7 @@ export type PricingData = {
   usable_group: Record<string, { desc: string; ratio: number }>
   supported_endpoint: Record<string, string>
   auto_groups: string[]
+  subscription_plans?: PricingSubscriptionPlan[]
 }
 
 export type TokenUnit = 'M' | 'K'

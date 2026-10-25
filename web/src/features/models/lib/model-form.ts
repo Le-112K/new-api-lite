@@ -41,6 +41,13 @@ export const modelFormSchema = z.object({
   sync_official: z.boolean().default(true),
   enable_groups: z.array(z.string()).default([]),
   quota_types: z.array(z.number()).default([]),
+  // 订阅制能力指标。0 = 未知（卡片上显示破折号，不编造数字）。
+  context_length: z.number().min(0).default(0),
+  max_output_tokens: z.number().min(0).default(0),
+  thinking_strength: z
+    .enum(['', 'none', 'low', 'medium', 'high'])
+    .default(''),
+  capabilities: z.array(z.string()).default([]),
 })
 
 export type ModelFormValues = z.infer<typeof modelFormSchema>
@@ -83,6 +90,15 @@ export function transformModelToFormDefaults(model: Model): ModelFormValues {
     sync_official: model.sync_official === 1,
     enable_groups: model.enable_groups || [],
     quota_types: model.quota_types || [],
+    context_length: model.context_length || 0,
+    max_output_tokens: model.max_output_tokens || 0,
+    thinking_strength: (model.thinking_strength || '') as
+      | ''
+      | 'none'
+      | 'low'
+      | 'medium'
+      | 'high',
+    capabilities: parseCapabilities(model.capabilities),
   }
 }
 
@@ -105,7 +121,21 @@ export function transformFormDataToModelPayload(
     sync_official: formData.sync_official ? 1 : 0,
     enable_groups: formData.enable_groups,
     quota_types: formData.quota_types,
+    context_length: formData.context_length || 0,
+    max_output_tokens: formData.max_output_tokens || 0,
+    thinking_strength: formData.thinking_strength || '',
+    capabilities: formatTagsArray(formData.capabilities),
   }
+}
+
+/** 能力清单在 API 上是数组、在存储层是逗号分隔串，两种都收。 */
+function parseCapabilities(value?: string | string[]): string[] {
+  if (!value) return []
+  if (Array.isArray(value)) return value.filter(Boolean)
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
 }
 
 // ============================================================================

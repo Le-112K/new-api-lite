@@ -141,14 +141,27 @@ export function SettingsPage<
   }, [data?.data, defaultSettings, resolveSettings])
 
   if (isLoading) {
+    // Placeholder cards rather than a centered sentence: the pane keeps its
+    // own height and column rhythm, so the fields replace blocks of the same
+    // size instead of pushing the page from a 40px strip to a full form.
     return (
       <SettingsPageFrame
         title={t(sectionMeta.titleKey)}
         layout={sectionMeta.layout}
       >
-        <div className='text-muted-foreground flex min-h-40 items-center justify-center text-sm'>
-          {t(loadingMessage)}
+        <div className='flex flex-col gap-4' aria-busy='true'>
+          {[0, 1].map((card) => (
+            <div
+              key={card}
+              className='border-border bg-card space-y-3 rounded-xl border p-5'
+            >
+              <div className='bg-muted h-3.5 w-32 rounded' />
+              <div className='bg-muted h-9 w-full rounded-lg' />
+              <div className='bg-muted h-9 w-2/3 rounded-lg' />
+            </div>
+          ))}
         </div>
+        <span className='sr-only'>{t(loadingMessage)}</span>
       </SettingsPageFrame>
     )
   }

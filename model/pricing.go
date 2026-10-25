@@ -18,6 +18,12 @@ type Pricing struct {
 	Description            string                  `json:"description,omitempty"`
 	Icon                   string                  `json:"icon,omitempty"`
 	Tags                   string                  `json:"tags,omitempty"`
+	// 订阅制能力指标：0 / '' 表示未知，由前端显示破折号而不是编造。
+	ContextLength          int64                   `json:"context_length,omitempty"`
+	MaxOutputTokens        int64                   `json:"max_output_tokens,omitempty"`
+	ThinkingStrength       string                  `json:"thinking_strength,omitempty"`
+	// Capabilities 以数组下发（存储层是逗号分隔串），前端按 ModelCapability[] 消费。
+	Capabilities           []string                `json:"capabilities,omitempty"`
 	VendorID               int                     `json:"vendor_id,omitempty"`
 	QuotaType              int                     `json:"quota_type"`
 	ModelRatio             float64                 `json:"model_ratio"`
@@ -63,6 +69,24 @@ var (
 	modelSupportEndpointTypes = make(map[string][]constant.EndpointType)
 	modelSupportEndpointsLock = sync.RWMutex{}
 )
+
+// splitModelCapabilities 把存储层的逗号分隔串拆成数组，跳过空项。
+func splitModelCapabilities(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if item := strings.TrimSpace(part); item != "" {
+			out = append(out, item)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
 
 func GetPricing() []Pricing {
 	if time.Since(lastGetPricingTime) > time.Minute*1 || len(pricingMap) == 0 {
@@ -329,6 +353,10 @@ func updatePricing() {
 			pricing.Description = meta.Description
 			pricing.Icon = meta.Icon
 			pricing.Tags = meta.Tags
+			pricing.ContextLength = meta.ContextLength
+			pricing.MaxOutputTokens = meta.MaxOutputTokens
+			pricing.ThinkingStrength = meta.ThinkingStrength
+			pricing.Capabilities = splitModelCapabilities(meta.Capabilities)
 			pricing.VendorID = meta.VendorID
 		}
 		modelPrice, findPrice := ratio_setting.GetModelPrice(model, false)

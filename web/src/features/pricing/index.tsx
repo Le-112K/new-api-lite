@@ -30,9 +30,21 @@ import {
   ModelDetailsDrawer,
 } from './components'
 import { PricingFilterBar } from './components/pricing-filter-bar'
-import { EXCLUDED_GROUPS, VIEW_MODES } from './constants'
+import { EXCLUDED_GROUPS, FILTER_ALL, VIEW_MODES } from './constants'
 import { useFilters } from './hooks/use-filters'
 import { usePricingData } from './hooks/use-pricing-data'
+
+/** Stable keys for the loading grid — one per card slot, never an index. */
+const CARD_PLACEHOLDERS = [
+  'slot-1',
+  'slot-2',
+  'slot-3',
+  'slot-4',
+  'slot-5',
+  'slot-6',
+  'slot-7',
+  'slot-8',
+] as const
 
 export function Pricing() {
   const { t } = useTranslation()
@@ -47,38 +59,26 @@ export function Pricing() {
     usableGroup,
     endpointMap,
     autoGroups,
+    subscriptionPlans,
     isLoading,
     priceRate,
     usdExchangeRate,
   } = usePricingData()
 
   const {
-    searchInput,
     sortBy,
     vendorFilter,
     groupFilter,
-    quotaTypeFilter,
-    endpointTypeFilter,
-    tagFilter,
     tokenUnit,
     viewMode,
     showRechargePrice,
-    setSearchInput,
     setSortBy,
     setVendorFilter,
     setGroupFilter,
-    setQuotaTypeFilter,
-    setEndpointTypeFilter,
-    setTagFilter,
-    setTokenUnit,
     setViewMode,
-    setShowRechargePrice,
     filteredModels,
     hasActiveFilters,
-    activeFilterCount,
-    availableTags,
     clearFilters,
-    clearSearch,
   } = useFilters(models || [])
 
   const handleModelClick = useCallback((modelName: string) => {
@@ -103,16 +103,39 @@ export function Pricing() {
     [usableGroup]
   )
 
+  // Group key -> label for each card's plan pills. Subscription plan titles
+  // win over the admin group label so the card badges speak the same words as
+  // the tier chips. Groups without a plan keep their usable_group label.
+  const groupLabels = useMemo(() => {
+    const out: Record<string, string> = {}
+    for (const [key, value] of Object.entries(usableGroup || {})) {
+      out[key] =
+        typeof value === 'string'
+          ? value
+          : ((value as { desc?: string })?.desc ?? key)
+    }
+    for (const plan of subscriptionPlans) {
+      if (plan.upgrade_group && plan.title) {
+        out[plan.upgrade_group] = plan.title
+      }
+    }
+    return out
+  }, [usableGroup, subscriptionPlans])
+
+  const appliedPlanLabel =
+    groupFilter !== FILTER_ALL
+      ? (groupLabels[groupFilter] ?? groupFilter)
+      : undefined
+
   const handleClearAll = useCallback(() => {
     clearFilters()
-    clearSearch()
-  }, [clearFilters, clearSearch])
+  }, [clearFilters])
 
   const renderPricingContent = () => {
     if (filteredModels.length === 0) {
       return (
         <EmptyState
-          searchQuery={searchInput}
+          appliedPlanLabel={appliedPlanLabel}
           hasActiveFilters={hasActiveFilters}
           onClearFilters={handleClearAll}
         />
@@ -124,11 +147,7 @@ export function Pricing() {
         <ModelCardGrid
           models={filteredModels}
           onModelClick={handleModelClick}
-          priceRate={priceRate}
-          usdExchangeRate={usdExchangeRate}
-          tokenUnit={tokenUnit}
-          showRechargePrice={showRechargePrice}
-          selectedGroup={groupFilter}
+          groupLabels={groupLabels}
         />
       )
     }
@@ -136,35 +155,71 @@ export function Pricing() {
     return (
       <PricingTable
         models={filteredModels}
-        priceRate={priceRate}
-        usdExchangeRate={usdExchangeRate}
-        tokenUnit={tokenUnit}
-        showRechargePrice={showRechargePrice}
-        selectedGroup={groupFilter}
         onModelClick={handleModelClick}
       />
     )
   }
 
   if (isLoading) {
-    // The route preloads this data, so this state is a rare fallback. It is
-    // deliberately a plain spinner rather than a skeleton of the page: the
-    // skeleton read as an unstyled "old version" flash while data arrived.
+    // Frame-preserving placeholder. The old spinner swapped a whole page for
+    // a single line of text, so the layout jumped twice: once into the void,
+    // once back. Keeping the title and the two filter rows in place means the
+    // cards only have to fill their own slots when the data lands.
     return (
-      <PublicLayout showMainContainer={false}>
+      <PublicLayout
+        showMainContainer={false}
+        headerProps={{ variant: 'landing' }}
+        wrapperClassName='bg-white dark:bg-[#0a0a0a]'
+      >
         <div
-          className='flex min-h-[70vh] flex-col items-center justify-center gap-3'
+          className='relative mx-auto w-full max-w-[1800px] px-3 pt-16 pb-8 sm:px-6 sm:pt-20 sm:pb-10 xl:px-8'
           aria-busy='true'
         >
-          <span className='border-foreground/15 border-t-foreground size-5 animate-spin rounded-full border-2 motion-reduce:animate-none' />
-          <p className='text-muted-foreground text-sm'>{t('Loading...')}</p>
+          <header className='pt-5 text-center sm:pt-8'>
+            <h1 className='text-foreground text-[clamp(1.75rem,2.6vw,2.25rem)] leading-tight font-bold'>
+              {t('Model Square')}
+            </h1>
+            <div className='bg-muted mx-auto mt-2.5 h-3.5 w-52 rounded-md' />
+          </header>
+
+          <div className='space-y-3 pt-5'>
+            {[
+              ['tier-a', 'tier-b', 'tier-c', 'tier-d'],
+              ['vendor-a', 'vendor-b', 'vendor-c', 'vendor-d', 'vendor-e'],
+            ].map((row) => (
+              <div key={row[0]} className='flex flex-wrap items-center gap-2'>
+                <div className='bg-muted mr-1 h-3.5 w-14 rounded' />
+                {row.map((chip) => (
+                  <div
+                    key={chip}
+                    className='bg-muted h-9 w-[4.5rem] rounded-full'
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+
+          <div className='grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-3 pt-6 sm:gap-4'>
+            {CARD_PLACEHOLDERS.map((slot) => (
+              <div
+                key={slot}
+                className='border-border bg-card min-h-[172px] rounded-2xl border'
+              />
+            ))}
+          </div>
+
+          <span className='sr-only'>{t('Loading...')}</span>
         </div>
       </PublicLayout>
     )
   }
 
   return (
-    <PublicLayout showMainContainer={false}>
+    <PublicLayout
+      showMainContainer={false}
+      headerProps={{ variant: 'landing' }}
+      wrapperClassName='bg-white dark:bg-[#0a0a0a]'
+    >
       <PageTransition className='relative mx-auto w-full max-w-[1800px] px-3 pt-16 pb-8 sm:px-6 sm:pt-20 sm:pb-10 xl:px-8'>
         <header className='pt-5 text-center sm:pt-8'>
           <h1 className='text-foreground text-[clamp(1.75rem,2.6vw,2.25rem)] leading-tight font-bold'>
@@ -179,24 +234,15 @@ export function Pricing() {
 
         <div className='pt-3'>
           <PricingFilterBar
-            searchInput={searchInput}
-            onSearchChange={setSearchInput}
-            onClearSearch={clearSearch}
-            quotaTypeFilter={quotaTypeFilter}
-            endpointTypeFilter={endpointTypeFilter}
-            vendorFilter={vendorFilter}
             groupFilter={groupFilter}
-            tagFilter={tagFilter}
-            onQuotaTypeChange={setQuotaTypeFilter}
-            onEndpointTypeChange={setEndpointTypeFilter}
-            onVendorChange={setVendorFilter}
+            vendorFilter={vendorFilter}
             onGroupChange={setGroupFilter}
-            onTagChange={setTagFilter}
+            onVendorChange={setVendorFilter}
             vendors={vendors || []}
             groups={availableGroups}
-            groupRatios={groupRatio}
-            tags={availableTags}
+            groupLabels={groupLabels}
             models={models || []}
+            subscriptionPlans={subscriptionPlans}
             hasActiveFilters={hasActiveFilters}
             onClearFilters={clearFilters}
           />
@@ -208,30 +254,8 @@ export function Pricing() {
             totalCount={models?.length}
             sortBy={sortBy}
             onSortChange={setSortBy}
-            tokenUnit={tokenUnit}
-            onTokenUnitChange={setTokenUnit}
-            showRechargePrice={showRechargePrice}
-            onRechargePriceChange={setShowRechargePrice}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
-            quotaTypeFilter={quotaTypeFilter}
-            endpointTypeFilter={endpointTypeFilter}
-            vendorFilter={vendorFilter}
-            groupFilter={groupFilter}
-            tagFilter={tagFilter}
-            onQuotaTypeChange={setQuotaTypeFilter}
-            onEndpointTypeChange={setEndpointTypeFilter}
-            onVendorChange={setVendorFilter}
-            onGroupChange={setGroupFilter}
-            onTagChange={setTagFilter}
-            vendors={vendors || []}
-            groups={availableGroups}
-            groupRatios={groupRatio}
-            tags={availableTags}
-            models={models || []}
-            hasActiveFilters={hasActiveFilters}
-            activeFilterCount={activeFilterCount}
-            onClearFilters={clearFilters}
           />
 
           {renderPricingContent()}

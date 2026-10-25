@@ -22,18 +22,15 @@ import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 
-import { DEFAULT_PRICING_PAGE_SIZE, DEFAULT_TOKEN_UNIT } from '../constants'
-import type { PricingModel, TokenUnit } from '../types'
+import { DEFAULT_PRICING_PAGE_SIZE } from '../constants'
+import type { PricingModel } from '../types'
 import { ModelCard } from './model-card'
 
 export interface ModelCardGridProps {
   models: PricingModel[]
   onModelClick: (modelName: string) => void
-  priceRate?: number
-  usdExchangeRate?: number
-  tokenUnit?: TokenUnit
-  showRechargePrice?: boolean
-  selectedGroup?: string
+  /** Group key -> human label, shown on each card's plan pills. */
+  groupLabels?: Record<string, string>
 }
 
 export const ModelCardGrid = memo(function ModelCardGrid(
@@ -42,7 +39,6 @@ export const ModelCardGrid = memo(function ModelCardGrid(
   const { t } = useTranslation()
   const [page, setPage] = useState(1)
   const pageSize = DEFAULT_PRICING_PAGE_SIZE
-  const tokenUnit = props.tokenUnit ?? DEFAULT_TOKEN_UNIT
   const totalPages = Math.max(1, Math.ceil(props.models.length / pageSize))
   const currentPage = Math.min(page, totalPages)
 
@@ -59,16 +55,16 @@ export const ModelCardGrid = memo(function ModelCardGrid(
 
   return (
     <div className='flex flex-col gap-4 sm:gap-5'>
-      <div className='grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3'>
+      {/* Target card width: 320–360px. `auto-fill` keeps each track inside
+          that band at every viewport (≈332px at 1440) instead of stretching
+          three wide cards across the row. `min(100%, 320px)` prevents
+          overflow on screens narrower than 320px. */}
+      <div className='grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-3 sm:gap-4'>
         {pagedModels.map((model) => (
           <ModelCard
             key={model.id ?? model.model_name}
             model={model}
-            tokenUnit={tokenUnit}
-            priceRate={props.priceRate}
-            usdExchangeRate={props.usdExchangeRate}
-            showRechargePrice={props.showRechargePrice}
-            selectedGroup={props.selectedGroup}
+            groupLabels={props.groupLabels}
             onClick={props.onModelClick}
           />
         ))}

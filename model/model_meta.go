@@ -38,8 +38,16 @@ type Model struct {
 	Description        string         `json:"description,omitempty" gorm:"type:text"`
 	Icon               string         `json:"icon,omitempty" gorm:"type:varchar(128)"`
 	Tags               string         `json:"tags,omitempty" gorm:"type:varchar(255)"`
-	VendorID           int            `json:"vendor_id,omitempty" gorm:"index"`
-	Endpoints          string         `json:"endpoints,omitempty" gorm:"type:text"`
+	// ContextLength 是订阅制下最要紧的能力指标之一（0 = 未知，卡片上显示破折号，
+	// 不编造数字）。MaxOutputTokens 同理。ThinkingStrength 与中继层 reasoning
+	// effort 一一对应：'' | none | low | medium | high。
+	// Capabilities 是逗号分隔的能力清单，取值见 ValidModelCapabilities。
+	ContextLength    int64  `json:"context_length,omitempty" gorm:"bigint;default:0"`
+	MaxOutputTokens  int64  `json:"max_output_tokens,omitempty" gorm:"bigint;default:0"`
+	ThinkingStrength string `json:"thinking_strength,omitempty" gorm:"type:varchar(16)"`
+	Capabilities     string `json:"capabilities,omitempty" gorm:"type:varchar(255)"`
+	VendorID         int    `json:"vendor_id,omitempty" gorm:"index"`
+	Endpoints        string `json:"endpoints,omitempty" gorm:"type:text"`
 	SupportedEndpoints []string       `json:"supported_endpoints,omitempty" gorm:"-"`
 	Status             int            `json:"status" gorm:"default:1"`
 	SyncOfficial       int            `json:"sync_official" gorm:"default:1"`

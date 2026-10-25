@@ -40,13 +40,64 @@ var ErrMetadataSyncConflict = errors.New("metadata changed; preview again before
 var MetadataSyncFields = []string{"description", "icon", "tags", "vendor", "endpoints", "name_rule", "status"}
 
 type MetadataValues struct {
-	Description string `json:"description"`
-	Icon        string `json:"icon"`
-	Tags        string `json:"tags"`
-	Vendor      string `json:"vendor"`
-	Endpoints   string `json:"endpoints"`
-	NameRule    int    `json:"name_rule"`
-	Status      int    `json:"status"`
+	Description      string `json:"description"`
+	Icon             string `json:"icon"`
+	Tags             string `json:"tags"`
+	Vendor           string `json:"vendor"`
+	Endpoints        string `json:"endpoints"`
+	NameRule         int    `json:"name_rule"`
+	Status           int    `json:"status"`
+	ContextLength    int64  `json:"context_length"`
+	MaxOutputTokens  int64  `json:"max_output_tokens"`
+	ThinkingStrength string `json:"thinking_strength"`
+	Capabilities     string `json:"capabilities"`
+}
+
+// ThinkingStrength 取值与中继层 reasoning effort 对齐，空串表示未知。
+const (
+	ThinkingStrengthNone   = "none"
+	ThinkingStrengthLow    = "low"
+	ThinkingStrengthMedium = "medium"
+	ThinkingStrengthHigh   = "high"
+)
+
+// ValidModelCapabilities 是能力清单的取值白名单，与前端 ModelCapability 一一对应。
+// 卡片用它决定渲染哪枚图标，所以不能随便填。
+var ValidModelCapabilities = map[string]bool{
+	"function_calling":    true,
+	"streaming":           true,
+	"vision":              true,
+	"json_mode":           true,
+	"structured_output":   true,
+	"reasoning":           true,
+	"tools":               true,
+	"system_prompt":       true,
+	"web_search":          true,
+	"code_interpreter":    true,
+	"caching":             true,
+}
+
+func ValidateThinkingStrength(value string) error {
+	switch value {
+	case "", ThinkingStrengthNone, ThinkingStrengthLow, ThinkingStrengthMedium, ThinkingStrengthHigh:
+		return nil
+	default:
+		return errors.New("invalid thinking strength")
+	}
+}
+
+// ValidateCapabilities 检查逗号分隔的能力清单：空串合法，未知取值报错。
+func ValidateCapabilities(value string) error {
+	for _, item := range strings.Split(value, ",") {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		if !ValidModelCapabilities[item] {
+			return fmt.Errorf("unknown model capability %q", item)
+		}
+	}
+	return nil
 }
 
 type MetadataSyncSelection struct {
@@ -98,6 +149,18 @@ func ValidateMetadataValues(values MetadataValues) error {
 	}
 	if values.Status != 0 && values.Status != 1 {
 		return errors.New("invalid catalog visibility")
+	}
+	if values.ContextLength < 0 {
+		return errors.New("invalid context length")
+	}
+	if values.MaxOutputTokens < 0 {
+		return errors.New("invalid max output tokens")
+	}
+	if err := ValidateThinkingStrength(values.ThinkingStrength); err != nil {
+		return err
+	}
+	if err := ValidateCapabilities(values.Capabilities); err != nil {
+		return err
 	}
 	return ValidateModelEndpoints(values.Endpoints)
 }

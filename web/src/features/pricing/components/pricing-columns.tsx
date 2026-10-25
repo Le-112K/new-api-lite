@@ -26,23 +26,47 @@ import {
 } from '@/components/data-table'
 import { GroupBadge } from '@/components/group-badge'
 import { StatusBadge } from '@/components/status-badge'
-import { getLobeIcon } from '@/lib/lobe-icon'
+import { getMonoLobeIcon } from '@/lib/lobe-icon'
 
 import { parseTags } from '../lib/filters'
 import type { PricingModel } from '../types'
-import { CachedPriceCell } from './cached-price-cell'
-import { ModelBillingModeBadge } from './model-billing-mode-badge'
-import { ModelPriceCell, type ModelPriceCellOptions } from './model-price-cell'
 
 // ----------------------------------------------------------------------------
 // Pricing Table Columns
 // ----------------------------------------------------------------------------
 
-export type PricingColumnsOptions = ModelPriceCellOptions
+/**
+ * Compact a token count: 128000 -> "128K", 1500000 -> "1.5M".
+ * null when unknown so the cell dashes instead of inventing a number.
+ */
+function formatContextLength(value?: number | null): string | null {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    return null
+  }
+  if (value >= 1_000_000) return `${Number((value / 1_000_000).toFixed(1))}M`
+  if (value >= 1000) return `${Number((value / 1000).toFixed(1))}K`
+  return String(value)
+}
 
-export function usePricingColumns(
-  options: PricingColumnsOptions = {}
-): ColumnDef<PricingModel>[] {
+function formatThinkingStrength(
+  value: string | undefined,
+  t: (key: string) => string
+): string | null {
+  switch (value) {
+    case 'none':
+      return t('None')
+    case 'low':
+      return t('Low')
+    case 'medium':
+      return t('Medium')
+    case 'high':
+      return t('High')
+    default:
+      return null
+  }
+}
+
+export function usePricingColumns(): ColumnDef<PricingModel>[] {
   const { t } = useTranslation()
 
   return [
@@ -56,7 +80,7 @@ export function usePricingColumns(
       cell: ({ row }) => {
         const model = row.original
         const modelIconKey = model.icon || model.vendor_icon
-        const modelIcon = modelIconKey ? getLobeIcon(modelIconKey, 14) : null
+        const modelIcon = modelIconKey ? getMonoLobeIcon(modelIconKey, 14) : null
 
         return (
           <div className='flex max-w-full min-w-0 items-center gap-2'>
@@ -70,39 +94,42 @@ export function usePricingColumns(
       minSize: 200,
     },
 
-    // Type column
-    {
-      accessorKey: 'quota_type',
-      header: t('Type'),
-      cell: ({ row }) => (
-        <ModelBillingModeBadge model={row.original} className='-ml-1.5' />
-      ),
-      size: 110,
-      enableSorting: false,
-    },
+    // Type column: quota type is a pay-per-use concept (token vs per-request).
+    // Subscription has no such split, so it is gone.
 
-    // Price column
+    // Context column — one of the two capability metrics that decide fit.
     {
-      accessorKey: 'price',
-      meta: { label: t('Price') },
+      accessorKey: 'context_length',
+      meta: { label: t('Context') },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('Price')} />
+        <DataTableColumnHeader column={column} title={t('Context')} />
       ),
       cell: ({ row }) => (
-        <ModelPriceCell model={row.original} options={options} />
+        <span className='text-sm font-medium tabular-nums'>
+          {formatContextLength(row.original.context_length) ?? (
+            <span className='text-muted-foreground font-normal'>—</span>
+          )}
+        </span>
       ),
-      size: 180,
+      size: 110,
       enableSorting: false,
     },
 
-    // Cached price column (Vercel AI Gateway style)
+    // Thinking strength column — the second capability metric.
     {
-      id: 'cached_price',
-      header: t('Cached'),
-      cell: ({ row }) => (
-        <CachedPriceCell model={row.original} options={options} />
+      accessorKey: 'thinking_strength',
+      meta: { label: t('Thinking Strength') },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('Thinking Strength')} />
       ),
-      size: 110,
+      cell: ({ row }) => (
+        <span className='text-sm font-medium'>
+          {formatThinkingStrength(row.original.thinking_strength, t) ?? (
+            <span className='text-muted-foreground font-normal'>—</span>
+          )}
+        </span>
+      ),
+      size: 130,
       enableSorting: false,
     },
 
@@ -116,7 +143,7 @@ export function usePricingColumns(
           return <span className='text-muted-foreground/50 text-xs'>—</span>
         }
         const vendorIcon = model.vendor_icon
-          ? getLobeIcon(model.vendor_icon, 12)
+          ? getMonoLobeIcon(model.vendor_icon, 12)
           : null
         return (
           <BadgeCell className='gap-1.5'>

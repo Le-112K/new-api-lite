@@ -47,6 +47,13 @@ export interface Model {
   vendor_id?: number
   endpoints?: string
   supported_endpoints?: string[]
+  /** 订阅制能力指标：0 = 未知，卡片显示破折号。 */
+  context_length?: number
+  max_output_tokens?: number
+  /** '' | none | low | medium | high，与中继层 reasoning effort 对齐。 */
+  thinking_strength?: string
+  /** 逗号分隔的能力清单，取值见 ModelCapability。 */
+  capabilities?: string
   status: number
   sync_official: number
   created_time: number

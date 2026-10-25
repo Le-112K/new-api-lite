@@ -71,7 +71,11 @@ import {
 } from '@/lib/server-error-message'
 
 import { createModel, updateModel, getModel, getVendors } from '../../api'
-import { getNameRuleOptions, ENDPOINT_TEMPLATES } from '../../constants'
+import {
+  getNameRuleOptions,
+  getThinkingStrengthOptions,
+  ENDPOINT_TEMPLATES,
+} from '../../constants'
 import { modelsQueryKeys, vendorsQueryKeys } from '../../lib'
 import {
   modelFormSchema,
@@ -429,6 +433,114 @@ export function ModelMutateDrawer(props: {
                             </FormControl>
                             <FormDescription>
                               {t('Press Enter or comma to add tags')}
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* 订阅制能力指标：模型页卡片上突出展示的就是这两项。
+                          留空 = 未知，卡片显示破折号而不是编造数字。 */}
+                      <FormField
+                        control={form.control}
+                        name='context_length'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t('Context Length')}</FormLabel>
+                            <FormControl>
+                              <Input
+                                type='number'
+                                min={0}
+                                placeholder={t('e.g. 200000')}
+                                value={field.value || ''}
+                                onChange={(event) => {
+                                  const next = event.target.value
+                                  field.onChange(
+                                    next === '' ? 0 : Number(next)
+                                  )
+                                }}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              {t('Tokens. Leave 0 when unknown.')}
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name='thinking_strength'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t('Thinking Strength')}</FormLabel>
+                            <FormControl>
+                              <Combobox
+                                options={getThinkingStrengthOptions(t)}
+                                value={field.value ?? ''}
+                                onValueChange={(next: string | null) =>
+                                  field.onChange(next ?? '')
+                                }
+                                placeholder={t('Unknown')}
+                                className='w-full'
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              {t(
+                                'How hard the model reasons. Maps to reasoning effort.'
+                              )}
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name='max_output_tokens'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t('Max output')}</FormLabel>
+                            <FormControl>
+                              <Input
+                                type='number'
+                                min={0}
+                                placeholder={t('e.g. 384000')}
+                                value={field.value || ''}
+                                onChange={(event) => {
+                                  const next = event.target.value
+                                  field.onChange(
+                                    next === '' ? 0 : Number(next)
+                                  )
+                                }}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              {t('Tokens per response. Leave 0 when unknown.')}
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name='capabilities'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t('Capabilities')}</FormLabel>
+                            <FormControl>
+                              <TagInput
+                                value={field.value || []}
+                                onChange={field.onChange}
+                                placeholder={t('vision, tools, reasoning...')}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              {t(
+                                'Shown as icons on the model card.'
+                              )}
                             </FormDescription>
                             <FormMessage />
                           </FormItem>

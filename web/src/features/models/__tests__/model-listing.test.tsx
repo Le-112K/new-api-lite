@@ -25,11 +25,6 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table'
-import {
   render,
   screen,
   within,
@@ -46,8 +41,6 @@ import type {
   ModelPricingEntry,
 } from '@/features/model-pricing/api'
 import { pricingOptions } from '@/features/model-pricing/pricing'
-import { usePricingColumns } from '@/features/pricing/components/pricing-columns'
-import type { PricingModel } from '@/features/pricing/types'
 import zhCN from '@/i18n/locales/zh.json'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
@@ -102,24 +95,6 @@ function Page() {
       <ModelsTable />
       <ModelsDialogs />
     </ModelsProvider>
-  )
-}
-
-function CatalogPrice(props: { model: PricingModel }) {
-  const columns = usePricingColumns({ tokenUnit: 'M' })
-  const table = useReactTable({
-    data: [props.model],
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  })
-  const cell = table
-    .getRowModel()
-    .rows[0].getAllCells()
-    .find((item) => item.column.id === 'price')
-  return (
-    <div role='group' aria-label='Catalog price'>
-      {cell && flexRender(cell.column.columnDef.cell, cell.getContext())}
-    </div>
   )
 }
 
@@ -562,24 +537,21 @@ it.each([
   {
     name: 'legacy',
     effective: { ModelRatio: 1.5, CompletionRatio: 5, CacheRatio: 0.1 },
-    catalog: { model_ratio: 1.5, completion_ratio: 5 },
     text: 'Input3Output15',
   },
   {
     name: 'free-request',
     effective: { ModelPrice: 0 },
-    catalog: { quota_type: 1, model_price: 0 },
     text: 'Per-request0USD/request',
   },
   {
     name: 'free-tokens',
     effective: { ModelRatio: 0, CompletionRatio: 2 },
-    catalog: { model_ratio: 0, completion_ratio: 2 },
     text: 'Input0Output0',
   },
 ])(
   'shows $name effective pricing like the catalog without requiring a listed model',
-  async ({ name, effective, catalog, text }) => {
+  async ({ name, effective, text }) => {
     const model = { ...channel, model_name: name }
     await renderList([model], {
       pricing: [{ model_name: name, version: 'v1', configured: {}, effective }],
@@ -590,22 +562,9 @@ it.each([
     expect(button.textContent?.replaceAll(/\s/g, '')).toContain(text)
     expect(button).not.toHaveTextContent('Unset price')
     expect(button).not.toHaveTextContent('Cache')
-    render(
-      <CatalogPrice
-        model={{
-          id: 1,
-          model_name: name,
-          quota_type: 0,
-          model_ratio: 0,
-          completion_ratio: 0,
-          enable_groups: [],
-          ...catalog,
-        }}
-      />
-    )
-    expect(button.textContent).toBe(
-      screen.getByRole('group', { name: 'Catalog price' }).textContent
-    )
+    // The public catalog is subscription-shaped now (context + thinking), so
+    // there is no price cell left to cross-check against. The property under
+    // test is the button's own effective price, asserted above.
   }
 )
 
