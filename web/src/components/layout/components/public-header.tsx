@@ -111,27 +111,20 @@ export function PublicHeader(props: PublicHeaderProps) {
   const isAuthenticated = !!user
   const links = dynamicLinks.length > 0 ? dynamicLinks : navLinks
 
-  /* Landing header contract: the two buttons look the same in both states.
-     Signed-out → sign-in / sign-up dialog. Signed-in → straight to the console,
-     because the header deliberately hides the avatar on the public page. */
+  /* Landing header contract: one action slot. Signed out it reads "Sign in"
+     and opens the dialog; signed in it reads "Console" and goes straight to the
+     dashboard. The two states never render at the same time, so the right edge
+     keeps a single, stable button. */
   const goToConsole = useCallback(() => {
     navigate({ to: '/dashboard' })
   }, [navigate])
 
-  const handleHeaderSignIn = useCallback(() => {
+  const handleAuthAction = useCallback(() => {
     if (isAuthenticated) {
       goToConsole()
       return
     }
     openAuthDialog('sign-in')
-  }, [isAuthenticated, goToConsole, openAuthDialog])
-
-  const handleHeaderSignUp = useCallback(() => {
-    if (isAuthenticated) {
-      goToConsole()
-      return
-    }
-    openAuthDialog('sign-up')
   }, [isAuthenticated, goToConsole, openAuthDialog])
 
   let authContent = (
@@ -230,8 +223,11 @@ export function PublicHeader(props: PublicHeaderProps) {
       <header
         className={cn(
           'fixed inset-x-0 top-0 z-50',
+          // `lp-header` mirrors the landing page's button geometry (8px instead
+          // of the site-wide pill) without dragging the page body into the
+          // landing scope — only this header is affected.
           isLanding
-            ? 'border-b border-black/[0.06] bg-white/80 backdrop-blur-[12px] dark:border-white/10 dark:bg-[#0a0a0a]/80'
+            ? 'lp-header border-b border-black/[0.06] bg-white/80 backdrop-blur-[12px] dark:border-white/10 dark:bg-[#0a0a0a]/80'
             : 'pointer-events-none'
         )}
       >
@@ -368,24 +364,19 @@ export function PublicHeader(props: PublicHeaderProps) {
                   {!isLanding && (
                     <div className='bg-border/40 mx-1 h-4 w-px' />
                   )}
-                  {/* 首页右上角恒定一对按钮：未登录 → 登录 / 注册弹窗；
-                      已登录 → 两个按钮都直接进控制台（公开页不露头像）。 */}
+                  {/* 首页右上角只占一个位置：未登录 → 登录；已登录 → 控制台。
+                      两个状态互斥，登录/登出后由 auth store 立即切换。 */}
                   {isLanding ? (
-                    <>
-                      <Button
-                        variant='ghost'
-                        className='h-10 rounded-lg px-4 text-sm font-semibold text-foreground/75 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
-                        onClick={handleHeaderSignIn}
-                      >
-                        {t('Sign in')}
-                      </Button>
+                    loading ? (
+                      <Skeleton className='h-10 w-24 rounded-lg' />
+                    ) : (
                       <Button
                         className='h-10 rounded-lg px-4 text-sm font-semibold'
-                        onClick={handleHeaderSignUp}
+                        onClick={handleAuthAction}
                       >
-                        {t('Get started')}
+                        {isAuthenticated ? t('Console') : t('Get started')}
                       </Button>
-                    </>
+                    )
                   ) : (
                     authContent
                   )}
@@ -499,28 +490,22 @@ export function PublicHeader(props: PublicHeaderProps) {
             )}
             style={{ transitionDelay: mobileOpen ? '250ms' : '0ms' }}
           >
-            {/* 首页移动端与桌面同规则：恒定一对按钮，登录态只改去向。 */}
+            {/* 首页移动端与桌面同规则：一个按钮，登录态决定文案与去向。 */}
             {showAuthButtons && isLanding && (
               <div className='flex flex-col gap-2'>
-                <Button
-                  variant='outline'
-                  onClick={() => {
-                    setMobileOpen(false)
-                    handleHeaderSignIn()
-                  }}
-                  className='h-10 w-full justify-center rounded-lg text-sm font-medium'
-                >
-                  {t('Sign in')}
-                </Button>
-                <Button
-                  onClick={() => {
-                    setMobileOpen(false)
-                    handleHeaderSignUp()
-                  }}
-                  className='bg-foreground text-background hover:bg-foreground/90 active:opacity-80 h-10 w-full justify-center rounded-lg text-sm font-medium transition-opacity'
-                >
-                  {t('Get started')}
-                </Button>
+                {loading ? (
+                  <Skeleton className='h-10 w-full rounded-lg' />
+                ) : (
+                  <Button
+                    onClick={() => {
+                      setMobileOpen(false)
+                      handleAuthAction()
+                    }}
+                    className='bg-foreground text-background hover:bg-foreground/90 active:opacity-80 h-10 w-full justify-center rounded-lg text-sm font-medium transition-opacity'
+                  >
+                    {isAuthenticated ? t('Console') : t('Get started')}
+                  </Button>
+                )}
               </div>
             )}
             {showAuthButtons && !isLanding && isAuthenticated && (

@@ -4,8 +4,146 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="google" content="notranslate" />
+    <!-- Declared before the palette script so it can rewrite the colour. -->
+    <meta name="theme-color" content="#fff" />
+
+    <script>
+      // Resolve the palette before the first paint. The bundle applies the
+      // theme only after it boots, so without this every reload starts on the
+      // light tokens and a dark-mode visitor eats a full-screen white flash.
+      // Keys mirror lib/theme-storage.ts; keep them in sync.
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('newapi:theme:v1:mode')
+          var prefersDark = window.matchMedia(
+            '(prefers-color-scheme: dark)'
+          ).matches
+          var dark =
+            stored === 'dark' ||
+            ((stored === null || stored === 'system') && prefersDark)
+          var root = document.documentElement
+          root.classList.add(dark ? 'dark' : 'light')
+          root.style.colorScheme = dark ? 'dark' : 'light'
+          var meta = document.querySelector('meta[name="theme-color"]')
+          if (meta) meta.setAttribute('content', dark ? '#0a0a0a' : '#fff')
+        } catch (error) {
+          /* Storage can be blocked; the light default is still correct. */
+        }
+      })()
+    </script>
+
+    <style>
+      /* Faces are declared here rather than in landing.css: the bundler
+         rewrites url() inside CSS with a content hash, which would break the
+         fixed /fonts paths the preloads above point at. Inline, the browser
+         also learns about them before the stylesheet finishes downloading. */
+      @font-face {
+        font-family: 'Sora';
+        src: url('/fonts/sora-latin-wght-normal.woff2') format('woff2');
+        font-weight: 100 800;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Manrope';
+        src: url('/fonts/manrope-latin-wght-normal.woff2') format('woff2');
+        font-weight: 200 800;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'JetBrains Mono';
+        src: url('/fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2');
+        font-weight: 100 800;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      /* Boot screen: a same-position brand mark on the resolved background,
+         in place of the blank white sheet the SPA shows until its bundle
+         runs. The root route dismisses it once real content has painted. */
+      html {
+        background: #ffffff;
+      }
+      html.dark {
+        background: #0a0a0a;
+      }
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 30;
+        pointer-events: none;
+        background: #ffffff;
+        transition: opacity 180ms ease-out;
+      }
+      html.dark #boot {
+        background: #0a0a0a;
+      }
+      #boot > span {
+        position: absolute;
+        top: 0;
+        left: 24px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        color: #0a0a0a;
+        font:
+          600 19px/1 system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+        letter-spacing: -0.02em;
+        opacity: 0;
+        animation: boot-fade 200ms ease-out 30ms forwards;
+      }
+      html.dark #boot > span {
+        color: #ffffff;
+      }
+      @media (min-width: 768px) {
+        #boot > span {
+          left: 32px;
+        }
+      }
+      #boot[data-dismissed='true'] {
+        opacity: 0;
+      }
+      @keyframes boot-fade {
+        to {
+          opacity: 1;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #boot {
+          transition: none;
+        }
+        #boot > span {
+          animation: none;
+          opacity: 1;
+        }
+      }
+    </style>
 
     <!-- Primary Meta Tags -->
+    <!-- Fonts are discovered late when only declared in CSS, and the landing
+         hero is set in Sora (headline) + Manrope (body), so a late swap
+         reflows the whole first screen. Served from /fonts (public dir) so the
+         URL stays stable enough to preload; JetBrains Mono is code-only and
+         stays lazy. -->
+    <link
+      rel="preload"
+      href="/fonts/sora-latin-wght-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/manrope-latin-wght-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
     <title>AperTurez</title>
     <meta name="title" content="AperTurez" />
     <meta
@@ -19,12 +157,12 @@
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0a0a'/%3E%3Ctext x='32' y='45' font-family='system-ui,-apple-system,sans-serif' font-size='34' font-weight='700' fill='%23ffffff' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E"
     />
 
-    <meta name="theme-color" content="#fff" />
     <!--umami-->
     <!--Google Analytics-->
   </head>
 
   <body>
     <div id="root" translate="no" class="notranslate"></div>
+    <div id="boot" aria-hidden="true"><span>AperTurez</span></div>
   </body>
 </html>

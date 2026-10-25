@@ -37,3 +37,19 @@ export async function getHomePageContent(): Promise<HomePageContentResponse> {
   })
   return res.data
 }
+
+let homeContentPrefetch: Promise<HomePageContentResponse> | null = null
+
+/**
+ * Kick the request off while the bundle is still evaluating, rather than from
+ * the home route's effect.
+ *
+ * The landing page has to know whether an admin configured custom content
+ * before it can paint, and the gap between "bundle runs" and "route mounts"
+ * was long enough that the boot screen handed over to a skeleton for a beat.
+ * Sharing one promise here closes that gap and also dedupes the request.
+ */
+export function prefetchHomePageContent(): Promise<HomePageContentResponse> {
+  homeContentPrefetch ??= getHomePageContent()
+  return homeContentPrefetch
+}

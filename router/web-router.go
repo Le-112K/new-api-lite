@@ -8,7 +8,6 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/controller"
 	"github.com/QuantumNous/new-api/middleware"
-	"github.com/gin-contrib/gzip"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 )
@@ -24,7 +23,7 @@ func SetWebRouter(router *gin.Engine, assets WebAssets) {
 
 	router.NoRoute(
 		middleware.RouteTag("web"),
-		gzip.Gzip(gzip.DefaultCompression),
+		middleware.StaticCompression(),
 		middleware.GlobalWebRateLimit(),
 		middleware.Cache(),
 		static.Serve("/", frontendFS),

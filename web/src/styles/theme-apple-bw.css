@@ -128,17 +128,17 @@ header[class*="sticky"]{
   border-bottom: 1px solid var(--glass-border) !important;
 }
 
-/* 4) 卡片：20px 圆角、细线、克制阴影 */
+/* 4) 卡片：20px 圆角、细线、常驻柔和阴影（悬停加深见 index.css 微交互层） */
 [data-slot="card"],
 .card,
 .overflow-hidden.rounded-lg.border{
   border-radius: 20px !important;
   border-color: var(--border) !important;
-  box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+  box-shadow: var(--shadow-card, 0 2px 4px rgba(0,0,0,0.05), 0 8px 20px rgba(0,0,0,0.08));
 }
 .dark [data-slot="card"],
 .dark .overflow-hidden.rounded-lg.border{
-  box-shadow: 0 1px 0 rgba(255,255,255,0.04);
+  box-shadow: var(--shadow-card, 0 2px 4px rgba(0,0,0,0.50), 0 8px 20px rgba(0,0,0,0.45));
 }
 
 /* 5) 按钮：主按钮黑、次按钮白+细线、胶囊更圆 */
@@ -187,8 +187,29 @@ thead th{ border-bottom-color: var(--border) !important; letter-spacing: 0.08em 
 /* 10) 滚动条：更细更淡 */
 *{ scrollbar-color: var(--border) transparent; }
 
-/* 11) 登录弹窗：参考站表单用的是 8px 直角控件，不是全站胶囊。
-       作用域锁在弹窗内，页面其它按钮不受影响。 */
-[data-slot="auth-dialog-content"] [data-slot="button"]{
+/* 11) 登录弹窗与邮箱验证落地页：参考站表单用的是 8px 直角控件，不是全站胶囊。
+       作用域锁在这两处，页面其它按钮不受影响。 */
+[data-slot="auth-dialog-content"] [data-slot="button"],
+[data-slot="auth-standalone"] [data-slot="button"]{
   border-radius: 0.5rem !important;
+}
+
+/* 12) 主题切换：交给 View Transitions 做圆形展开，必须关掉浏览器默认的
+       交叉淡入淡出与 group 缩放，否则两套动画会互相盖住。旧快照保持不透明，
+       新快照在它上面由 JS 做「圆形展开 + 淡入 + 去模糊」的慢速混合。 */
+::view-transition-old(root),
+::view-transition-new(root),
+::view-transition-group(root){
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* 13) 落地页形态的顶栏（首页与模型页共用）：
+       参考站顶栏按钮是 8px 圆角方块，不是全站胶囊。这条规则留在全局样式里，
+       因为模型页可能直接进入、不会加载首页的 landing.css。 */
+.lp-header [data-slot="button"]{
+  border-radius: 0.5rem !important;
+}
+.lp-header [data-slot="button"][data-shape="pill"]{
+  border-radius: 9999px !important;
 }

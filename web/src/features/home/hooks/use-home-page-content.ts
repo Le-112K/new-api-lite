@@ -22,18 +22,32 @@ import { useEffect, useState } from 'react'
 import { isHttpUrl } from '@/lib/content-format'
 import { handleServerError } from '@/lib/handle-server-error'
 
-import { getHomePageContent } from '../api'
+import { prefetchHomePageContent } from '../api'
 import type { HomePageContentResult } from '../types'
 
 const STORAGE_KEY = 'home_page_content'
+
+function readCachedContent(): string {
+  if (typeof window === 'undefined') return ''
+
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
 
 /**
  * Hook to load and manage custom home page content
  * Supports both Markdown/HTML content and iframe URLs
  */
 export function useHomePageContent(): HomePageContentResult {
-  const [content, setContent] = useState<string>('')
-  const [isLoaded, setIsLoaded] = useState(false)
+  // Seed both values from the cache: a reload that already knows the content
+  // must render it on the first frame instead of flashing a loading state.
+  const [content, setContent] = useState<string>(readCachedContent)
+  const [isLoaded, setIsLoaded] = useState<boolean>(
+    () => readCachedContent().length > 0
+  )
 
   useEffect(() => {
     let mounted = true
@@ -46,7 +60,9 @@ export function useHomePageContent(): HomePageContentResult {
       }
 
       try {
-        const response = await getHomePageContent()
+        // Shared with the prefetch in main.tsx: usually already in flight (or
+        // resolved) by the time this effect runs.
+        const response = await prefetchHomePageContent()
         const { success, data } = response
 
         if (!mounted) return

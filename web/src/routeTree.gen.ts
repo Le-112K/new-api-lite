@@ -14,6 +14,7 @@ import { Route as authRouteRouteImport } from './routes/(auth)/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as UserAgreementRouteImport } from './routes/user-agreement'
+import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
 import { Route as authRegisterRouteImport } from './routes/(auth)/register'
 import { Route as authResetRouteImport } from './routes/(auth)/reset'
@@ -82,6 +83,11 @@ const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
 const UserAgreementRoute = UserAgreementRouteImport.update({
   id: '/user-agreement',
   path: '/user-agreement',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyRoute = VerifyRouteImport.update({
+  id: '/verify',
+  path: '/verify',
   getParentRoute: () => rootRouteImport,
 } as any)
 const authForgotPasswordRoute = authForgotPasswordRouteImport.update({
@@ -349,6 +355,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/user-agreement': typeof UserAgreementRoute
+  '/verify': typeof VerifyRoute
   '/system-settings': typeof AuthenticatedSystemSettingsRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/register': typeof authRegisterRoute
@@ -400,6 +407,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/user-agreement': typeof UserAgreementRoute
+  '/verify': typeof VerifyRoute
   '/forgot-password': typeof authForgotPasswordRoute
   '/register': typeof authRegisterRoute
   '/reset': typeof authResetRoute
@@ -453,6 +461,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/user-agreement': typeof UserAgreementRoute
+  '/verify': typeof VerifyRoute
   '/_authenticated/system-settings': typeof AuthenticatedSystemSettingsRouteRouteWithChildren
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
   '/(auth)/register': typeof authRegisterRoute
@@ -506,6 +515,7 @@ export interface FileRouteTypes {
     | '/'
     | '/privacy-policy'
     | '/user-agreement'
+    | '/verify'
     | '/system-settings'
     | '/forgot-password'
     | '/register'
@@ -557,6 +567,7 @@ export interface FileRouteTypes {
     | '/'
     | '/privacy-policy'
     | '/user-agreement'
+    | '/verify'
     | '/forgot-password'
     | '/register'
     | '/reset'
@@ -609,6 +620,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/privacy-policy'
     | '/user-agreement'
+    | '/verify'
     | '/_authenticated/system-settings'
     | '/(auth)/forgot-password'
     | '/(auth)/register'
@@ -663,6 +675,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   UserAgreementRoute: typeof UserAgreementRoute
+  VerifyRoute: typeof VerifyRoute
   errors401Route: typeof errors401Route
   errors403Route: typeof errors403Route
   errors404Route: typeof errors404Route
@@ -708,6 +721,13 @@ declare module '@tanstack/react-router' {
       path: '/user-agreement'
       fullPath: '/user-agreement'
       preLoaderRoute: typeof UserAgreementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify': {
+      id: '/verify'
+      path: '/verify'
+      fullPath: '/verify'
+      preLoaderRoute: typeof VerifyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(auth)/forgot-password': {
@@ -1165,6 +1185,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
   UserAgreementRoute: UserAgreementRoute,
+  VerifyRoute: VerifyRoute,
   errors401Route: errors401Route,
   errors403Route: errors403Route,
   errors404Route: errors404Route,

@@ -36,7 +36,6 @@ export type TopNavLink = {
  * Backend format example (stringified JSON):
  * {
  *   home: true,
- *   console: true,
  *   pricing: { enabled: true, requireAuth: false },
  *   docs: true
  * }
@@ -65,16 +64,15 @@ export function useTopNavLinks(): TopNavLink[] {
     links.push({ title: t('Home'), href: '/' })
   }
 
-  // Console -> /dashboard (new console path)
-  if (modules?.console !== false) {
-    links.push({ title: t('Console'), href: '/dashboard' })
-  }
+  // The centre nav no longer carries a console entry: the console is reached
+  // from the header's own "Console" button, which opens the auth dialog first
+  // when the visitor is not signed in.
 
   // Pricing
   const pricing = modules?.pricing
   if (pricing && typeof pricing === 'object' && pricing.enabled) {
     const requiresAuth = pricing.requireAuth && !isAuthed
-    links.push({ title: t('Model Square'), href: '/pricing', requiresAuth })
+    links.push({ title: t('Models'), href: '/pricing', requiresAuth })
   }
 
   // Docs (supports external links)

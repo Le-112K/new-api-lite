@@ -28,7 +28,7 @@ For commercial licensing, please contact support@quantumnous.com
  * create a second source of truth for the same value, so this file only
  * declares what the project does NOT already have.
  *
- * WHAT IT ADDS (77 tokens: 60 in :root, 17 in .dark)
+ * WHAT IT ADDS (83 tokens: 62 in :root, 21 in .dark)
  *   1. the full gray ramp        --gray-0 .. --gray-950
  *   2. literal aliases           --text-color / --input-bg / --panel / --code-bg
  *   3. emphasis + interaction     --emphasis* / --link / --live / --active-*
@@ -98,6 +98,11 @@ For commercial licensing, please contact support@quantumnous.com
   --radius-xs:                       6px;  /* 徽标 / 小标签（OpenAI 卡片 whisper 6px） */
   --radius-pill:                     999px;  /* 按钮 / 标签 / 胶囊 */
   --shadow-hairline:                 0 1px 0 rgba(0, 0, 0, 0.03);
+  /* 卡片三档：静止 < 悬停 ≈ 选中。加深时优先加大模糊与 y 偏移、
+     透明度只小步抬，避免阴影发硬或显脏。 */
+  --shadow-card:                     0 2px 4px rgba(0, 0, 0, 0.05), 0 8px 20px rgba(0, 0, 0, 0.08);
+  --shadow-card-hover:               0 4px 8px rgba(0, 0, 0, 0.08), 0 16px 40px rgba(0, 0, 0, 0.14);
+  --shadow-card-selected:            0 4px 8px rgba(0, 0, 0, 0.08), 0 16px 40px rgba(0, 0, 0, 0.14);
   --shadow-floating:                 0 12px 32px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.05);
   --border-width:                    1px;
   --ease-out-expo:                   cubic-bezier(0.16, 1, 0.3, 1);
@@ -126,5 +131,8 @@ For commercial licensing, please contact support@quantumnous.com
   --hairline:                        rgba(255, 255, 255, 0.14);
   --whisper:                         rgba(255, 255, 255, 0.05);
   --shadow-hairline:                 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-card:                     0 2px 4px rgba(0, 0, 0, 0.50), 0 8px 20px rgba(0, 0, 0, 0.45);
+  --shadow-card-hover:               0 4px 8px rgba(0, 0, 0, 0.55), 0 16px 40px rgba(0, 0, 0, 0.65);
+  --shadow-card-selected:            0 4px 8px rgba(0, 0, 0, 0.55), 0 16px 40px rgba(0, 0, 0, 0.65);
   --shadow-floating:                 0 12px 32px rgba(0, 0, 0, 0.60);
 }

@@ -27,7 +27,6 @@ import {
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
 
-import { NavigationProgress } from '@/components/navigation-progress'
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeCustomizationProvider } from '@/context/theme-customization-provider'
 import { GeneralError } from '@/features/errors/general-error'
@@ -40,6 +39,7 @@ import {
   clearAuthentication,
 } from '@/lib/auth-session'
 import { subscribeAuthSessionEvents } from '@/lib/auth-session-sync'
+import { dismissBootScreen } from '@/lib/boot-screen'
 import { resolveLegacyRoute } from '@/lib/legacy-route'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -49,6 +49,12 @@ function RootComponent() {
 
   // Load system configuration (logo, system name, etc.) from backend
   useSystemConfig({ autoLoad: true })
+
+  // The static boot screen in index.html covers the viewport until this point;
+  // retire it only now that the first real paint exists.
+  useEffect(() => {
+    dismissBootScreen()
+  }, [])
 
   useEffect(
     () =>
@@ -90,7 +96,6 @@ function RootComponent() {
 
   return (
     <ThemeCustomizationProvider>
-      <NavigationProgress />
       <Outlet />
       <Toaster closeButton duration={5000} position='top-center' richColors />
       {import.meta.env.MODE === 'development' && (

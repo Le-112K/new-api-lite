@@ -83,7 +83,12 @@ export function ModelCatalog() {
     )
   }, [models])
 
-  if (!isLoading && vendors.length === 0) return null
+  // Hold the whole section back until the catalog answers. A skeleton here
+  // lived for ~200ms and read as a flicker; the heading also flipped from
+  // "0 models" to the real count in the same beat. The section sits below the
+  // fold, so rendering it a beat later is invisible, while a placeholder that
+  // appears and vanishes is not.
+  if (isLoading || vendors.length === 0) return null
 
   return (
     <SectionShell id='models' tight divided>
@@ -111,68 +116,49 @@ export function ModelCatalog() {
         }
       />
 
-      {isLoading ? (
-        <div className='overflow-hidden rounded-xl border border-border'>
-          <div className='flex flex-wrap'>
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div
-                key={index}
-                className='-mt-px -ml-px flex min-w-[240px] flex-1 items-center gap-3.5 border-t border-l border-border bg-background px-5 py-4'
+      <div className='overflow-hidden rounded-xl border border-border'>
+        {/* Hairline mesh: every tile keeps its own top/left border and pulls
+            itself 1px up-left, so the seams collapse into single lines and the
+            first row/column sit exactly on the container border. */}
+        <div className='flex flex-wrap'>
+          {vendors.map((vendor) => (
+            <Link
+              key={vendor.id}
+              to='/pricing'
+              search={{ vendor: vendor.name }}
+              className='group -mt-px -ml-px flex min-w-[240px] flex-1 items-center gap-3.5 border-t border-l border-border bg-background px-5 py-4 transition-colors hover:bg-secondary/40'
+            >
+              {/* Two stacked marks, cross-faded on hover: the mono one is
+                  black at rest, the `*.Color` one takes over on hover. The
+                  reference ships both as `absolute` children of a size-7 box
+                  and flips their opacity, which is why no filter is involved
+                  (a grayscale filter would wash the brand colours out). */}
+              <span
+                className='relative block size-7 shrink-0'
+                aria-hidden
               >
-                <div className='size-7 animate-pulse rounded-full bg-secondary' />
-                <div className='min-w-0 flex-1'>
-                  <div className='h-3.5 w-20 animate-pulse rounded bg-secondary' />
-                  <div className='mt-2 h-2.5 w-12 animate-pulse rounded bg-secondary' />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className='overflow-hidden rounded-xl border border-border'>
-          {/* Hairline mesh: every tile keeps its own top/left border and pulls
-              itself 1px up-left, so the seams collapse into single lines and the
-              first row/column sit exactly on the container border. */}
-          <div className='flex flex-wrap'>
-            {vendors.map((vendor) => (
-              <Link
-                key={vendor.id}
-                to='/pricing'
-                search={{ vendor: vendor.name }}
-                className='group -mt-px -ml-px flex min-w-[240px] flex-1 items-center gap-3.5 border-t border-l border-border bg-background px-5 py-4 transition-colors hover:bg-secondary/40'
-              >
-                {/* Two stacked marks, cross-faded on hover: the mono one is
-                    black at rest, the `*.Color` one takes over on hover. The
-                    reference ships both as `absolute` children of a size-7 box
-                    and flips their opacity, which is why no filter is involved
-                    (a grayscale filter would wash the brand colours out). */}
-                <span
-                  className='relative block size-7 shrink-0'
-                  aria-hidden
-                >
-                  <span className='absolute inset-0 opacity-100 transition-opacity duration-150 group-hover:opacity-0 motion-reduce:transition-none'>
-                    {getLobeIcon(
-                      vendor.icon?.split('.')[0] ?? undefined,
-                      ICON_SIZE
-                    )}
-                  </span>
-                  <span className='absolute inset-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100 motion-reduce:transition-none'>
-                    {getLobeIcon(vendor.icon, ICON_SIZE)}
-                  </span>
+                <span className='absolute inset-0 opacity-100 transition-opacity duration-150 group-hover:opacity-0 motion-reduce:transition-none'>
+                  {getLobeIcon(
+                    vendor.icon?.split('.')[0] ?? undefined,
+                    ICON_SIZE
+                  )}
                 </span>
-                <span className='min-w-0'>
-                  <span className='block truncate text-[17px] leading-[21px] font-semibold text-foreground'>
-                    {vendor.name}
-                  </span>
-                  <span className='mt-0.5 block text-[13px] leading-[16px] text-muted-foreground'>
-                    {t('{{count}} models', { count: vendor.count })}
-                  </span>
+                <span className='absolute inset-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100 motion-reduce:transition-none'>
+                  {getLobeIcon(vendor.icon, ICON_SIZE)}
                 </span>
-              </Link>
-            ))}
-          </div>
+              </span>
+              <span className='min-w-0'>
+                <span className='block truncate text-[17px] leading-[21px] font-semibold text-foreground'>
+                  {vendor.name}
+                </span>
+                <span className='mt-0.5 block text-[13px] leading-[16px] text-muted-foreground'>
+                  {t('{{count}} models', { count: vendor.count })}
+                </span>
+              </span>
+            </Link>
+          ))}
         </div>
-      )}
+      </div>
     </SectionShell>
   )
 }

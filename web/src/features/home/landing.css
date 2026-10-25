@@ -20,36 +20,16 @@ For commercial licensing, please contact support@quantumnous.com
  * landing.css — 落地页的字体层
  * --------------------------------------------------------------------------
  * 三款字体都是从参考站实测出来的（Sora 标题 / Manrope 正文 / JetBrains Mono
- * 代码），文件随源码一起打包（./fonts/），不走 Google Fonts CDN：
+ * 代码），文件放在 public/fonts/（固定文件名，index.html 才能 preload），
+ * 不走 Google Fonts CDN：
  * 一是不给自托管产品引入外部域名，二是避免国内访问 fonts.googleapis.com 被墙后
  * 落到系统字体、版式全变。
  *
+ * `@font-face` 声明放在 index.html 的 <head> 里：内联样式不会被 css-loader
+ * 重写 url()，字体路径才能保持固定（public/fonts/），也才能被 preload 命中。
+ *
  * 只作用于 `.lp` 子树，控制台其余页面继续用 Public Sans，互不影响。
  * ========================================================================== */
-
-@font-face {
-  font-family: 'Sora';
-  src: url('./fonts/sora-latin-wght-normal.woff2') format('woff2');
-  font-weight: 100 800;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Manrope';
-  src: url('./fonts/manrope-latin-wght-normal.woff2') format('woff2');
-  font-weight: 200 800;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'JetBrains Mono';
-  src: url('./fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2');
-  font-weight: 100 800;
-  font-style: normal;
-  font-display: swap;
-}
 
 .lp {
   font-family: 'Manrope', var(--font-sans);

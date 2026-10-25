@@ -21,6 +21,7 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 
+import { prefetchHomePageContent } from '@/features/home/api'
 import { installBuildMetadata } from '@/lib/build-metadata'
 import { BRAND_NAME } from '@/lib/constants'
 import '@/lib/dayjs'
@@ -84,6 +85,13 @@ if (!rootElement) {
     // localStorage write and the system-config store sync.
     queryClient.ensureQueryData(statusQueryOptions).catch(() => {
       /* empty */
+    })
+
+    // The landing page cannot paint until it knows whether an admin set custom
+    // content. Starting here (instead of in the route's effect) keeps the boot
+    // screen as the only thing between the blank document and real content.
+    prefetchHomePageContent().catch(() => {
+      /* the home hook owns the user-facing error */
     })
   } catch {
     /* empty */

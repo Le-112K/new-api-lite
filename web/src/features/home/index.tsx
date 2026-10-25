@@ -60,10 +60,21 @@ export function Home() {
   }, [isUrl, syncIframePreferences])
 
   if (!isLoaded) {
+    // Structured placeholder instead of a lone "Loading..." line. It mirrors
+    // the hero's centred stack so the arrival of real content does not move
+    // anything, and it is static (no pulse) to stay quiet on a fast load.
     return (
       <PublicLayout showMainContainer={false} headerProps={{ variant: 'landing' }} wrapperClassName='bg-white dark:bg-[#0a0a0a]'>
-        <main className='flex min-h-screen items-center justify-center'>
-          <div className='text-muted-foreground'>{t('Loading...')}</div>
+        <main
+          className='flex min-h-screen flex-col items-center justify-center gap-4 px-6'
+          aria-busy='true'
+        >
+          <div className='bg-muted h-3 w-24 rounded-full' />
+          <div className='bg-muted mt-2 h-10 w-[min(88vw,40rem)] rounded-xl sm:h-14' />
+          <div className='bg-muted h-10 w-[min(62vw,26rem)] rounded-xl sm:h-14' />
+          <div className='bg-muted mt-3 h-4 w-[min(72vw,30rem)] rounded-md' />
+          <div className='bg-muted mt-4 h-10 w-36 rounded-full' />
+          <span className='sr-only'>{t('Loading...')}</span>
         </main>
       </PublicLayout>
     )

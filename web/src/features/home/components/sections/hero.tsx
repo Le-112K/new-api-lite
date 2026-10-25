@@ -136,15 +136,13 @@ export function Hero(props: HeroProps) {
 
             <div className='mt-6 border-t border-border pt-5'>
               <a
-                href={`${docsBase}/zh/docs/installation`}
-                target='_blank'
-                rel='noopener noreferrer'
+                href='/?auth=signup'
                 className='inline-flex items-center gap-2 text-[14px] leading-5 text-muted-foreground transition-colors hover:text-foreground'
               >
                 <span className='rounded-md border border-border px-1.5 py-0.5 text-[11px] font-semibold text-foreground'>
-                  {t('Open source')}
+                  {t('Free')}
                 </span>
-                {t('Deploy on your own server, no per-seat fee')}
+                {t('Sign up and get 5M free tokens')}
                 <ArrowRight className='size-3.5' aria-hidden />
               </a>
             </div>
