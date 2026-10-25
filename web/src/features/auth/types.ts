@@ -22,27 +22,39 @@ import type { LoginResult } from './secure-verification/types'
 // API Payloads
 // ============================================================================
 
-export interface LoginPayload {
-  username: string
+/**
+ * The one payload the unified entry accepts. The server decides what it means:
+ * a known address is a sign-in, an unknown one starts a verified signup.
+ */
+export interface AuthEntryPayload {
+  /** Normal accounts sign in with their email. */
+  email?: string
+  /** Super administrators sign in with their username instead. */
+  username?: string
   password: string
+  /** Required by the server on the signup branch only. */
+  agreeLegal: boolean
   turnstile?: string
   passwordEncryptionEnabled?: boolean
 }
 
-export interface RegisterPayload {
-  username: string
-  password: string
-  email?: string
-  verification_code?: string
-  turnstile?: string
+export type AuthEntryAction = 'login' | 'verify_email'
+
+/** Returned when the submission was a signup and a link is on its way. */
+export interface AuthEntryPendingResult {
+  action: 'verify_email'
+  email: string
+}
+
+export type AuthEntryResult = LoginResult | AuthEntryPendingResult
+
+export interface AuthEntryResponse {
+  success: boolean
+  message: string
+  data?: AuthEntryResult
 }
 
 export interface PasswordResetPayload {
-  email: string
-  turnstile?: string
-}
-
-export interface EmailVerificationPayload {
   email: string
   turnstile?: string
 }
@@ -56,12 +68,6 @@ export interface BindEmailPayload {
 // ============================================================================
 // API Responses
 // ============================================================================
-
-export interface LoginResponse {
-  success: boolean
-  message: string
-  data?: LoginResult
-}
 
 export interface ApiResponse<T = unknown> {
   success: boolean
@@ -82,7 +88,6 @@ export interface SystemStatus {
     logo?: string
     turnstile_check?: boolean
     turnstile_site_key?: string
-    email_verification?: boolean
     display_in_currency?: boolean
     display_token_stat_enabled?: boolean
     quota_per_unit?: number
@@ -104,7 +109,6 @@ export interface SystemStatus {
   logo?: string
   turnstile_check?: boolean
   turnstile_site_key?: string
-  email_verification?: boolean
   display_in_currency?: boolean
   display_token_stat_enabled?: boolean
   quota_per_unit?: number

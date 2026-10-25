@@ -21,11 +21,11 @@ For commercial licensing, please contact support@quantumnous.com
 // ============================================================================
 
 export {
-  login,
+  authEntry,
+  verifyEmailLink,
+  resendVerificationLink,
   logout,
-  register,
   sendPasswordResetEmail,
-  sendEmailVerification,
   bindEmail,
 } from './api'
 
@@ -34,11 +34,10 @@ export {
 // ============================================================================
 
 export type {
-  LoginPayload,
-  LoginResponse,
-  RegisterPayload,
+  AuthEntryPayload,
+  AuthEntryResponse,
+  AuthEntryResult,
   PasswordResetPayload,
-  EmailVerificationPayload,
   BindEmailPayload,
   ApiResponse,
   SystemStatus,
@@ -50,8 +49,7 @@ export type {
 // ============================================================================
 
 export {
-  loginFormSchema,
-  registerFormSchema,
+  authEntryFormSchema,
   forgotPasswordFormSchema,
   otpFormSchema,
   PASSWORD_MIN_LENGTH,
@@ -60,7 +58,6 @@ export {
   BACKUP_CODE_LENGTH,
   BACKUP_CODE_REGEX,
   OTP_REGEX,
-  EMAIL_VERIFICATION_COUNTDOWN,
   PASSWORD_RESET_COUNTDOWN,
 } from './constants'
 
@@ -83,7 +80,6 @@ export {
 
 export { useTurnstile } from './hooks/use-turnstile'
 export { useAuthRedirect } from './hooks/use-auth-redirect'
-export { useEmailVerification } from './hooks/use-email-verification'
 
 // ============================================================================
 // Components

@@ -21,7 +21,7 @@ import { Cancel01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { Check } from 'lucide-react'
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { BrandWordmark } from '@/components/brand-wordmark'
@@ -46,7 +46,6 @@ import {
   type AuthDialogState,
 } from '../lib/auth-dialog'
 import { UserAuthForm } from '../sign-in/components/user-auth-form'
-import { SignUpForm } from '../sign-up/components/sign-up-form'
 import { AuthMesh } from './auth-mesh'
 import { TermsFooter } from './terms-footer'
 
@@ -59,6 +58,11 @@ import './auth-dialog.css'
  * decides which pane renders and the pane's own footer line switches it — the
  * pattern mainstream sites use. Keeping the state in the URL means a reload or
  * a shared link restores the exact pane.
+ *
+ * `signin` and `signup` render the *same* pane: the unified entry decides
+ * between signing in and signing up from the email alone, so two panes would be
+ * two copies of one form. `?auth=signup` is kept as an alias so old links,
+ * bookmarks and the header CTA keep working.
  *
  * Strictly modal: `disablePointerDismissal` makes clicks on the backdrop and
  * on the navigation underneath inert — the only ways out are the close button
@@ -85,9 +89,27 @@ export function AuthDialog() {
   if (dialog.open) lastOpenRef.current = dialog
   const view = dialog.open ? dialog : lastOpenRef.current
 
+  // Open state lives in the URL, but navigation is async: for a frame or two
+  // after the close click the router still reports `?auth=…`, so a purely
+  // URL-driven `open` stays true and Base UI reopens the dialog mid-exit —
+  // the overlay faded out, snapped back to full opacity, then closed again.
+  // A local flag makes the close synchronous; the URL catches up behind it.
+  const [closing, setClosing] = useState(false)
+  const isOpen = dialog.open && !closing
+
+  useEffect(() => {
+    // Reset on either transition: after the URL drops `?auth` the close is
+    // complete, and the next open must not wait a frame for this flag.
+    setClosing(false)
+  }, [dialog.open])
+
   const handleOpenChange = useCallback(
     (open: boolean) => {
-      if (open) return
+      if (open) {
+        setClosing(false)
+        return
+      }
+      setClosing(true)
       navigate({
         href: buildAuthDialogClosedHref(currentUrl.pathname, currentUrl.search),
       })
@@ -104,16 +126,11 @@ export function AuthDialog() {
     [navigate, currentUrl.pathname, currentUrl.search]
   )
 
-  const isSignUp = view.mode === 'sign-up'
   const isForgotPassword = view.mode === 'forgot-password'
-  const canRegister = status?.register_enabled !== false
 
   let title = t('Sign in')
   let subtitle = t('Continue with your self-hosted account')
-  if (isSignUp) {
-    title = t('Create an account')
-    subtitle = t('A few steps, then connect your first channel')
-  } else if (isForgotPassword) {
+  if (isForgotPassword) {
     title = t('Reset password')
     subtitle = t(
       'Enter your registered email and we will send you a link to reset your password.'
@@ -122,15 +139,19 @@ export function AuthDialog() {
 
   return (
     <Dialog
-      open={dialog.open}
+      open={isOpen}
       onOpenChange={handleOpenChange}
       disablePointerDismissal
     >
       <DialogPortal>
-        {/* Light veil: keeps the page's paper feel and the aperture visible
-            underneath. Clicks on it stay inert (`disablePointerDismissal`), so
-            the only exits are the close button and Escape. */}
-        <DialogOverlay className='bg-background/80 backdrop-blur-[2px]' />
+        {/* Plain tint, no `backdrop-filter`: Chromium keeps a filtered
+            backdrop blurred for a few frames while the overlay fades out, so
+            closing the dialog smeared the page and then snapped it sharp —
+            a one-frame flash. The shared DialogOverlay documents the same
+            constraint. The duration must match the popup's 200ms exit: a
+            shorter fade finishes first, snaps back to full opacity and sits
+            there until the popup unmounts — the other half of the flash. */}
+        <DialogOverlay className='bg-background/80 duration-200' />
         <DialogPrimitive.Popup
           data-slot='auth-dialog-content'
           className={cn(
@@ -212,11 +233,9 @@ export function AuthDialog() {
               </div>
 
               <div className='mt-7 flex flex-col gap-5'>
-                {isForgotPassword && <ForgotPasswordForm />}
-                {isSignUp && (
-                  <SignUpForm onSuccess={() => switchMode('sign-in')} />
-                )}
-                {!isForgotPassword && !isSignUp && (
+                {isForgotPassword ? (
+                  <ForgotPasswordForm />
+                ) : (
                   <UserAuthForm
                     redirectTo={view.redirectTo}
                     onForgotPassword={() => switchMode('forgot-password')}
@@ -231,23 +250,9 @@ export function AuthDialog() {
                       onClick={() => switchMode('sign-in')}
                     />
                   )}
-                  {isSignUp && (
-                    <SwitchLine
-                      lead={t('Already have an account?')}
-                      action={t('Sign in')}
-                      onClick={() => switchMode('sign-in')}
-                    />
-                  )}
-                  {!isSignUp && !isForgotPassword && canRegister && (
-                    <SwitchLine
-                      lead={t("Don't have an account?")}
-                      action={t('Sign up')}
-                      onClick={() => switchMode('sign-up')}
-                    />
-                  )}
                   {!isForgotPassword && (
                     <TermsFooter
-                      variant={isSignUp ? 'sign-up' : 'sign-in'}
+                      variant='sign-in'
                       status={status}
                       className='text-center'
                     />

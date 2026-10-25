@@ -18,28 +18,23 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { z } from 'zod'
 
-import { accountPasswordSchema } from '@/lib/password-policy'
-
 // ============================================================================
 // Form Schemas
 // ============================================================================
 
-export const loginFormSchema = z.object({
-  username: z.string().min(1, 'Please enter your username or email'),
+export const authEntryFormSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Please enter your email or admin username')
+    .refine(
+      (value) =>
+        !value.includes('@') ||
+        z.string().email().safeParse(value).success,
+      { message: 'Please enter a valid email address' }
+    ),
   password: z.string().min(1, 'Please enter your password'),
 })
-
-export const registerFormSchema = z
-  .object({
-    username: z.string().min(1, 'Please enter your username'),
-    email: z.string().optional(),
-    password: accountPasswordSchema,
-    confirmPassword: z.string().min(1, 'Please confirm your password'),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match.",
-    path: ['confirmPassword'],
-  })
 
 export const forgotPasswordFormSchema = z.object({
   email: z.string().email({
@@ -66,5 +61,4 @@ export const OTP_REGEX = /^\d{6}$/
 // Countdown Constants
 // ============================================================================
 
-export const EMAIL_VERIFICATION_COUNTDOWN = 30 // seconds
 export const PASSWORD_RESET_COUNTDOWN = 30 // seconds

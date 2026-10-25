@@ -26,9 +26,8 @@ import {
   encryptPassword,
 } from './lib/password-encryption'
 import type {
-  LoginPayload,
-  LoginResponse,
-  RegisterPayload,
+  AuthEntryPayload,
+  AuthEntryResponse,
   ApiResponse,
 } from './types'
 
@@ -40,8 +39,10 @@ import type {
 // Login & Logout
 // ----------------------------------------------------------------------------
 
-// User login with username and password
-export async function login(payload: LoginPayload): Promise<LoginResponse> {
+// Unified entry: signs an existing account in, or starts a verified signup.
+export async function authEntry(
+  payload: AuthEntryPayload
+): Promise<AuthEntryResponse> {
   const turnstile = payload.turnstile ?? ''
   try {
     let passwordFields:
@@ -56,10 +57,14 @@ export async function login(payload: LoginPayload): Promise<LoginResponse> {
     } else {
       passwordFields = { password: payload.password }
     }
-    const res = await api.post<LoginResponse>(
-      `/api/user/login?turnstile=${turnstile}`,
+    const res = await api.post<AuthEntryResponse>(
+      `/api/user/auth/entry?turnstile=${turnstile}`,
       {
-        username: payload.username,
+        // Email for normal accounts, username for the root-only sign-in path.
+        ...(payload.username
+          ? { username: payload.username }
+          : { email: payload.email }),
+        agree_legal: payload.agreeLegal,
         ...passwordFields,
       },
       { skipAuthRefresh: true }
@@ -74,6 +79,31 @@ export async function login(payload: LoginPayload): Promise<LoginResponse> {
     }
     throw error
   }
+}
+
+// Trade a mailed link for an account: the token is single use.
+export async function verifyEmailLink(
+  token: string
+): Promise<AuthEntryResponse> {
+  const res = await api.post<AuthEntryResponse>(
+    '/api/user/auth/verify-email',
+    { token },
+    { skipAuthRefresh: true }
+  )
+  return res.data
+}
+
+// Ask for a new link. The server answers the same way whether or not a pending
+// signup exists, so this cannot be used to probe for accounts.
+export async function resendVerificationLink(
+  email: string
+): Promise<ApiResponse> {
+  const res = await api.post(
+    '/api/user/auth/resend-verification',
+    { email },
+    { skipAuthRefresh: true }
+  )
+  return res.data
 }
 
 interface LogoutRuntime {
@@ -144,25 +174,6 @@ export async function sendPasswordResetEmail(
 // ----------------------------------------------------------------------------
 // Registration
 // ----------------------------------------------------------------------------
-
-// User registration
-export async function register(payload: RegisterPayload): Promise<ApiResponse> {
-  const res = await api.post(`/api/user/register`, payload, {
-    params: { turnstile: payload.turnstile ?? '' },
-  })
-  return res.data
-}
-
-// Send email verification code
-export async function sendEmailVerification(
-  email: string,
-  turnstile?: string
-): Promise<ApiResponse> {
-  const res = await api.get('/api/verification', {
-    params: { email, turnstile },
-  })
-  return res.data
-}
 
 // Confirm an authenticated, server-owned email binding flow.
 export async function bindEmail(

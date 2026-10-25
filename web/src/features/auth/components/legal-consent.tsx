@@ -35,10 +35,12 @@ export function LegalConsent(props: LegalConsentProps) {
   const { t } = useTranslation()
   const hasUserAgreement = Boolean(props.status?.user_agreement_enabled)
   const hasPrivacyPolicy = Boolean(props.status?.privacy_policy_enabled)
-
-  if (!hasUserAgreement && !hasPrivacyPolicy) {
-    return null
-  }
+  // The two documents always exist as public routes, and this form can create an
+  // account, so the acknowledgement is shown even when the operator has not
+  // flipped the settings yet. Both links stay visible in that case rather than
+  // silently dropping the disclosure.
+  const showUserAgreement = hasUserAgreement || !hasPrivacyPolicy
+  const showPrivacyPolicy = hasPrivacyPolicy || !hasUserAgreement
 
   const handleChange = (value: boolean) => {
     props.onCheckedChange(value === true)
@@ -58,7 +60,7 @@ export function LegalConsent(props: LegalConsentProps) {
       >
         <span>
           {t('I have read and agree to the')}{' '}
-          {hasUserAgreement && (
+          {showUserAgreement && (
             <a
               href='/user-agreement'
               target='_blank'
@@ -68,8 +70,10 @@ export function LegalConsent(props: LegalConsentProps) {
               {t('User Agreement')}
             </a>
           )}
-          {hasUserAgreement && hasPrivacyPolicy && ' and the '}
-          {hasPrivacyPolicy && (
+          {showUserAgreement && showPrivacyPolicy && (
+            <> {t('and')} </>
+          )}
+          {showPrivacyPolicy && (
             <a
               href='/privacy-policy'
               target='_blank'

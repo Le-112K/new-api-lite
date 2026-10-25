@@ -85,7 +85,6 @@ type User struct {
 	Role                 int                        `json:"role" gorm:"type:int;default:1"`   // admin, common
 	Status               int                        `json:"status" gorm:"type:int;default:1"` // enabled, disabled
 	Email                string                     `json:"email" gorm:"index" validate:"max=50"`
-	VerificationCode     string                     `json:"verification_code" gorm:"-:all"`                         // this field is only for Email verification, don't save it to database!
 	Quota                int                        `json:"quota" gorm:"type:int;default:0"`
 	UsedQuota            int                        `json:"used_quota" gorm:"type:int;default:0;column:used_quota"` // used quota
 	RequestCount         int                        `json:"request_count" gorm:"type:int;default:0;"`               // request number
@@ -97,6 +96,10 @@ type User struct {
 	LastLoginAt          int64                      `json:"last_login_at" gorm:"default:0;column:last_login_at"`
 	AuthVersion          int64                      `json:"-" gorm:"type:bigint;not null;default:1;column:auth_version"`
 	AdminPermissions     map[string]map[string]bool `json:"admin_permissions,omitempty" gorm:"-:all"`
+	// passwordPreHashed marks an in-memory user whose Password already holds a
+	// hash. Only the verified-signup path sets it, and it never reaches the
+	// database.
+	passwordPreHashed bool `gorm:"-:all"`
 }
 
 func (user *User) ToBaseUser() *UserBase {
@@ -231,6 +234,63 @@ func CheckUserExistOrDeleted(username string, email string) (bool, error) {
 
 func NormalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
+}
+
+// DeriveUsernameFromEmail builds a unique username out of an email address.
+//
+// This deployment's registration form only collects email + password, while
+// `users.username` is still a required, unique column that the rest of the UI
+// renders. The local part is therefore sanitized into a slug and, when it is
+// already taken, suffixed with the smallest free ordinal ("alice", "alice2").
+// Soft-deleted rows are considered taken as well: the unique index does not
+// discriminate them, so reusing the name would fail on insert.
+func DeriveUsernameFromEmail(email string) (string, error) {
+	base := NormalizeEmail(email)
+	if at := strings.LastIndex(base, "@"); at > 0 {
+		base = base[:at]
+	}
+
+	slug := make([]byte, 0, len(base))
+	for i := 0; i < len(base); i++ {
+		c := base[i]
+		switch {
+		case c >= 'a' && c <= 'z', c >= '0' && c <= '9', c == '.', c == '_', c == '-':
+			slug = append(slug, c)
+		}
+	}
+	base = strings.Trim(string(slug), "._-")
+	if base == "" {
+		base = "user"
+	}
+	if len(base) > UserNameMaxLength {
+		base = strings.TrimRight(base[:UserNameMaxLength], "._-")
+	}
+	if base == "" {
+		base = "user"
+	}
+
+	for ordinal := 1; ordinal <= 9999; ordinal++ {
+		candidate := base
+		if ordinal > 1 {
+			suffix := strconv.Itoa(ordinal)
+			trimmed := base
+			if len(trimmed) > UserNameMaxLength-len(suffix) {
+				trimmed = strings.TrimRight(trimmed[:UserNameMaxLength-len(suffix)], "._-")
+			}
+			if trimmed == "" {
+				trimmed = "user"
+			}
+			candidate = trimmed + suffix
+		}
+		exist, err := CheckUserExistOrDeleted(candidate, "")
+		if err != nil {
+			return "", err
+		}
+		if !exist {
+			return candidate, nil
+		}
+	}
+	return "", ErrUsernameUnavailable
 }
 
 func emailQuery(tx *gorm.DB, email string) *gorm.DB {
@@ -485,9 +545,31 @@ func (user *User) prepareForInsert(tx *gorm.DB) error {
 	if user.Password == "" {
 		return nil
 	}
+	if user.passwordPreHashed {
+		return nil
+	}
 	var err error
 	user.Password, err = common.HashAccountPassword(user.Password)
 	return err
+}
+
+// CreateVerifiedUser inserts an account whose password hash was produced by the
+// pending-registration flow. The hash travels through User.Password, so the
+// pre-hashed marker is what stops prepareForInsert from hashing it a second
+// time.
+func CreateVerifiedUser(username string, email string, passwordHash string) (*User, error) {
+	user := &User{
+		Username:          username,
+		Email:             email,
+		DisplayName:       username,
+		Password:          passwordHash,
+		Role:              common.RoleCommonUser,
+		passwordPreHashed: true,
+	}
+	if err := user.Insert(); err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
 // BindEmailToUser atomically checks email availability and assigns it to the
@@ -872,6 +954,29 @@ func GetUniqueUserByEmail(email string) (*User, error) {
 	default:
 		return nil, ErrEmailAmbiguous
 	}
+}
+
+// GetRootUserByUsername resolves a super administrator by exact username.
+//
+// The role predicate is the security boundary of the root-only username login
+// path: registered users get their username derived from an email address, so
+// a lookup without the role check would let them bypass the email identity.
+// Soft-deleted rows are excluded by GORM's default scope.
+func GetRootUserByUsername(username string) (*User, error) {
+	username = strings.TrimSpace(username)
+	if username == "" {
+		return nil, ErrInvalidCredentials
+	}
+	var user User
+	err := DB.Where("username = ? AND role = ?", username, common.RoleRootUser).
+		First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrInvalidCredentials
+		}
+		return nil, fmt.Errorf("%w: %v", ErrDatabase, err)
+	}
+	return &user, nil
 }
 
 func ResetUserPasswordByEmail(email string, password string) error {

@@ -31,13 +31,14 @@ var anonymousAllowedRoutes = []string{
 	// 模型价格页对游客公开（仅受 HeaderNavModule 开关控制）。
 	"GET /api/pricing",
 
-	// 匿名账号入口。
+	// 匿名账号入口（同一个 /auth/entry 既登录也发起注册）。
 	"GET /api/verification",
 	"GET /api/reset_password",
 	"POST /api/user/reset",
-	"POST /api/user/register",
 	"GET /api/user/login/encryption-key",
-	"POST /api/user/login",
+	"POST /api/user/auth/entry",
+	"POST /api/user/auth/verify-email",
+	"POST /api/user/auth/resend-verification",
 
 	// 浏览器会话 cookie 端点（凭 cookie 自认证）。
 	"POST /api/user/auth/refresh",
@@ -131,9 +132,13 @@ func TestRetiredApiRoutesStayUnregistered(t *testing.T) {
 	}
 
 	// 性能指标（批次 09 随 pkg/perf_metrics 一并下线）。
+	// 旧的注册/登录入口：统一入口 POST /api/user/auth/entry 上线后下线，
+	// 留着它们等于留下绕过邮箱验证的注册旁路。
 	retired := []string{
 		"GET /api/perf-metrics",
 		"GET /api/perf-metrics/summary",
+		"POST /api/user/register",
+		"POST /api/user/login",
 	}
 
 	for _, key := range retired {
