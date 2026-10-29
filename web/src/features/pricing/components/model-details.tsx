@@ -48,16 +48,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { getMonoLobeIcon } from '@/lib/lobe-icon'
 import { cn } from '@/lib/utils'
 
-import { DEFAULT_TOKEN_UNIT } from '../constants'
 import { usePricingData } from '../hooks/use-pricing-data'
+import { CAPABILITY_LABEL_KEYS } from '../lib/capability-labels'
 import { parseTags } from '../lib/filters'
+import { buildGroupLabels } from '../lib/group-labels'
 import { formatModelDisplayName } from '../lib/model-display-name'
 import { getAvailableGroups } from '../lib/model-helpers'
-import type {
-  ModelCapability,
-  PricingModel,
-  TokenUnit,
-} from '../types'
+import type { ModelCapability, PricingModel } from '../types'
 import { ModelDetailsApi } from './model-details-api'
 
 // ----------------------------------------------------------------------------
@@ -70,20 +67,6 @@ function SectionTitle(props: { children: React.ReactNode }) {
       {props.children}
     </h2>
   )
-}
-
-const CAPABILITY_LABEL_KEYS: Record<ModelCapability, string> = {
-  function_calling: 'Function calling',
-  streaming: 'Streaming',
-  vision: 'Vision',
-  json_mode: 'JSON mode',
-  structured_output: 'Structured output',
-  reasoning: 'Reasoning',
-  tools: 'Tools',
-  system_prompt: 'System prompt',
-  web_search: 'Web search',
-  code_interpreter: 'Code interpreter',
-  caching: 'Prompt caching',
 }
 
 const MODALITY_LABEL_KEYS: Record<string, string> = {
@@ -338,10 +321,15 @@ function ModelBackendSignalsSection(props: { model: PricingModel }) {
   )
 }
 
-function ModelBackendProviderSection(props: { model: PricingModel }) {
+function ModelBackendProviderSection(props: {
+  model: PricingModel
+  groupLabels?: Record<string, string>
+}) {
   const { t } = useTranslation()
   const model = props.model
-  const groups = normalizeCatalogItems(model.enable_groups)
+  const groups = normalizeCatalogItems(model.enable_groups).map(
+    (group) => props.groupLabels?.[group] ?? group
+  )
   const endpoints = normalizeCatalogItems(model.supported_endpoint_types)
   const tags = parseTags(model.tags)
   const cells: React.ReactNode[] = []
@@ -400,12 +388,18 @@ function ModelBackendProviderSection(props: { model: PricingModel }) {
   )
 }
 
-function ModelBackendDetailsSection(props: { model: PricingModel }) {
+function ModelBackendDetailsSection(props: {
+  model: PricingModel
+  groupLabels?: Record<string, string>
+}) {
   return (
     <>
       <ModelBackendQuickStats model={props.model} />
       <ModelBackendSignalsSection model={props.model} />
-      <ModelBackendProviderSection model={props.model} />
+      <ModelBackendProviderSection
+        model={props.model}
+        groupLabels={props.groupLabels}
+      />
     </>
   )
 }
@@ -469,14 +463,10 @@ const TAB_META: Record<
 
 export interface ModelDetailsContentProps {
   model: PricingModel
-  groupRatio: Record<string, number>
   usableGroup: Record<string, { desc: string; ratio: number }>
   endpointMap: Record<string, { path?: string; method?: string }>
-  autoGroups: string[]
-  priceRate: number
-  usdExchangeRate: number
-  tokenUnit: TokenUnit
-  showRechargePrice?: boolean
+  /** 分组 key → 订阅套餐名（与卡片胶囊同源）。 */
+  groupLabels?: Record<string, string>
 }
 
 export function ModelDetailsContent(props: ModelDetailsContentProps) {
@@ -506,7 +496,10 @@ export function ModelDetailsContent(props: ModelDetailsContentProps) {
         <TabsContent value='overview' className='space-y-6 outline-none'>
           {/* 按需付费的定价区块（基础价、分组倍率）已随订阅制移除：
               详情页现在只讲「这个模型能干什么」，不讲「每 1M 多少钱」。 */}
-          <ModelBackendDetailsSection model={props.model} />
+          <ModelBackendDetailsSection
+            model={props.model}
+            groupLabels={props.groupLabels}
+          />
         </TabsContent>
 
         <TabsContent value='api' className='outline-none'>
@@ -589,19 +582,29 @@ function DetailsModalPillList(props: { items: string[] }) {
 interface ModelDetailsModalProps {
   model: PricingModel
   usableGroup: Record<string, { desc: string; ratio: number }>
-  priceRate: number
-  usdExchangeRate: number
-  tokenUnit: TokenUnit
-  showRechargePrice?: boolean
+  /** 分组 key → 订阅套餐名，与卡片底部的胶囊共用同一份映射。 */
+  groupLabels?: Record<string, string>
 }
 
 function ModelDetailsModal(props: ModelDetailsModalProps) {
   const { t } = useTranslation()
   const model = props.model
+  // Every value below is a backend metadata field (admin-editable via the model
+  // drawer). Missing values render as a dash rather than a guess, so an
+  // unconfigured catalogue is visibly unconfigured instead of inventing specs.
+  const displayName =
+    model.display_name?.trim() || formatModelDisplayName(model.model_name)
   const contextLength = formatContextLength(model.context_length)
+  const maxOutput = formatContextLength(model.max_output_tokens)
   const endpoints = normalizeCatalogItems(model.supported_endpoint_types)
+  const capabilities = normalizeCatalogItems(model.capabilities)
   const tags = parseTags(model.tags)
   const availableGroups = getAvailableGroups(model, props.usableGroup || {})
+  // 订阅制下用户最关心的商业信息：这个模型属于哪些套餐。数据源与卡片底部
+  // 完全一致（enable_groups），否则会在两个页面看到两套说法。
+  const planNames = (model.enable_groups ?? []).map(
+    (group) => props.groupLabels?.[group] ?? group
+  )
   // 按需付费的价格单元（输入/输出/缓存读/缓存写）已随订阅制移除。
 
   return (
@@ -623,7 +626,7 @@ function ModelDetailsModal(props: ModelDetailsModalProps) {
         </DialogClose>
         <div className='order-1 min-w-0'>
           <DialogTitle className='text-[1.375rem] leading-[1.2] font-bold tracking-[-0.02em]'>
-            {formatModelDisplayName(model.model_name)}
+            {displayName}
           </DialogTitle>
           <DialogDescription className='text-muted-foreground mt-1.5 flex min-w-0 items-center gap-1.5 text-xs'>
             {model.vendor_name && (
@@ -643,6 +646,11 @@ function ModelDetailsModal(props: ModelDetailsModalProps) {
               iconClassName='size-3'
             />
           </DialogDescription>
+          {model.description && (
+            <p className='text-muted-foreground mt-2 text-[13px] leading-relaxed'>
+              {model.description}
+            </p>
+          )}
         </div>
       </header>
 
@@ -665,6 +673,27 @@ function ModelDetailsModal(props: ModelDetailsModalProps) {
         )}
       </DetailsModalSection>
 
+      {/* 订阅制下「属于哪些套餐」和协议接口一样是首要信息，放在规格之前；
+          胶囊样式与模型卡片底部完全一致。 */}
+      <DetailsModalSection title={t('Plans')}>
+        {planNames.length > 0 ? (
+          <ul className='flex flex-wrap gap-1.5'>
+            {planNames.map((name) => (
+              <li
+                key={name}
+                className='bg-foreground text-background rounded-full px-2 py-0.5 text-[11px] font-semibold'
+              >
+                {name}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <span className='text-muted-foreground text-sm'>
+            {t('No plan includes this model yet')}
+          </span>
+        )}
+      </DetailsModalSection>
+
       <DetailsModalSection title={t('Specifications')}>
         <dl className='grid grid-cols-2 gap-x-6 gap-y-3.5'>
           <DetailsModalKv label={t('Provider')}>
@@ -673,7 +702,24 @@ function ModelDetailsModal(props: ModelDetailsModalProps) {
           <DetailsModalKv label={t('Context')}>
             {contextLength ?? DETAILS_MODAL_DASH}
           </DetailsModalKv>
-          <DetailsModalKv label={t('Capability tags')}>
+          <DetailsModalKv label={t('Max output')}>
+            {maxOutput ?? DETAILS_MODAL_DASH}
+          </DetailsModalKv>
+          <DetailsModalKv label={t('Capabilities')}>
+            {capabilities.length > 0 ? (
+              <DetailsModalPillList
+                items={capabilities.map((capability) =>
+                  t(
+                    CAPABILITY_LABEL_KEYS[capability as ModelCapability] ??
+                      capability
+                  )
+                )}
+              />
+            ) : (
+              DETAILS_MODAL_DASH
+            )}
+          </DetailsModalKv>
+          <DetailsModalKv label={t('Tags')}>
             {tags.length > 0 ? (
               <DetailsModalPillList items={tags} />
             ) : (
@@ -723,10 +769,7 @@ export function ModelDetailsDrawer(props: ModelDetailsDrawerProps) {
           <ModelDetailsModal
             model={props.model}
             usableGroup={props.usableGroup}
-            priceRate={props.priceRate}
-            usdExchangeRate={props.usdExchangeRate}
-            tokenUnit={props.tokenUnit}
-            showRechargePrice={props.showRechargePrice}
+            groupLabels={props.groupLabels}
           />
         </DialogPrimitive.Popup>
       </DialogPortal>
@@ -740,19 +783,14 @@ export function ModelDetails() {
   const search = useSearch({ from: '/pricing/$modelId/' })
   const navigate = useNavigate()
 
-  const {
-    models,
-    groupRatio,
-    usableGroup,
-    endpointMap,
-    autoGroups,
-    isLoading,
-    priceRate,
-    usdExchangeRate,
-  } = usePricingData()
+  const { models, usableGroup, endpointMap, subscriptionPlans, isLoading } =
+    usePricingData()
 
-  const tokenUnit: TokenUnit =
-    search.tokenUnit === 'K' ? 'K' : DEFAULT_TOKEN_UNIT
+  // 与广场卡片同源的分组→套餐名映射：详情页的分组单元格不能直接吐原始 key。
+  const groupLabels = useMemo(
+    () => buildGroupLabels(usableGroup, subscriptionPlans),
+    [usableGroup, subscriptionPlans]
+  )
 
   const model = useMemo(() => {
     if (!models || !modelId) return null
@@ -821,13 +859,8 @@ export function ModelDetails() {
 
         <ModelDetailsContent
           model={model}
-          groupRatio={groupRatio || {}}
           usableGroup={usableGroup || {}}
-          autoGroups={autoGroups || []}
-          priceRate={priceRate ?? 1}
-          usdExchangeRate={usdExchangeRate ?? 1}
-          tokenUnit={tokenUnit}
-          showRechargePrice={search.rechargePrice ?? false}
+          groupLabels={groupLabels}
           endpointMap={
             (endpointMap as Record<
               string,

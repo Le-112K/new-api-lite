@@ -60,14 +60,19 @@ type upstreamEnvelope[T any] struct {
 }
 
 type upstreamModel struct {
-	Description string          `json:"description"`
-	Endpoints   json.RawMessage `json:"endpoints"`
-	Icon        string          `json:"icon"`
-	ModelName   string          `json:"model_name"`
-	NameRule    int             `json:"name_rule"`
-	Status      int             `json:"status"`
-	Tags        string          `json:"tags"`
-	VendorName  string          `json:"vendor_name"`
+	Description      string          `json:"description"`
+	Endpoints        json.RawMessage `json:"endpoints"`
+	Icon             string          `json:"icon"`
+	ModelName        string          `json:"model_name"`
+	NameRule         int             `json:"name_rule"`
+	Status           int             `json:"status"`
+	Tags             string          `json:"tags"`
+	VendorName       string          `json:"vendor_name"`
+	ContextLength    int64           `json:"context_length"`
+	MaxOutputTokens  int64           `json:"max_output_tokens"`
+	ThinkingStrength string          `json:"thinking_strength"`
+	// capabilities 在上游可能是数组也可能是逗号串，用 RawMessage 收下来再归一。
+	Capabilities json.RawMessage `json:"capabilities"`
 }
 
 type upstreamVendor struct {
@@ -297,7 +302,28 @@ func fetchMetadataCatalog(c *gin.Context, locale string) (metadataSyncSource, ma
 				endpoints = string(item.Endpoints)
 			}
 		}
-		values := model.MetadataValues{Description: item.Description, Icon: item.Icon, Tags: item.Tags, Vendor: strings.TrimSpace(item.VendorName), Endpoints: endpoints, NameRule: item.NameRule, Status: item.Status}
+		capabilities := ""
+		if len(item.Capabilities) > 0 && string(item.Capabilities) != "null" {
+			var list []string
+			if err := common.Unmarshal(item.Capabilities, &list); err == nil {
+				capabilities = strings.Join(list, ",")
+			} else if err := common.Unmarshal(item.Capabilities, &capabilities); err != nil {
+				capabilities = ""
+			}
+		}
+		values := model.MetadataValues{
+			Description:      item.Description,
+			Icon:             item.Icon,
+			Tags:             item.Tags,
+			Vendor:           strings.TrimSpace(item.VendorName),
+			Endpoints:        endpoints,
+			NameRule:         item.NameRule,
+			Status:           item.Status,
+			ContextLength:    item.ContextLength,
+			MaxOutputTokens:  item.MaxOutputTokens,
+			ThinkingStrength: item.ThinkingStrength,
+			Capabilities:     model.SanitizeCapabilities(capabilities),
+		}
 		if err := model.ValidateMetadataValues(values); err != nil {
 			return source, nil, nil, fmt.Errorf("model %s: %w", item.ModelName, err)
 		}

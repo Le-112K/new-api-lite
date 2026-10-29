@@ -61,9 +61,11 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { ModelPricingPanel } from '@/features/model-pricing/model-pricing-panel'
+import {
+  CAPABILITY_LABEL_KEYS,
+  MODEL_CAPABILITY_VALUES,
+} from '@/features/pricing/lib/capability-labels'
 import {
   requireServerSuccess,
   createServerError,
@@ -84,13 +86,11 @@ import {
   type ModelFormValues,
 } from '../../lib/model-form'
 import type { Model } from '../../types'
-import { ModelConnections } from '../model-connections'
 
 export function ModelMutateDrawer(props: {
   open: boolean
   onOpenChange: (open: boolean) => void
   currentRow?: Model | null
-  initialSection?: 'metadata' | 'pricing'
 }) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -104,17 +104,6 @@ export function ModelMutateDrawer(props: {
       : props.currentRow
   const isEditing = Boolean(currentRow?.id)
   const hasModelName = Boolean(currentRow?.model_name)
-  const [section, setSection] = useState<string>(
-    props.initialSection ?? 'metadata'
-  )
-  const [pricingName, setPricingName] = useState('')
-  const [pricingVisited, setPricingVisited] = useState(
-    props.initialSection === 'pricing'
-  )
-  const [pricingDirty, setPricingDirty] = useState(false)
-  const [pendingPricingName, setPendingPricingName] = useState<string | null>(
-    null
-  )
   const [closeConfirm, setCloseConfirm] = useState(false)
   const loadedKey = useRef('')
   const form = useForm({
@@ -148,22 +137,10 @@ export function ModelMutateDrawer(props: {
     },
     enabled: props.open && isEditing,
   })
-  const savedModel = modelQuery.data ?? currentRow
-
   useEffect(() => {
     if (!props.open) return
-    setSection(props.initialSection ?? 'metadata')
-    setPricingVisited(props.initialSection === 'pricing')
-    setPricingName('')
-    setPricingDirty(false)
-    setPendingPricingName(null)
     setCloseConfirm(false)
-  }, [
-    props.open,
-    props.initialSection,
-    props.currentRow?.id,
-    props.currentRow?.model_name,
-  ])
+  }, [props.open, props.currentRow?.id, props.currentRow?.model_name])
 
   useEffect(() => {
     if (!props.open) {
@@ -194,11 +171,6 @@ export function ModelMutateDrawer(props: {
     meta: { errorToast: false },
     onMutate: () => form.clearErrors('root.server'),
     mutationFn: async (values: ModelFormValues) => {
-      if (pricingDirty && values.model_name !== currentRow?.model_name) {
-        throw new Error(
-          t('Save or discard pricing changes before renaming metadata.')
-        )
-      }
       const payload = transformFormDataToModelPayload(values)
       const response = currentRow?.id
         ? await updateModel({ ...payload, id: currentRow.id })
@@ -225,7 +197,7 @@ export function ModelMutateDrawer(props: {
         queryClient.invalidateQueries({ queryKey: vendorsQueryKeys.all }),
       ])
       toast.success(t('Model metadata saved'))
-      if (!pricingDirty) props.onOpenChange(false)
+      props.onOpenChange(false)
     },
     onError: (error) => {
       form.setError('root.server', {
@@ -245,7 +217,7 @@ export function ModelMutateDrawer(props: {
   const metadataDirty = form.formState.isDirty
   const close = (open: boolean) => {
     if (!open && isSubmitting) return
-    if (!open && (metadataDirty || pricingDirty)) {
+    if (!open && metadataDirty) {
       setCloseConfirm(true)
       return
     }
@@ -259,52 +231,42 @@ export function ModelMutateDrawer(props: {
           className={sideDrawerContentClassName('sm:max-w-[1280px]')}
         >
           <SheetHeader className={sideDrawerHeaderClassName()}>
+            {/* 标题与模型列表/广场卡片同源：优先展示名，模型 ID 降为副标题，
+                否则运营在列表里认的是「DeepSeek V4.1 Flash」，点进来却只看到一串 ID。 */}
             <SheetTitle className='pr-6 break-all'>
-              {hasModelName ? currentRow?.model_name : t('Create Model')}
+              {hasModelName
+                ? currentRow?.display_name?.trim() || currentRow?.model_name
+                : t('Create Model')}
             </SheetTitle>
-            <SheetDescription>
-              {t(
-                'Manage metadata, pricing, and channel connections. Each section saves separately.'
+            <SheetDescription className='flex flex-wrap items-center gap-2'>
+              {hasModelName && currentRow?.display_name?.trim() && (
+                <code className='bg-muted text-muted-foreground rounded px-1.5 py-0.5 font-mono text-[11px]'>
+                  {currentRow?.model_name}
+                </code>
               )}
+              <span>
+                {t(
+                  'Manage this model’s metadata. Changes apply when you save.'
+                )}
+              </span>
             </SheetDescription>
           </SheetHeader>
-          <Tabs
-            value={section}
-            onValueChange={(value) => {
-              setSection(value)
-              if (value === 'pricing') setPricingVisited(true)
-            }}
-            className='shrink-0 px-4'
-          >
-            <TabsList className='grid w-full grid-cols-3 group-data-horizontal/tabs:h-auto'>
-              <TabsTrigger
-                value='metadata'
-                className='h-auto min-w-0 whitespace-normal'
-              >
-                {t('Model metadata')}
-              </TabsTrigger>
-              <TabsTrigger
-                value='pricing'
-                disabled={!hasModelName}
-                className='h-auto min-w-0 whitespace-normal'
-              >
-                {t('Pricing')}
-              </TabsTrigger>
-              <TabsTrigger
-                value='connections'
-                disabled={!hasModelName}
-                className='h-auto min-w-0 whitespace-normal'
-              >
-                {t('Channels and groups')}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-          {props.open && section === 'metadata' && (
+          {props.open && (
             <>
               {modelQuery.isError ? (
                 <ErrorState
-                  description={modelQuery.error.message}
+                  title={t('Model metadata could not be loaded')}
+                  // 直接把后端原文（record not found）怼到脸上，运营既看不懂也不知道
+                  // 下一步做什么；这里换成可行动的说明，原文留在 tooltip 里排查用。
+                  description={t(
+                    'The record may have been deleted, or this row came from stale data. Close this panel and refresh the list.'
+                  )}
                   onRetry={() => void modelQuery.refetch()}
+                  action={
+                    <Button variant='ghost' size='sm' onClick={() => close(false)}>
+                      {t('Close')}
+                    </Button>
+                  }
                 />
               ) : null}
               {isEditing && modelQuery.isPending && <LoadingState />}
@@ -346,6 +308,28 @@ export function ModelMutateDrawer(props: {
                                     )}
                                   </span>
                                 )}
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name='display_name'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t('Display name')}</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder={t('Defaults to the model name')}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              {t(
+                                'Shown on the model square and detail page. Leave empty to derive it from the model name.'
+                              )}
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
@@ -535,13 +519,39 @@ export function ModelMutateDrawer(props: {
                                 value={field.value || []}
                                 onChange={field.onChange}
                                 placeholder={t('vision, tools, reasoning...')}
+                                renderLabel={(value) =>
+                                  t(
+                                    CAPABILITY_LABEL_KEYS[
+                                      value as keyof typeof CAPABILITY_LABEL_KEYS
+                                    ] ?? value
+                                  )
+                                }
                               />
                             </FormControl>
                             <FormDescription>
-                              {t(
-                                'Shown as icons on the model card.'
-                              )}
+                              {t('Shown as icons on the model card.')}
                             </FormDescription>
+                            {/* 能力值有白名单且是英文标识，光给个自由输入框等于让运营背
+                                code。这里把可选值摊开成胶囊，点一下追加，仓库里存的仍是标识。 */}
+                            <div className='flex flex-wrap gap-1.5'>
+                              {MODEL_CAPABILITY_VALUES.filter(
+                                (value) => !(field.value || []).includes(value)
+                              ).map((value) => (
+                                <button
+                                  key={value}
+                                  type='button'
+                                  className='border-border text-muted-foreground hover:border-foreground hover:text-foreground rounded-full border px-2 py-0.5 text-[11px] transition-colors'
+                                  onClick={() =>
+                                    field.onChange([
+                                      ...(field.value || []),
+                                      value,
+                                    ])
+                                  }
+                                >
+                                  {t(CAPABILITY_LABEL_KEYS[value])}
+                                </button>
+                              ))}
+                            </div>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -665,7 +675,7 @@ export function ModelMutateDrawer(props: {
                               </FormLabel>
                               <FormDescription>
                                 {t(
-                                  'Allow listing when a channel is available and the user has group access. This does not change API access.'
+                                  'Allow listing when a channel is available, billing is configured, and the user has group access. This does not change API access.'
                                 )}
                               </FormDescription>
                             </div>
@@ -739,61 +749,6 @@ export function ModelMutateDrawer(props: {
               </SheetFooter>
             </>
           )}
-          {props.open && pricingVisited && savedModel && (
-            <div
-              className={
-                section === 'pricing'
-                  ? 'flex min-h-0 flex-1 flex-col'
-                  : 'hidden'
-              }
-            >
-              {savedModel.name_rule !== 0 && (
-                <div className='space-y-2 p-4'>
-                  <p className='text-muted-foreground text-sm'>
-                    {t(
-                      'Select a concrete model to configure pricing. Metadata matching does not propagate prices.'
-                    )}
-                  </p>
-                  <Combobox
-                    value={pricingName}
-                    onValueChange={(value) => {
-                      if (pricingDirty) {
-                        setPendingPricingName(value ?? '')
-                        setCloseConfirm(true)
-                      } else {
-                        setPricingName(value ?? '')
-                      }
-                    }}
-                    options={(savedModel.matched_models ?? []).map((name) => ({
-                      value: name,
-                      label: name,
-                    }))}
-                    aria-label={t('Select model')}
-                    className='w-full'
-                    placeholder={t('Select model')}
-                  />
-                </div>
-              )}
-              {(savedModel.name_rule === 0 || pricingName) && (
-                <ModelPricingPanel
-                  onDirtyChange={setPricingDirty}
-                  key={
-                    savedModel.name_rule === 0
-                      ? savedModel.model_name
-                      : pricingName
-                  }
-                  modelName={
-                    savedModel.name_rule === 0
-                      ? savedModel.model_name
-                      : pricingName
-                  }
-                />
-              )}
-            </div>
-          )}
-          {props.open && section === 'connections' && savedModel && (
-            <ModelConnections model={savedModel} />
-          )}
         </SheetContent>
       </Sheet>
       <ConfirmDialog
@@ -804,13 +759,7 @@ export function ModelMutateDrawer(props: {
         confirmText={t('Discard changes')}
         handleConfirm={() => {
           setCloseConfirm(false)
-          if (pendingPricingName !== null) {
-            setPricingName(pendingPricingName)
-            setPendingPricingName(null)
-            setPricingDirty(false)
-          } else {
-            props.onOpenChange(false)
-          }
+          props.onOpenChange(false)
         }}
       />
     </>

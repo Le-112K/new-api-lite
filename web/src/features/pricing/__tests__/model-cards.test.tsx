@@ -163,14 +163,17 @@ describe('model cards', () => {
     render(
       <ModelCard model={pricingModel({ model_name: name })} onClick={onClick} />
     )
-    // The heading carries the brand-cased display name and keeps the raw API id
-    // on its title, so hovering reveals the exact machine string.
+    // The heading carries the display name (admin-configured or derived) and
+    // repeats it on its title so a truncation still has a hover affordance.
     const heading = screen.getByRole('heading', { level: 3 })
-    expect(heading).toHaveAttribute('title', name)
+    expect(heading).toHaveAttribute('title', heading.textContent)
     expect(heading).not.toHaveTextContent(name)
     // The raw identifier is still rendered on the card (mono, selectable), so it
-    // survives even without the clipboard button.
-    expect(screen.getByText(name)).toHaveClass('font-mono')
+    // survives even without the clipboard button; its title exposes the full id
+    // even when the line truncates.
+    const idLine = screen.getByText(name)
+    expect(idLine).toHaveClass('font-mono')
+    expect(idLine).toHaveAttribute('title', name)
     await user.click(screen.getByRole('button', { name: 'Copy model name' }))
     expect(await navigator.clipboard.readText()).toBe(name)
     expect(onClick).not.toHaveBeenCalled()
@@ -225,9 +228,46 @@ describe('model cards', () => {
     )
     const heading = screen.getByRole('heading', { level: 3 })
     expect(heading).toHaveTextContent('DeepSeek Reasoner')
-    expect(heading).toHaveAttribute('title', name)
+    expect(heading).toHaveAttribute('title', 'DeepSeek Reasoner')
     expect(heading).not.toHaveClass('font-mono')
     expect(screen.getByText(name)).toHaveClass('font-mono')
+  })
+
+  it('prefers the backend-configured display name and keeps the id copyable', async () => {
+    const user = userEvent.setup()
+    const name = 'deepseek-v4-1-flash-260910'
+    render(
+      <ModelCard
+        model={pricingModel({
+          model_name: name,
+          display_name: 'DeepSeek V4.1 Flash 特调版',
+        })}
+        onClick={vi.fn()}
+      />
+    )
+    // Line 1: whatever the admin configured.
+    const heading = screen.getByRole('heading', { level: 3 })
+    expect(heading).toHaveTextContent('DeepSeek V4.1 Flash 特调版')
+    // Line 2: the callable id is untouched by the display name, and copying it
+    // yields the exact upstream string rather than the title above.
+    expect(screen.getByText(name)).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Copy model name' }))
+    expect(await navigator.clipboard.readText()).toBe(name)
+  })
+
+  it('falls back to the derived name when the configured one is blank', () => {
+    render(
+      <ModelCard
+        model={pricingModel({
+          model_name: 'glm-5-3-flash',
+          display_name: '   ',
+        })}
+        onClick={vi.fn()}
+      />
+    )
+    expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent(
+      'GLM 5 3 Flash'
+    )
   })
 
   it('paginates the model cards and disables navigation at both boundaries', async () => {

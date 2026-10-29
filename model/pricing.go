@@ -15,6 +15,9 @@ import (
 
 type Pricing struct {
 	ModelName              string                  `json:"model_name"`
+	// DisplayName 是管理员在模型元数据里配置的展示名；为空表示未配置，
+	// 由前端按 ModelName 推导。ModelName 始终是可调用的模型 ID。
+	DisplayName            string                  `json:"display_name,omitempty"`
 	Description            string                  `json:"description,omitempty"`
 	Icon                   string                  `json:"icon,omitempty"`
 	Tags                   string                  `json:"tags,omitempty"`
@@ -37,7 +40,6 @@ type Pricing struct {
 	AudioCompletionRatio   *float64                `json:"audio_completion_ratio,omitempty"`
 	EnableGroup            []string                `json:"enable_groups"`
 	SupportedEndpointTypes []constant.EndpointType `json:"supported_endpoint_types"`
-	PricingVersion         string                  `json:"pricing_version,omitempty"`
 
 	// PriceConfigured 表示该模型是否存在可用的计费配置（按次价格或模型倍率）。
 	// 未配置的模型无法通过计费校验，调用必然失败，因此
@@ -350,6 +352,7 @@ func updatePricing() {
 			if meta.Status != 1 {
 				continue
 			}
+			pricing.DisplayName = meta.DisplayName
 			pricing.Description = meta.Description
 			pricing.Icon = meta.Icon
 			pricing.Tags = meta.Tags
@@ -389,11 +392,6 @@ func updatePricing() {
 			pricing.AudioCompletionRatio = &audioCompletionRatio
 		}
 		pricingMap = append(pricingMap, pricing)
-	}
-
-	// 防止大更新后数据不通用
-	if len(pricingMap) > 0 {
-		pricingMap[0].PricingVersion = "5a90f2b86c08bd983a9a2e6d66c255f4eaef9c4bc934386d2b6ae84ef0ff1f1f"
 	}
 
 	// 刷新缓存映射，供高并发快速查询

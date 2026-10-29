@@ -85,7 +85,7 @@ describe('pricing subscription filter', () => {
     render(<PricingFilterBar {...filterBarProps()} />)
 
     // Subscription tiers are directly visible.
-    expect(screen.getByRole('button', { name: /^All Models\s*4$/ })).toBeVisible()
+    expect(screen.getByRole('button', { name: /^All plans\s*4$/ })).toBeVisible()
     expect(screen.getByRole('button', { name: /^Pro/ })).toBeVisible()
     expect(screen.getByRole('button', { name: /^Max/ })).toBeVisible()
     expect(screen.getByRole('button', { name: /^默认分组/ })).toBeVisible()
@@ -125,7 +125,7 @@ describe('pricing subscription filter', () => {
     expect(props.onVendorChange).toHaveBeenCalledWith('智谱')
   })
 
-  it('marks the applied tier and resets through the All Models pill', async () => {
+  it('marks the applied tier and resets through the All plans pill', async () => {
     const props = filterBarProps({ groupFilter: 'vip' })
     const user = userEvent.setup()
     render(<PricingFilterBar {...props} />)
@@ -135,11 +135,11 @@ describe('pricing subscription filter', () => {
       'true'
     )
     expect(
-      screen.getByRole('button', { name: /^All Models\s*4$/ })
+      screen.getByRole('button', { name: /^All plans\s*4$/ })
     ).toHaveAttribute('aria-pressed', 'false')
 
     await user.click(
-      screen.getByRole('button', { name: /^All Models\s*4$/ })
+      screen.getByRole('button', { name: /^All plans\s*4$/ })
     )
     expect(props.onGroupChange).toHaveBeenCalledWith('all')
   })

@@ -30,6 +30,12 @@ export type PricingVendor = {
 export type PricingModel = {
   id: number
   model_name: string
+  /**
+   * Admin-configured title for the model square. Empty/absent means the card
+   * falls back to a readable form derived from `model_name`. It never replaces
+   * `model_name`: that stays the callable id shown (and copied) on the card.
+   */
+  display_name?: string
   description?: string
   icon?: string
   vendor_id?: number
@@ -51,7 +57,6 @@ export type PricingModel = {
   key?: string
   group_ratio?: Record<string, number>
   /** Pricing version returned by backend, useful for cache busting */
-  pricing_version?: string
   /**
    * Optional model metadata fields reserved for backend-provided catalog data.
    * Keep them data-driven; do not synthesize display values on the client.

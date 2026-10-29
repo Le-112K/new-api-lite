@@ -37,7 +37,12 @@ func lockMetadataMutation(tx *gorm.DB) error {
 
 var ErrMetadataSyncConflict = errors.New("metadata changed; preview again before applying")
 
-var MetadataSyncFields = []string{"description", "icon", "tags", "vendor", "endpoints", "name_rule", "status"}
+// MetadataSyncFields 决定「同步资料」能覆盖哪些列。模型广场卡片与详情弹窗消费
+// 的上下文/最大输出/能力也必须在这里，否则同步完仍然是破折号，只能手填。
+var MetadataSyncFields = []string{
+	"description", "icon", "tags", "vendor", "endpoints", "name_rule", "status",
+	"context_length", "max_output_tokens", "capabilities", "thinking_strength",
+}
 
 type MetadataValues struct {
 	Description      string `json:"description"`
@@ -87,6 +92,23 @@ func ValidateThinkingStrength(value string) error {
 }
 
 // ValidateCapabilities 检查逗号分隔的能力清单：空串合法，未知取值报错。
+// SanitizeCapabilities 丢弃白名单外的取值。上游 feed 不受我们控制，整串写入
+// 会让 ValidateMetadataValues 直接报错、整次同步失败，所以这里按白名单收敛。
+func SanitizeCapabilities(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return ""
+	}
+	kept := make([]string, 0, 4)
+	for item := range strings.SplitSeq(value, ",") {
+		item = strings.TrimSpace(item)
+		if item == "" || !ValidModelCapabilities[item] {
+			continue
+		}
+		kept = append(kept, item)
+	}
+	return strings.Join(kept, ",")
+}
+
 func ValidateCapabilities(value string) error {
 	for _, item := range strings.Split(value, ",") {
 		item = strings.TrimSpace(item)
@@ -290,6 +312,14 @@ func ApplyMetadataSync(updates []MetadataSyncUpdate, upstreamVendors map[string]
 					fields[field] = update.Values.NameRule
 				case "status":
 					fields[field] = update.Values.Status
+				case "context_length":
+					fields[field] = update.Values.ContextLength
+				case "max_output_tokens":
+					fields[field] = update.Values.MaxOutputTokens
+				case "capabilities":
+					fields[field] = update.Values.Capabilities
+				case "thinking_strength":
+					fields[field] = update.Values.ThinkingStrength
 				case "vendor":
 					vendorID := 0
 					name := update.Values.Vendor

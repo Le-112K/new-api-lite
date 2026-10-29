@@ -16,6 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { TriangleAlert } from 'lucide-react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -25,23 +26,17 @@ import { BadgeListCell, TruncatedCell } from '@/components/data-table'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from '@/components/ui/tooltip'
-import {
-  useCanEditModelPricing,
-  type ModelPricingConfig,
-} from '@/features/model-pricing/api'
-import { modelPricingDisplay } from '@/features/model-pricing/pricing'
-import { ModelPriceCell } from '@/features/pricing/components/model-price-cell'
+import { formatModelDisplayName } from '@/features/pricing/lib/model-display-name'
 import { formatTimestampToDate } from '@/lib/format'
 import { getLobeIcon } from '@/lib/lobe-icon'
 
 import { getNameRuleConfig } from '../constants'
-import { parseModelTags, formatEndpointsDisplay } from '../lib'
-import { getModelChannelState } from '../lib/model-utils'
+import {
+  getModelMetadataCompleteness,
+  MODEL_METADATA_FIELD_LABELS,
+  parseModelTags,
+  formatEndpointsDisplay,
+} from '../lib'
 import type { Model, Vendor } from '../types'
 import { DataTableRowActions } from './data-table-row-actions'
 import { DescriptionCell } from './description-cell'
@@ -52,20 +47,15 @@ const EMPTY_VENDORS: Vendor[] = []
 
 export function useModelsColumns(
   vendors: Vendor[] = EMPTY_VENDORS,
-  pricing?: ModelPricingConfig,
-  pricingState?: 'loading' | 'error'
+  /** 分组 key → 订阅套餐标题。与模型广场卡片底部的套餐胶囊同源，
+   *  保证后台看到的名字和用户看到的一致。 */
+  planLabels: Record<string, string> = {}
 ): ColumnDef<Model>[] {
   const { t } = useTranslation()
-  const canPrice = useCanEditModelPricing()
   const { setCurrentRow, setOpen } = useModels()
   const vendorMap = useMemo(
     () => new Map(vendors.map((vendor) => [vendor.id, vendor])),
     [vendors]
-  )
-  const priceMap = useMemo(
-    () =>
-      new Map(pricing?.entries.map((entry) => [entry.model_name, entry]) ?? []),
-    [pricing]
   )
   return useMemo<ColumnDef<Model>[]>(() => {
     const rules = getNameRuleConfig(t)
@@ -96,14 +86,25 @@ export function useModelsColumns(
       {
         accessorKey: 'model_name',
         header: t('Model'),
-        size: 310,
-        minSize: 250,
+        size: 260,
+        minSize: 220,
         enableHiding: false,
         meta: { mobileTitle: true },
         cell: ({ row }) => {
           const model = row.original
           const vendor = vendorMap.get(model.vendor_id ?? 0)
           const iconKey = model.icon || vendor?.icon || model.model_name[0]
+          // 后台与模型广场共用同一套身份：第一行是运营配置的展示名（留空回落
+          // 派生名），第二行才是可调用的模型 ID。两处名字必须一致，否则运营
+          // 改完展示名也无从核对。
+          const displayName =
+            model.display_name?.trim() ||
+            formatModelDisplayName(model.model_name)
+          const completeness = getModelMetadataCompleteness(model)
+          const missingLabels = completeness.missing
+            .map((field) => t(MODEL_METADATA_FIELD_LABELS[field]))
+            .join(' / ')
+          const showIncomplete = model.id <= 0 || !completeness.complete
           return (
             <div className='flex max-w-[320px] min-w-0 items-start gap-2.5 py-1'>
               <span className='mt-1 flex size-6 shrink-0 items-center justify-center'>
@@ -113,26 +114,37 @@ export function useModelsColumns(
                 <div className='flex min-w-0 items-center gap-1'>
                   <Button
                     variant='link'
-                    className='text-foreground h-auto min-w-0 shrink justify-start p-0 font-mono text-sm'
-                    title={model.model_name}
+                    className='text-foreground h-auto min-w-0 shrink justify-start p-0 text-sm font-semibold'
+                    title={displayName}
                     onClick={() => {
                       setCurrentRow(model)
                       setOpen('update-model')
                     }}
                   >
-                    <span className='truncate'>{model.model_name}</span>
+                    <span className='truncate'>{displayName}</span>
                   </Button>
                   <CopyButton
                     value={model.model_name}
                     className='size-6 shrink-0'
                   />
                 </div>
-                <div className='text-muted-foreground mt-1 flex min-w-0 items-center gap-2 text-xs'>
-                  <span className='truncate' title={vendor?.name}>
-                    {model.id > 0
-                      ? (vendor?.name ?? t('No vendor'))
-                      : t('Missing metadata')}
+                <div className='text-muted-foreground mt-1 flex min-w-0 items-center gap-1.5 text-xs'>
+                  <span className='truncate font-mono' title={model.model_name}>
+                    {model.model_name}
                   </span>
+                  {vendor && (
+                    <>
+                      <span aria-hidden className='hidden shrink-0 xl:inline'>
+                        ·
+                      </span>
+                      <span
+                        className='hidden max-w-[45%] shrink-0 truncate xl:inline'
+                        title={vendor.name}
+                      >
+                        {vendor.name}
+                      </span>
+                    </>
+                  )}
                   {model.name_rule !== 0 && (
                     <span className='shrink-0'>
                       {rules[model.name_rule as 0 | 1 | 2 | 3]?.label} ·{' '}
@@ -140,112 +152,90 @@ export function useModelsColumns(
                     </span>
                   )}
                 </div>
+                {showIncomplete && (
+                  <div
+                    className='text-warning mt-1 flex min-w-0 items-center gap-1 text-xs'
+                    title={
+                      missingLabels
+                        ? t('Missing: {{fields}}', { fields: missingLabels })
+                        : undefined
+                    }
+                  >
+                    <TriangleAlert className='size-3.5 shrink-0' />
+                    <span className='truncate'>
+                      {model.id <= 0
+                        ? t('Missing metadata')
+                        : t('Metadata incomplete')}
+                    </span>
+                    {model.id > 0 && (
+                      <span className='shrink-0 tabular-nums'>
+                        {completeness.filled}/{completeness.total}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )
         },
       },
       {
-        id: 'pricing',
-        header: t('Pricing'),
-        meta: { label: t('Pricing') },
-        size: 225,
+        // 订阅制下运营真正关心的是「这个模型被哪些套餐包含」——模型广场卡片
+        // 底部展示的就是这些胶囊，后台必须用同一套名字，否则对不上账。
+        id: 'plans',
+        header: t('Plans'),
+        meta: { label: t('Plans') },
+        size: 160,
+        minSize: 110,
         enableSorting: false,
         cell: ({ row }) => {
-          if (!canPrice) {
+          // 只认真正绑定了套餐的分组：没绑过的分组没有套餐名，不能拿分组名顶上,
+          // 否则运营看到「默认分组」会以为自己已经配好了。
+          const groups = (row.original.enable_groups ?? []).filter(
+            (group) => planLabels[group]
+          )
+          if (groups.length === 0) {
             return (
               <span className='text-muted-foreground text-xs'>
-                {t('Super admin')}
+                {t('No plan includes this model yet')}
               </span>
             )
           }
-          if (row.original.name_rule !== 0) {
-            return (
-              <span className='text-muted-foreground text-xs'>
-                {t('Per matched model')}
-              </span>
-            )
-          }
-          if (pricingState) {
-            return (
-              <span className='text-muted-foreground text-xs'>
-                {pricingState === 'error'
-                  ? t('Failed to load model pricing')
-                  : t('Loading...')}
-              </span>
-            )
-          }
-          const entry = priceMap.get(row.original.model_name)
+          // 一列最多放一个胶囊：多套餐的模型靠「+N」+ 悬浮全量，避免行高
+          // 随套餐数量跳动（列宽只够放 4 个中文字）。
+          const [first, ...others] = groups
+          const rest = others.length
           return (
-            <Button
-              variant='ghost'
-              className='h-auto w-full max-w-full min-w-0 justify-start px-0 py-1 text-left font-normal hover:bg-transparent'
-              aria-label={t('View pricing for {{model}}', {
-                model: row.original.model_name,
-              })}
-              onClick={() => {
-                setCurrentRow(row.original)
-                setOpen('price-model')
-              }}
+            <div
+              className='flex min-w-0 items-center gap-1'
+              title={groups.map((group) => planLabels[group]).join(' / ')}
             >
-              <ModelPriceCell
-                model={modelPricingDisplay(
-                  entry ?? {
-                    model_name: row.original.model_name,
-                    effective: {},
-                  }
-                )}
-                options={{ tokenUnit: 'M' }}
-              />
-            </Button>
+              <span className='bg-foreground text-background max-w-full truncate rounded-full px-2 py-0.5 text-[11px] font-semibold'>
+                {planLabels[first]}
+              </span>
+              {rest > 0 && (
+                <span className='text-muted-foreground shrink-0 text-[11px] font-medium'>
+                  +{rest}
+                </span>
+              )}
+            </div>
           )
         },
       },
       {
         accessorKey: 'square_state',
         header: t('Model square visibility'),
-        size: 115,
+        size: 110,
+        // 徽标不能被压到换行/截断（「无法展示」曾在此列被切成「无法展」）。
+        minSize: 104,
         enableSorting: false,
         meta: { mobileBadge: true },
         cell: ({ row }) => <ModelSquareStatus model={row.original} />,
       },
       {
-        id: 'connections',
-        header: t('Channels and groups'),
-        size: 180,
-        enableSorting: false,
-        cell: ({ row }) => {
-          const state = getModelChannelState(row.original)
-          return (
-            <div className='min-w-0 text-sm'>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <span
-                      tabIndex={0}
-                      title={t(state.description)}
-                      aria-description={t(state.description)}
-                      className='block whitespace-normal sm:truncate'
-                    />
-                  }
-                >
-                  {t('Channels {{channels}} · Groups {{groups}}', {
-                    channels: row.original.bound_channels?.length ?? 0,
-                    groups: row.original.enable_groups?.length ?? 0,
-                  })}
-                </TooltipTrigger>
-                <TooltipContent role='tooltip'>
-                  {t(state.description)}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          )
-        },
-      },
-      {
         accessorKey: 'tags',
         header: t('Tags'),
-        size: 180,
+        size: 140,
         enableSorting: false,
         meta: { mobileHidden: true },
         cell: ({ row }) => (
@@ -265,7 +255,8 @@ export function useModelsColumns(
             {t('Sync policy')}
           </TruncatedCell>
         ),
-        size: 145,
+        size: 120,
+        minSize: 100,
         enableSorting: false,
         meta: { mobileHidden: true, label: t('Sync policy') },
         cell: ({ row }) => (
@@ -283,7 +274,7 @@ export function useModelsColumns(
         header: t('Actions'),
         enableSorting: false,
         enableHiding: false,
-        size: canPrice ? 170 : 105,
+        size: 120,
         cell: ({ row }) => <DataTableRowActions row={row} />,
       },
       {
@@ -378,5 +369,5 @@ export function useModelsColumns(
         meta: { mobileHidden: true },
       },
     ]
-  }, [t, canPrice, vendorMap, priceMap, pricingState, setCurrentRow, setOpen])
+  }, [t, vendorMap, planLabels, setCurrentRow, setOpen])
 }

@@ -24,15 +24,14 @@ import { PageTransition } from '@/components/page-transition'
 
 import {
   EmptyState,
-  PricingTable,
-  PricingToolbar,
   ModelCardGrid,
   ModelDetailsDrawer,
 } from './components'
 import { PricingFilterBar } from './components/pricing-filter-bar'
-import { EXCLUDED_GROUPS, FILTER_ALL, VIEW_MODES } from './constants'
+import { EXCLUDED_GROUPS, FILTER_ALL } from './constants'
 import { useFilters } from './hooks/use-filters'
 import { usePricingData } from './hooks/use-pricing-data'
+import { buildGroupLabels } from './lib/group-labels'
 
 /** Stable keys for the loading grid — one per card slot, never an index. */
 const CARD_PLACEHOLDERS = [
@@ -52,30 +51,14 @@ export function Pricing() {
     null
   )
 
-  const {
-    models,
-    vendors,
-    groupRatio,
-    usableGroup,
-    endpointMap,
-    autoGroups,
-    subscriptionPlans,
-    isLoading,
-    priceRate,
-    usdExchangeRate,
-  } = usePricingData()
+  const { models, vendors, usableGroup, endpointMap, subscriptionPlans, isLoading } =
+    usePricingData()
 
   const {
-    sortBy,
     vendorFilter,
     groupFilter,
-    tokenUnit,
-    viewMode,
-    showRechargePrice,
-    setSortBy,
     setVendorFilter,
     setGroupFilter,
-    setViewMode,
     filteredModels,
     hasActiveFilters,
     clearFilters,
@@ -103,24 +86,12 @@ export function Pricing() {
     [usableGroup]
   )
 
-  // Group key -> label for each card's plan pills. Subscription plan titles
-  // win over the admin group label so the card badges speak the same words as
-  // the tier chips. Groups without a plan keep their usable_group label.
-  const groupLabels = useMemo(() => {
-    const out: Record<string, string> = {}
-    for (const [key, value] of Object.entries(usableGroup || {})) {
-      out[key] =
-        typeof value === 'string'
-          ? value
-          : ((value as { desc?: string })?.desc ?? key)
-    }
-    for (const plan of subscriptionPlans) {
-      if (plan.upgrade_group && plan.title) {
-        out[plan.upgrade_group] = plan.title
-      }
-    }
-    return out
-  }, [usableGroup, subscriptionPlans])
+  // Group key -> label for each card's plan pills. Shared with the admin model
+  // list so both sides print the same plan names.
+  const groupLabels = useMemo(
+    () => buildGroupLabels(usableGroup, subscriptionPlans),
+    [usableGroup, subscriptionPlans]
+  )
 
   const appliedPlanLabel =
     groupFilter !== FILTER_ALL
@@ -142,20 +113,11 @@ export function Pricing() {
       )
     }
 
-    if (viewMode === VIEW_MODES.CARD) {
-      return (
-        <ModelCardGrid
-          models={filteredModels}
-          onModelClick={handleModelClick}
-          groupLabels={groupLabels}
-        />
-      )
-    }
-
     return (
-      <PricingTable
+      <ModelCardGrid
         models={filteredModels}
         onModelClick={handleModelClick}
+        groupLabels={groupLabels}
       />
     )
   }
@@ -179,10 +141,9 @@ export function Pricing() {
             <h1 className='text-foreground text-[clamp(1.75rem,2.6vw,2.25rem)] leading-tight font-bold'>
               {t('Model Square')}
             </h1>
-            <div className='bg-muted mx-auto mt-2.5 h-3.5 w-52 rounded-md' />
           </header>
 
-          <div className='space-y-3 pt-5'>
+          <div className='space-y-3 pt-8'>
             {[
               ['tier-a', 'tier-b', 'tier-c', 'tier-d'],
               ['vendor-a', 'vendor-b', 'vendor-c', 'vendor-d', 'vendor-e'],
@@ -199,7 +160,7 @@ export function Pricing() {
             ))}
           </div>
 
-          <div className='grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-3 pt-6 sm:gap-4'>
+          <div className='grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-3 pt-8 sm:gap-4'>
             {CARD_PLACEHOLDERS.map((slot) => (
               <div
                 key={slot}
@@ -225,14 +186,9 @@ export function Pricing() {
           <h1 className='text-foreground text-[clamp(1.75rem,2.6vw,2.25rem)] leading-tight font-bold'>
             {t('Model Square')}
           </h1>
-          <p className='text-muted-foreground mt-1 text-sm'>
-            {t('This site currently has {{count}} models enabled', {
-              count: models?.length ?? 0,
-            })}
-          </p>
         </header>
 
-        <div className='pt-3'>
+        <div className='pt-8'>
           <PricingFilterBar
             groupFilter={groupFilter}
             vendorFilter={vendorFilter}
@@ -248,18 +204,7 @@ export function Pricing() {
           />
         </div>
 
-        <section className='pt-4 pb-10'>
-          <PricingToolbar
-            filteredCount={filteredModels.length}
-            totalCount={models?.length}
-            sortBy={sortBy}
-            onSortChange={setSortBy}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-          />
-
-          {renderPricingContent()}
-        </section>
+        <section className='pt-8 pb-10'>{renderPricingContent()}</section>
 
         {selectedModel && (
           <ModelDetailsDrawer
@@ -268,7 +213,6 @@ export function Pricing() {
               if (!open) setSelectedModelName(null)
             }}
             model={selectedModel}
-            groupRatio={groupRatio || {}}
             usableGroup={usableGroup || {}}
             endpointMap={
               (endpointMap as Record<
@@ -276,11 +220,7 @@ export function Pricing() {
                 { path?: string; method?: string }
               >) || {}
             }
-            autoGroups={autoGroups || []}
-            priceRate={priceRate ?? 1}
-            usdExchangeRate={usdExchangeRate ?? 1}
-            tokenUnit={tokenUnit}
-            showRechargePrice={showRechargePrice}
+            groupLabels={groupLabels}
           />
         )}
       </PageTransition>

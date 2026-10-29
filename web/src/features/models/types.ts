@@ -37,10 +37,14 @@ export type ModelSquareState = 'visible' | 'unavailable' | 'hidden' | 'partial'
 
 export interface Model {
   square_state?: ModelSquareState
+  /** 是否配了模型倍率或按次价；false 的模型不会出现在公开广场上。 */
+  billing_configured?: boolean
   has_metadata?: boolean
   configured_channel_count?: number
   id: number
   model_name: string
+  /** 模型广场/详情页上展示的标题；留空时前端按 model_name 推导。 */
+  display_name?: string
   description?: string
   icon?: string
   tags?: string
@@ -120,6 +124,7 @@ export interface SearchModelsParams {
   vendor?: string // vendor ID to filter by
   status?: string // filter by status
   sync_official?: string // filter by sync_official status
+  group?: string // filter by plan (group key)
   p?: number
   page_size?: number
 }

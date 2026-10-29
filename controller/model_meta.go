@@ -2,12 +2,14 @@ package controller
 
 import (
 	"net/http"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/setting/ratio_setting"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,13 +33,17 @@ func listModelsMeta(c *gin.Context, keyword, vendor string) {
 		return
 	}
 
+	// 订阅制下运营按套餐找模型，套餐即分组（分组由渠道分组推导），所以这里
+	// 和 square_state 一样做后置过滤：先取全量候选，再按套餐筛完才分页。
+	group := strings.TrimSpace(c.Query("group"))
+
 	pageInfo := common.GetPageQuery(c)
-	if squareState != "" && (pageInfo.GetPage() < 1 || pageInfo.GetPageSize() < 1) {
+	if (squareState != "" || group != "") && (pageInfo.GetPage() < 1 || pageInfo.GetPageSize() < 1) {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Invalid pagination"})
 		return
 	}
 	offset, limit := pageInfo.GetStartIdx(), pageInfo.GetPageSize()
-	if squareState != "" {
+	if squareState != "" || group != "" {
 		// Visibility depends on live channels and metadata rules. Filter the
 		// enriched candidate set before counting and paginating the results.
 		offset, limit = 0, -1
@@ -55,12 +61,16 @@ func listModelsMeta(c *gin.Context, keyword, vendor string) {
 		common.ApiError(c, err)
 		return
 	}
-	if squareState != "" {
+	if squareState != "" || group != "" {
 		filtered := make([]*model.Model, 0, len(modelsMeta))
 		for _, metadata := range modelsMeta {
-			if metadata.SquareState == squareState {
-				filtered = append(filtered, metadata)
+			if squareState != "" && metadata.SquareState != squareState {
+				continue
 			}
+			if group != "" && !slices.Contains(metadata.EnableGroups, group) {
+				continue
+			}
+			filtered = append(filtered, metadata)
 		}
 		total = int64(len(filtered))
 		start := len(filtered)
@@ -332,6 +342,24 @@ func enrichModels(models []*model.Model) error {
 			sort.Strings(metadata.MatchedModels)
 			metadata.MatchedCount = len(names)
 		}
+		// 公开广场用同一套计费配置做准入：没配倍率/按次价的模型不会出现在
+		// 广场上。这里把结果带出去，后台才不会一边写「正常展示」一边被藏掉。
+		billingNames := []string{metadata.ModelName}
+		if len(metadata.MatchedModels) > 0 {
+			billingNames = metadata.MatchedModels
+		}
+		billingConfigured := false
+		for _, name := range billingNames {
+			if _, ok := ratio_setting.GetModelPrice(name, false); ok {
+				billingConfigured = true
+				break
+			}
+			if _, ok, _ := ratio_setting.GetModelRatio(name); ok {
+				billingConfigured = true
+				break
+			}
+		}
+		metadata.BillingConfigured = &billingConfigured
 	}
 	return nil
 }

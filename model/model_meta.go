@@ -35,6 +35,9 @@ type BoundChannel struct {
 type Model struct {
 	Id                 int            `json:"id"`
 	ModelName          string         `json:"model_name" gorm:"size:128;not null;uniqueIndex:uk_model_name_delete_at,priority:1"`
+	// DisplayName 是模型广场上的展示名，由管理员配置；留空时前端回落到由
+	// ModelName 推导的可读名称。它只影响展示，不改变可调用的模型 ID。
+	DisplayName        string         `json:"display_name,omitempty" gorm:"type:varchar(128)"`
 	Description        string         `json:"description,omitempty" gorm:"type:text"`
 	Icon               string         `json:"icon,omitempty" gorm:"type:varchar(128)"`
 	Tags               string         `json:"tags,omitempty" gorm:"type:varchar(255)"`
@@ -66,6 +69,11 @@ type Model struct {
 	HasMetadata            bool             `json:"has_metadata" gorm:"-"`
 	ConfiguredChannelCount int              `json:"configured_channel_count" gorm:"-"`
 	SquareState            ModelSquareState `json:"square_state" gorm:"-"`
+
+	// BillingConfigured 表示该模型是否配了模型倍率或按次价格。公开广场的准入
+	// 仍然要求有计费配置（否则用户能点到必然报错的模型），所以后台必须能看见
+	// 这件事，否则会出现「后台正常展示、广场看不到」的错位。
+	BillingConfigured *bool `json:"billing_configured,omitempty" gorm:"-"`
 }
 
 // MatchesName applies a metadata rule to a concrete channel model name.
@@ -273,7 +281,15 @@ func (mi *Model) Update() error {
 		}
 		mi.UpdatedTime = common.GetTimestamp()
 		return tx.Model(&Model{}).Where("id = ?", mi.Id).
-			Select("model_name", "description", "icon", "tags", "vendor_id", "endpoints", "status", "sync_official", "name_rule", "updated_time").Updates(mi).Error
+			// 显式列出可写列：Select 会让零值也写回，所以管理员可以清空
+			// display_name / context_length 等字段。新增可配置字段时务必加到
+			// 这里，否则表单能改、保存却静默丢失。
+			Select(
+				"model_name", "display_name", "description", "icon", "tags",
+				"vendor_id", "endpoints", "status", "sync_official", "name_rule",
+				"context_length", "max_output_tokens", "thinking_strength",
+				"capabilities", "updated_time",
+			).Updates(mi).Error
 	})
 }
 

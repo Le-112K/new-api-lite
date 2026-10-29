@@ -19,50 +19,26 @@ For commercial licensing, please contact support@quantumnous.com
 import { useSearch } from '@tanstack/react-router'
 import { useMemo, useCallback, useState } from 'react'
 
-import {
-  FILTER_ALL,
-  SORT_OPTIONS,
-  DEFAULT_TOKEN_UNIT,
-  VIEW_MODES,
-  type ViewMode,
-} from '../constants'
+import { FILTER_ALL, SORT_OPTIONS } from '../constants'
 import { filterAndSortModels } from '../lib/filters'
-import type { PricingModel, TokenUnit } from '../types'
+import type { PricingModel } from '../types'
 
+// 只剩「供应商 / 套餐(分组)」两个筛选维度。价格单位、充值价开关、排序都是
+// 按 token 卖时代的东西，随订阅制一起删了——不要为兼容旧链接再把它们加回来。
 type FilterState = {
-  sort?: string
   vendor?: string
   group?: string
-  tokenUnit?: TokenUnit
-  view?: ViewMode
-  rechargePrice?: boolean
-}
-
-function normalizeViewMode(value: unknown): ViewMode {
-  if (value === VIEW_MODES.TABLE) {
-    return VIEW_MODES.TABLE
-  }
-  return VIEW_MODES.CARD
 }
 
 export function useFilters(models: PricingModel[]) {
   const search = useSearch({ from: '/pricing/' })
   const [filterState, setFilterState] = useState<FilterState>(() => ({
-    sort: search.sort,
     vendor: search.vendor,
     group: search.group,
-    tokenUnit: search.tokenUnit,
-    view: search.view,
-    rechargePrice: search.rechargePrice,
   }))
 
-  const sortBy = filterState.sort || SORT_OPTIONS.NAME
   const vendorFilter = filterState.vendor || FILTER_ALL
   const groupFilter = filterState.group || FILTER_ALL
-  const tokenUnit: TokenUnit =
-    filterState.tokenUnit === 'K' ? 'K' : DEFAULT_TOKEN_UNIT
-  const viewMode = normalizeViewMode(filterState.view)
-  const showRechargePrice = filterState.rechargePrice === true
 
   const updateFilters = useCallback((updates: Record<string, unknown>) => {
     setFilterState((prev) => {
@@ -76,11 +52,6 @@ export function useFilters(models: PricingModel[]) {
     })
   }, [])
 
-  const setSortBy = useCallback(
-    (v: string) =>
-      updateFilters({ sort: v === SORT_OPTIONS.NAME ? undefined : v }),
-    [updateFilters]
-  )
   const setVendorFilter = useCallback(
     (v: string) => updateFilters({ vendor: v === FILTER_ALL ? undefined : v }),
     [updateFilters]
@@ -89,30 +60,15 @@ export function useFilters(models: PricingModel[]) {
     (v: string) => updateFilters({ group: v === FILTER_ALL ? undefined : v }),
     [updateFilters]
   )
-  const setTokenUnit = useCallback(
-    (v: TokenUnit) =>
-      updateFilters({ tokenUnit: v === DEFAULT_TOKEN_UNIT ? undefined : v }),
-    [updateFilters]
-  )
-  const setViewMode = useCallback(
-    (v: ViewMode) =>
-      updateFilters({ view: v === VIEW_MODES.CARD ? undefined : v }),
-    [updateFilters]
-  )
-  const setShowRechargePrice = useCallback(
-    (v: boolean) => updateFilters({ rechargePrice: v || undefined }),
-    [updateFilters]
-  )
-
   const filteredModels = useMemo(() => {
     if (!models || models.length === 0) return []
 
     return filterAndSortModels(models, {
       vendor: vendorFilter,
       group: groupFilter,
-      sortBy,
+      sortBy: SORT_OPTIONS.NAME,
     })
-  }, [models, vendorFilter, groupFilter, sortBy])
+  }, [models, vendorFilter, groupFilter])
 
   const hasActiveFilters = useMemo(
     () => vendorFilter !== FILTER_ALL || groupFilter !== FILTER_ALL,
@@ -134,18 +90,10 @@ export function useFilters(models: PricingModel[]) {
   }, [updateFilters])
 
   return {
-    sortBy,
     vendorFilter,
     groupFilter,
-    tokenUnit,
-    viewMode,
-    showRechargePrice,
-    setSortBy,
     setVendorFilter,
     setGroupFilter,
-    setTokenUnit,
-    setViewMode,
-    setShowRechargePrice,
     filteredModels,
     hasActiveFilters,
     activeFilterCount,

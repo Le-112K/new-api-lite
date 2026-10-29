@@ -131,7 +131,6 @@ func GetPricing(c *gin.Context) {
 		"supported_endpoint": model.GetSupportedEndpointMap(),
 		"auto_groups":        service.GetUserAutoGroup(group),
 		"subscription_plans": getPublicSubscriptionPlans(),
-		"pricing_version":    "a42d372ccf0b5dd13ecf71203521f9d2",
 	})
 }
 

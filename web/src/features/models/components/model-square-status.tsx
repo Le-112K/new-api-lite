@@ -75,6 +75,15 @@ export function ModelSquareStatus(props: { model: Model; detail?: boolean }) {
     default:
       return <span className='text-muted-foreground'>—</span>
   }
+  // 计费未就绪时公开广场会把模型过滤掉，哪怕渠道是通的。后台必须说这件事，
+  // 否则运营看到「正常展示」去前台找不到模型，只会怀疑是缓存问题。
+  if (props.model.square_state === 'visible' && props.model.billing_configured === false) {
+    label = t('Not priced')
+    description = t(
+      'No model ratio or per-request price is configured, so the model square hides it. Set a price before it can be published.'
+    )
+    variant = 'warning'
+  }
   const badge = (
     <StatusBadge
       variant={variant}

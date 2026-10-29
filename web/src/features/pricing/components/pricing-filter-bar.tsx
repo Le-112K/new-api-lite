@@ -266,7 +266,7 @@ export const PricingFilterBar = memo(function PricingFilterBar(
       {tierOptions.length > 0 && (
         <FilterRow label={t('Subscription Type')} first>
           <Chip
-            label={t('All Models')}
+            label={t('All plans')}
             count={props.models.length}
             active={props.groupFilter === FILTER_ALL}
             onClick={() => props.onGroupChange(FILTER_ALL)}

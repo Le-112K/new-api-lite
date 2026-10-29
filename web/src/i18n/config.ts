@@ -28,7 +28,7 @@ import { convertDetectedLanguage } from './languages'
 // dynamic import below turns each locale into its own async chunk, fetched in
 // parallel with the other initial chunks; main.tsx gates the first render on
 // `i18nReady` so components never mount with raw keys.
-const lazyLocaleBackend = {
+export const lazyLocaleBackend = {
   type: 'backend' as const,
   init() {},
   read(
@@ -40,7 +40,14 @@ const lazyLocaleBackend = {
       const file = language === 'zhCN' ? 'zh' : 'en'
       try {
         const module = await import(`./locales/${file}.json`)
-        callback(null, module.default)
+        // i18next's addResourceBundle(lng, ns, data) stores `data` as the
+        // namespace value. The locale files are wrapped in a `translation` key
+        // (the same shape inline `resources` used), so hand over the inner map:
+        // returning the whole file nests it twice and every lookup falls
+        // through to the raw key — which, since keys are English source
+        // strings, silently looks like "English works, switching does nothing".
+        const raw = module.default as { translation?: Record<string, string> }
+        callback(null, raw.translation ?? {})
       } catch (error) {
         callback(error)
       }

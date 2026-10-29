@@ -23,7 +23,7 @@ import { useTranslation } from 'react-i18next'
 
 import { DataTablePage, useDataTable } from '@/components/data-table'
 import { ErrorState } from '@/components/error-state'
-import { useModelPricing } from '@/features/model-pricing/api'
+import { usePlanLabels } from '@/features/pricing/hooks/use-plan-labels'
 import { useMediaQuery } from '@/hooks'
 import { useTableUrlState } from '@/hooks/use-table-url-state'
 import { requireServerSuccess } from '@/lib/server-error-message'
@@ -65,6 +65,7 @@ export function ModelsTable() {
       { columnId: 'square_state', searchKey: 'square_state', type: 'array' },
       { columnId: 'vendor_id', searchKey: 'vendor', type: 'array' },
       { columnId: 'sync_official', searchKey: 'sync', type: 'array' },
+      { columnId: 'plans', searchKey: 'plans', type: 'array' },
     ],
   })
 
@@ -81,6 +82,9 @@ export function ModelsTable() {
   const syncFilter =
     (columnFilters.find((f) => f.id === 'sync_official')?.value as string[]) ||
     []
+  const planFilterValue = (
+    columnFilters.find((f) => f.id === 'plans')?.value as string[] | undefined
+  )?.[0]
 
   // Fetch vendors for filter
   const { data: vendorsData } = useQuery({
@@ -123,7 +127,8 @@ export function ModelsTable() {
     activeVendorFilter ||
     statusFilterValue ||
     squareState ||
-    syncFilterValue
+    syncFilterValue ||
+    planFilterValue
   )
 
   // Fetch models data
@@ -149,6 +154,7 @@ export function ModelsTable() {
             status: statusFilterValue,
             square_state: squareState,
             sync_official: syncFilterValue,
+            group: planFilterValue,
             p: pagination.pageIndex + 1,
             page_size: pagination.pageSize,
           })
@@ -168,17 +174,10 @@ export function ModelsTable() {
   const totalCount = data?.data?.total || 0
   const vendorCounts = data?.data?.vendor_counts
 
-  // Columns configuration
-  const pricingQuery = useModelPricing(
-    models
-      .filter((item) => item.name_rule === 0)
-      .map((item) => item.model_name),
-    models.length > 0
-  )
-  let pricingState: 'loading' | 'error' | undefined
-  if (pricingQuery.isError) pricingState = 'error'
-  else if (pricingQuery.isLoading) pricingState = 'loading'
-  const columns = useModelsColumns(vendors, pricingQuery.data, pricingState)
+  // 套餐标签与模型广场同源：广场卡片底部用的就是 usable_group + 订阅套餐标题。
+  // 后台只认套餐，不拿分组名兜底——否则未绑套餐的模型会显示「默认分组」冒充套餐。
+  const planLabels = usePlanLabels(true)
+  const columns = useModelsColumns(vendors, planLabels)
 
   // React Table instance
   const { table } = useDataTable({
@@ -272,6 +271,15 @@ export function ModelsTable() {
               { label: t('Listing hidden'), value: 'hidden' },
               { label: t('Partly shown'), value: 'partial' },
             ],
+            singleSelect: true,
+          },
+          {
+            columnId: 'plans',
+            title: t('Plans'),
+            options: Object.entries(planLabels).map(([value, label]) => ({
+              label,
+              value,
+            })),
             singleSelect: true,
           },
           {

@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { X } from 'lucide-react'
-import { useState, useRef, type KeyboardEvent } from 'react'
+import { useState, useRef, type KeyboardEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Badge } from '@/components/ui/badge'
@@ -30,6 +30,8 @@ interface TagInputProps {
   placeholder?: string
   className?: string
   disabled?: boolean
+  /** 值的展示名。仓库里存的是标识符（function_calling），给人看的是中文。 */
+  renderLabel?: (value: string) => ReactNode
 }
 
 export function TagInput({
@@ -38,6 +40,7 @@ export function TagInput({
   placeholder,
   className,
   disabled = false,
+  renderLabel,
 }: TagInputProps) {
   const { t } = useTranslation()
   const placeholderText = placeholder ?? t('Add tags...')
@@ -81,7 +84,7 @@ export function TagInput({
     >
       {value.map((tag) => (
         <Badge key={tag} variant='secondary' className='gap-1 pr-1'>
-          {tag}
+          {renderLabel ? renderLabel(tag) : tag}
           {!disabled && (
             <Button
               type='button'

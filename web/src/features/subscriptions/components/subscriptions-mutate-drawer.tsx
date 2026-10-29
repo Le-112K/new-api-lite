@@ -301,7 +301,7 @@ export function SubscriptionsMutateDrawer({
                   name='upgrade_group'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('Upgrade Group')}</FormLabel>
+                      <FormLabel>{t('Plan group')}</FormLabel>
                       <FormControl>
                         <Combobox
                           options={[
@@ -319,6 +319,11 @@ export function SubscriptionsMutateDrawer({
                           placeholder={t('No Upgrade')}
                         />
                       </FormControl>
+                      <FormDescription>
+                        {t(
+                          'Users upgrade to this group after purchase, and this group also decides which models the plan sells. Model membership still comes from the channel groups.'
+                        )}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

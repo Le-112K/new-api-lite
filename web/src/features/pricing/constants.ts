@@ -31,16 +31,6 @@ export const SORT_OPTIONS = {
   PRICE_HIGH: 'price-high',
 } as const
 
-export type SortOption = (typeof SORT_OPTIONS)[keyof typeof SORT_OPTIONS]
-
-export function getSortLabels(t: TFunction): Record<SortOption, string> {
-  return {
-    [SORT_OPTIONS.NAME]: t('Name'),
-    [SORT_OPTIONS.PRICE_LOW]: t('Price: Low to High'),
-    [SORT_OPTIONS.PRICE_HIGH]: t('Price: High to Low'),
-  }
-}
-
 /** Filter values */
 export const FILTER_ALL = 'all'
 
@@ -129,13 +119,5 @@ export const TOKEN_UNIT_DIVISORS = {
 /** Default token unit for pricing display */
 export const DEFAULT_TOKEN_UNIT: TokenUnit = 'M'
 
-/** View mode options */
-export const VIEW_MODES = {
-  CARD: 'card',
-  TABLE: 'table',
-} as const
-
-export type ViewMode = (typeof VIEW_MODES)[keyof typeof VIEW_MODES]
-
-/** Default page size for pricing table */
+/** Default page size for the model card grid */
 export const DEFAULT_PRICING_PAGE_SIZE = 20

@@ -146,7 +146,7 @@ export function useSubscriptionsColumns(): ColumnDef<PlanRecord>[] {
       },
       {
         id: 'upgrade_group',
-        header: t('Upgrade Group'),
+        header: t('Plan group'),
         meta: { mobileHidden: true },
         cell: ({ row }) => {
           const group = row.original.plan.upgrade_group

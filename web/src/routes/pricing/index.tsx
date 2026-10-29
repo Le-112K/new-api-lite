@@ -24,17 +24,12 @@ import { pricingQueryOptions } from '@/features/pricing/queries'
 import { getModuleAccessForGuard } from '@/lib/nav-modules'
 import { useAuthStore } from '@/stores/auth-store'
 
+// 只剩「供应商 / 套餐(分组)」两个维度。sort / tokenUnit / rechargePrice /
+// quotaType / endpointType / tag 都是按 token 售卖时代的筛选参数，UI 早已删除，
+// 留着只会让旧链接看起来还生效。
 const pricingSearchSchema = z.object({
-  search: z.string().optional(),
-  sort: z.string().optional(),
   vendor: z.string().optional(),
   group: z.string().optional(),
-  quotaType: z.string().optional(),
-  endpointType: z.string().optional(),
-  tag: z.string().optional(),
-  tokenUnit: z.enum(['M', 'K']).optional(),
-  view: z.enum(['card', 'table']).optional().catch(undefined),
-  rechargePrice: z.boolean().optional(),
 })
 
 export const Route = createFileRoute('/pricing/')({

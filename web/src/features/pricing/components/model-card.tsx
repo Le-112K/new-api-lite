@@ -39,12 +39,24 @@ export interface ModelCardProps {
 /**
  * Model card modelled on apmix.ai/models.
  *
- * Layout is deliberately vertical and sparse: vendor mark + name, one large
- * display title, the raw model id in a tinted mono well with a copy button, and
- * the plans that include the model as solid pills pinned to the bottom. A large
- * vendor mark sits in the bottom-right corner as a watermark (16% opacity,
- * 28% on hover) and is clipped by the card. The whole card is the click target;
- * the copy button stops propagation so it never opens the drawer.
+ * The name block is two lines with different jobs:
+ *
+ * - line 1 (display name) — what the model is called. Content comes from the
+ *   backend's model metadata (`display_name`, admin-configured); when that is
+ *   empty the card derives a readable name from the id, so an unconfigured
+ *   catalogue never renders blank titles. This line is display-only.
+ * - line 2 (model id) — the callable identifier from the upstream channel
+ *   (`model_name`). It is what users paste into an API call, so it is shown in
+ *   mono and is copyable; the copy action always copies the full id, never the
+ *   truncated text on screen.
+ *
+ * Both lines truncate to keep every card on one baseline; the untruncated value
+ * stays reachable through `title`. Layout is otherwise vertical and sparse:
+ * vendor mark + name, the two name lines, then the plans that include the model
+ * as solid pills pinned to the bottom. A large vendor mark sits in the
+ * bottom-right corner as a watermark (16% opacity, 28% on hover) and is clipped
+ * by the card. The whole card is the click target; the copy button stops
+ * propagation so it never opens the drawer.
  */
 export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
   const { t } = useTranslation()
@@ -57,7 +69,10 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
   const initial = (props.model.vendor_name || modelName)
     .charAt(0)
     .toUpperCase()
-  const displayName = formatModelDisplayName(modelName)
+  // Backend-configured title wins; the derived name keeps unconfigured models
+  // readable instead of leaving a blank line.
+  const displayName =
+    props.model.display_name?.trim() || formatModelDisplayName(modelName)
 
   // Plans that already include this model. Real data (enable_groups), shown as
   // solid pills the way the reference card shows its tiers.
@@ -103,21 +118,30 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
         </span>
       </div>
 
-      {/* Display title: Sora with the app sans as fallback for CJK glyphs. */}
+      {/* Line 1 — display name. Admin-configured, truncates with the full value
+          on hover; the copy action belongs to the id below, not to this line. */}
       <h3
-        className='relative mt-4 truncate text-lg font-semibold tracking-tight'
+        className='relative mt-4 truncate text-lg leading-6 font-semibold tracking-tight'
         style={{ fontFamily: "'Sora', var(--font-sans)" }}
-        title={modelName}
+        title={displayName}
       >
         {displayName}
       </h3>
 
-      {/* Raw API id in a tinted mono well + copy affordance. */}
-      <div className='relative mt-2 flex min-w-0 items-center gap-2'>
-        <code className='bg-muted text-foreground/85 min-w-0 truncate rounded-md px-2 py-1 font-mono text-[12px]'>
+      {/* Line 2 — callable model id. The well hugs short ids and truncates long
+          ones (`min-w-0` lets it shrink); the copy button is `shrink-0` so it
+          always stays reachable. */}
+      <div className='relative mt-1.5 flex min-w-0 items-center gap-2'>
+        <code
+          className='bg-muted text-foreground/85 min-w-0 truncate rounded-md px-2 py-1 font-mono text-[12px]'
+          title={modelName}
+        >
           {modelName}
         </code>
-        <span onClick={(event) => event.stopPropagation()}>
+        <span
+          className='shrink-0'
+          onClick={(event) => event.stopPropagation()}
+        >
           <CopyButton
             value={modelName}
             tooltip={t('Copy model name')}
