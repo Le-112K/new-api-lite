@@ -31,14 +31,6 @@ export type PricingModel = {
   id: number
   model_name: string
   /**
-   * Standard model name this card belongs to (matched via the metadata name
-   * rules). Equal to `model_name` when the card has no metadata parent.
-   * Same-canonical channel aliases are merged into one card; the merged
-   * callable names ride along in `aliases`.
-   */
-  canonical?: string
-  aliases?: string[]
-  /**
    * Admin-configured title for the model square. Empty/absent means the card
    * falls back to a readable form derived from `model_name`. It never replaces
    * `model_name`: that stays the callable id shown (and copied) on the card.

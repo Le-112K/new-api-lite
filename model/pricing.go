@@ -2,7 +2,6 @@ package model
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -41,12 +40,6 @@ type Pricing struct {
 	AudioCompletionRatio   *float64                `json:"audio_completion_ratio,omitempty"`
 	EnableGroup            []string                `json:"enable_groups"`
 	SupportedEndpointTypes []constant.EndpointType `json:"supported_endpoint_types"`
-
-	// Canonical 是该卡片归属的标准模型名（元数据 model_name，经名称规则匹配）。
-	// 无元数据归属时等于自身 ModelName。前端以它为分组键，把同一标准模型的
-	// 多渠道别名聚合为一张卡片。Aliases 是组内其余可调用名（不含代表自身）。
-	Canonical string   `json:"canonical,omitempty"`
-	Aliases   []string `json:"aliases,omitempty"`
 
 	// PriceConfigured 表示该模型是否存在可用的计费配置（按次价格或模型倍率）。
 	// 未配置的模型无法通过计费校验，调用必然失败，因此
@@ -95,106 +88,6 @@ func splitModelCapabilities(raw string) []string {
 		return nil
 	}
 	return out
-}
-
-// AggregatePricingByCanonical 把同属一个标准模型的渠道别名合并为一张广场卡片。
-//
-// 归属关系来自元数据的名称匹配规则（exact/prefix/suffix/contains，优先级与
-// resolveModelMetadata 一致）：渠道名匹配到元数据后，canonical 即该元数据的
-// model_name；组内代表优先取标准名本尊（若渠道里真实存在），否则取最短名
-// （最接近标准名）。无元数据归属的渠道名自成一组，展示行为不变。
-// 组内套餐取并集；计费字段沿用代表条目，各别名的实际计费仍按渠道名独立生效。
-func AggregatePricingByCanonical(pricing []Pricing) []Pricing {
-	if len(pricing) == 0 {
-		return pricing
-	}
-	var records []Model
-	if err := DB.Select("model_name", "name_rule").Find(&records).Error; err != nil || len(records) == 0 {
-		return pricing
-	}
-	names := make([]string, 0, len(pricing))
-	for _, item := range pricing {
-		names = append(names, item.ModelName)
-	}
-	resolved := resolveModelMetadata(records, names)
-	canonicalOf := make(map[string]string, len(pricing))
-	for _, item := range pricing {
-		if meta := resolved[item.ModelName]; meta != nil {
-			canonicalOf[item.ModelName] = meta.ModelName
-		} else {
-			canonicalOf[item.ModelName] = item.ModelName
-		}
-	}
-
-	groups := make(map[string][]Pricing)
-	order := make([]string, 0, len(pricing))
-	for _, item := range pricing {
-		key := canonicalOf[item.ModelName]
-		if _, exists := groups[key]; !exists {
-			order = append(order, key)
-		}
-		groups[key] = append(groups[key], item)
-	}
-
-	aggregated := make([]Pricing, 0, len(order))
-	for _, key := range order {
-		members := groups[key]
-		// 代表：标准名本尊优先，否则最短名（并列取字典序），保证确定性。
-		representative := members[0]
-		for _, member := range members[1:] {
-			if betterRepresentative(member.ModelName, representative.ModelName, key) {
-				representative = member
-			}
-		}
-		grouped := representative
-		grouped.Canonical = key
-		if len(members) > 1 {
-			aliases := make([]string, 0, len(members)-1)
-			for _, member := range members {
-				if member.ModelName != representative.ModelName {
-					aliases = append(aliases, member.ModelName)
-				}
-			}
-			sort.Strings(aliases)
-			grouped.Aliases = aliases
-		}
-		if len(members) > 1 {
-			grouped.EnableGroup = mergeGroupUnion(members)
-		}
-		aggregated = append(aggregated, grouped)
-	}
-	return aggregated
-}
-
-// betterRepresentative 报告 candidate 是否比 current 更适合做卡片代表：
-// 标准名本尊永远赢；其余取更短的名字（更接近标准名），并列取字典序。
-func betterRepresentative(candidate, current, canonical string) bool {
-	if candidate == canonical {
-		return current != canonical
-	}
-	if current == canonical {
-		return false
-	}
-	if len(candidate) != len(current) {
-		return len(candidate) < len(current)
-	}
-	return candidate < current
-}
-
-// mergeGroupUnion 合并组内全部条目的启用分组，保持首次出现顺序并去重。
-func mergeGroupUnion(members []Pricing) []string {
-	seen := make(map[string]struct{})
-	merged := make([]string, 0, len(members[0].EnableGroup))
-	for _, member := range members {
-		for _, group := range member.EnableGroup {
-			if _, exists := seen[group]; exists {
-				continue
-			}
-			seen[group] = struct{}{}
-			merged = append(merged, group)
-		}
-	}
-	return merged
 }
 
 func GetPricing() []Pricing {

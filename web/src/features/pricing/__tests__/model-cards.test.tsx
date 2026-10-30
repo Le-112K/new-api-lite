@@ -133,26 +133,6 @@ describe('model cards', () => {
     expect(screen.queryByText('Reasoning')).not.toBeInTheDocument()
   })
 
-  it('surfaces merged channel aliases as a compact +N badge', () => {
-    render(
-      <ModelCard
-        model={pricingModel({
-          model_name: 'gpt-4',
-          aliases: ['gpt-4-2024-08-06', 'gpt-4-turbo'],
-        })}
-        onClick={vi.fn()}
-      />
-    )
-    expect(screen.getByText('+2')).toBeVisible()
-    // 完整别名列表在详情页：卡片只留紧凑徽标，不铺开名字。
-    expect(screen.queryByText('gpt-4-2024-08-06')).not.toBeInTheDocument()
-  })
-
-  it('omits the alias badge when the card has no merged aliases', () => {
-    render(<ModelCard model={pricingModel()} onClick={vi.fn()} />)
-    expect(screen.queryByText(/^\+\d+$/)).not.toBeInTheDocument()
-  })
-
   it('shows which plans already include the model', () => {
     render(
       <ModelCard
