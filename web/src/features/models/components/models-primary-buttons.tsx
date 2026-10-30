@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Plus, MoreHorizontal, List, AlertCircle, GitMerge } from 'lucide-react'
+import { Plus, MoreHorizontal, List, AlertCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
@@ -42,10 +42,6 @@ export function ModelsPrimaryButtons() {
 
   const handleMissingModels = () => {
     setOpen('missing-models')
-  }
-
-  const handleConsolidation = () => {
-    setOpen('consolidation')
   }
 
   const handleSync = () => {
@@ -81,13 +77,6 @@ export function ModelsPrimaryButtons() {
             {t('Missing Models')}
             <DropdownMenuShortcut>
               <AlertCircle className='h-4 w-4' />
-            </DropdownMenuShortcut>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem onClick={handleConsolidation}>
-            {t('Merge alias models')}
-            <DropdownMenuShortcut>
-              <GitMerge className='h-4 w-4' />
             </DropdownMenuShortcut>
           </DropdownMenuItem>
 

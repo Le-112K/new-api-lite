@@ -19,8 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { api } from '@/lib/api'
 
 import type {
-  ConsolidationApplyResponse,
-  ConsolidationSuggestionsResponse,
+  StandardMatchResponse,
   GetModelsParams,
   GetModelsResponse,
   GetModelResponse,
@@ -278,22 +277,13 @@ export interface ModelDeleteResult {
 }
 
 /**
- * Alias consolidation: channel model names that match a metadata rule can be
- * normalized to the standard model name (models + model_mapping rewrite).
+ * Match candidate channel model names to standard model names via the
+ * metadata name rules. Read-only; the channel form consumes the result.
  */
-export async function getConsolidationSuggestions(): Promise<ConsolidationSuggestionsResponse> {
-  const res = await api.get('/api/models/consolidation_suggestions')
-  return res.data
-}
-
-export async function applyConsolidation(
-  items: { channel_id: number; standard_name: string; alias_name: string }[],
-  removeAliases: boolean
-): Promise<ConsolidationApplyResponse> {
-  const res = await api.post('/api/models/consolidation_apply', {
-    items,
-    remove_aliases: removeAliases,
-  })
+export async function matchStandardModels(
+  names: string[]
+): Promise<StandardMatchResponse> {
+  const res = await api.post('/api/models/consolidation_match', { names })
   return res.data
 }
 

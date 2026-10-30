@@ -24,6 +24,9 @@ import { toast } from 'sonner'
 
 import { Dialog } from '@/components/dialog'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { matchStandardModels } from '@/features/models/api'
+import type { StandardMatch } from '@/features/models/types'
 import { handleServerError } from '@/lib/handle-server-error'
 
 import { fetchUpstreamModels, updateChannel } from '../../api'
@@ -79,6 +82,12 @@ export function FetchModelsDialog({
   const [fetchedModels, setFetchedModels] = useState<string[]>([])
   const [candidateModels, setCandidateModels] = useState<string[]>([])
   const [selectedModels, setSelectedModels] = useState<string[]>([])
+  // 拉取结果按元数据名称规则匹配出的标准模型映射；勾选项在保存时落进
+  // models + model_mapping，客户端即可用标准模型名调用。
+  const [standardMatches, setStandardMatches] = useState<StandardMatch[]>([])
+  const [acceptedMappings, setAcceptedMappings] = useState<
+    Record<string, boolean>
+  >({})
 
   // Parse existing models
   const existingModels = useMemo(
@@ -110,11 +119,26 @@ export function FetchModelsDialog({
 
     setIsFetching(true)
     try {
+      const applyMatches = async (list: string[]) => {
+        // 匹配失败不阻断拉取流程：没有建议时用户仍可手工配置映射。
+        try {
+          const response = await matchStandardModels(list)
+          setStandardMatches(
+            response.success && Array.isArray(response.data)
+              ? response.data
+              : []
+          )
+        } catch {
+          setStandardMatches([])
+        }
+        setAcceptedMappings({})
+      }
       if (customFetcher) {
         const list = await customFetcher()
         setFetchedModels(list)
         setCandidateModels(existingModels)
         setSelectedModels(existingModels)
+        void applyMatches(list)
         toast.success(t('Fetched {{count}} models', { count: list.length }))
       } else if (activeChannel) {
         const response = await fetchUpstreamModels(activeChannel.id)
@@ -123,10 +147,12 @@ export function FetchModelsDialog({
           setFetchedModels(list)
           setCandidateModels(existingModels)
           setSelectedModels(existingModels)
+          void applyMatches(list)
           toast.success(t('Fetched {{count}} models', { count: list.length }))
         } else {
           handleServerError(response, t('Failed to fetch models'))
           setFetchedModels([])
+          setStandardMatches([])
         }
       }
     } catch (error: unknown) {
@@ -136,6 +162,14 @@ export function FetchModelsDialog({
       setIsFetching(false)
     }
   }
+
+  // 展示在对话框里的映射建议：有归属、原名仍在勾选列表中、且用户未取消。
+  const activeMappings = standardMatches.filter(
+    (match) =>
+      match.mapped &&
+      selectedModels.includes(match.name) &&
+      (acceptedMappings[match.name] ?? true)
+  )
 
   const handleSave = async () => {
     // If onModelsSelected callback is provided, use it (form filling mode)
@@ -150,9 +184,29 @@ export function FetchModelsDialog({
     if (!activeChannel) return
     setIsSaving(true)
     try {
-      const modelsString = selectedModels.join(',')
+      // 接受的标准模型映射：models 追加标准名（别名保留，版本仍可挑），
+      // model_mapping 合并 {标准名: 原名}（不覆盖已有映射，兼容手工配置）。
+      const standardAdds = activeMappings
+        .map((match) => match.standard)
+        .filter((standard) => !selectedModels.includes(standard))
+      const modelsString = [...selectedModels, ...standardAdds].join(',')
+      let mapping: Record<string, string> = {}
+      const rawMapping = (activeChannel.model_mapping ?? '').trim()
+      if (rawMapping !== '' && rawMapping !== '{}') {
+        try {
+          mapping = JSON.parse(rawMapping)
+        } catch {
+          mapping = {}
+        }
+      }
+      for (const match of activeMappings) {
+        if (!(match.standard in mapping)) {
+          mapping[match.standard] = match.name
+        }
+      }
       const response = await updateChannel(activeChannel.id, {
         models: modelsString,
+        model_mapping: JSON.stringify(mapping),
       })
       if (response.success) {
         toast.success(t('Models updated successfully'))
@@ -172,6 +226,8 @@ export function FetchModelsDialog({
     setFetchedModels([])
     setCandidateModels([])
     setSelectedModels([])
+    setStandardMatches([])
+    setAcceptedMappings({})
     onOpenChange(false)
   }
 
@@ -223,14 +279,58 @@ export function FetchModelsDialog({
     )
   } else {
     dialogBody = (
-      <UpstreamModelSelection
-        models={fetchedModels}
-        selected={selectedModels}
-        onChange={setSelectedModels}
-        existingModels={existingModels}
-        redirectModels={redirectModels}
-        redirectSourceModels={redirectSourceModels}
-      />
+      <div className='space-y-3'>
+        {activeMappings.length > 0 && (
+          <div className='bg-muted/30 space-y-2 rounded-lg border p-3'>
+            <div className='flex flex-col gap-0.5'>
+              <p className='text-xs font-semibold'>
+                {t('Standard model mapping')}
+              </p>
+              <p className='text-muted-foreground text-xs'>
+                {t(
+                  'Matched names stay callable as-is and are also exposed under the standard model name; the gateway rewrites standard-name requests to the original name per channel.'
+                )}
+              </p>
+            </div>
+            {activeMappings.map((match) => (
+              <label
+                key={match.name}
+                className='flex min-w-0 cursor-pointer items-center gap-2 text-xs'
+              >
+                <Checkbox
+                  className='mt-0'
+                  checked={acceptedMappings[match.name] ?? true}
+                  disabled={isSaving}
+                  onCheckedChange={(next) =>
+                    setAcceptedMappings((prev) => ({
+                      ...prev,
+                      [match.name]: next === true,
+                    }))
+                  }
+                  aria-label={`${match.name} → ${match.standard}`}
+                />
+                <code className='bg-muted min-w-0 truncate rounded px-1.5 py-0.5 font-mono'>
+                  {match.name}
+                </code>
+                <span aria-hidden className='text-muted-foreground shrink-0'>
+                  →
+                </span>
+                <code className='text-foreground min-w-0 truncate rounded bg-black/5 px-1.5 py-0.5 font-mono font-semibold dark:bg-white/10'>
+                  {match.standard}
+                </code>
+              </label>
+            ))}
+          </div>
+        )}
+        <UpstreamModelSelection
+          models={fetchedModels}
+          selected={selectedModels}
+          onChange={setSelectedModels}
+          existingModels={existingModels}
+          redirectModels={redirectModels}
+          redirectSourceModels={redirectSourceModels}
+        />
+      </div>
     )
   }
 

@@ -35,28 +35,20 @@ export interface BoundChannel {
  */
 export type ModelSquareState = 'visible' | 'unavailable' | 'hidden' | 'partial'
 
-export type ConsolidationItem = {
-  channel_id: number
-  channel_name: string
-  alias: string
+export type StandardMatch = {
+  /** 渠道拉取到的原始模型名。 */
+  name: string
+  /** 归属的标准模型名；无归属时等于 name。 */
+  standard: string
+  /** 命中的元数据匹配规则；无归属时为空。 */
+  rule?: string
+  mapped: boolean
 }
 
-export type ConsolidationSuggestion = {
-  standard_name: string
-  rule: string
-  items: ConsolidationItem[]
-}
-
-export interface ConsolidationSuggestionsResponse {
+export interface StandardMatchResponse {
   success: boolean
   message?: string
-  data?: ConsolidationSuggestion[]
-}
-
-export interface ConsolidationApplyResponse {
-  success: boolean
-  message?: string
-  data?: { updated_channels: number }
+  data?: StandardMatch[]
 }
 
 export interface Model {

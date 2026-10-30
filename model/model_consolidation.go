@@ -19,34 +19,13 @@ For commercial licensing, please contact support@quantumnous.com
 package model
 
 import (
-	"encoding/json"
-	"errors"
-	"sort"
 	"strings"
-
-	"gorm.io/gorm"
 )
 
-// 渠道别名归并：把渠道里的非标准模型名（gpt-4-turbo 等）收敛到元数据定义的
-// 标准模型名下。建议只做「发现」，应用才真正改写渠道 models 与 model_mapping。
-
-type ConsolidationItem struct {
-	ChannelID   int    `json:"channel_id"`
-	ChannelName string `json:"channel_name"`
-	Alias       string `json:"alias"`
-}
-
-type ConsolidationSuggestion struct {
-	StandardName string              `json:"standard_name"`
-	Rule         string              `json:"rule"`
-	Items        []ConsolidationItem `json:"items"`
-}
-
-type ConsolidationApplyItem struct {
-	ChannelID int    `json:"channel_id"`
-	Standard  string `json:"standard_name"`
-	Alias     string `json:"alias_name"`
-}
+// 渠道模型名标准化：渠道「拉取模型列表」时，把拉到的候选名按元数据名称
+// 规则匹配到标准模型。匹配结果由渠道表单消费——保存渠道时把标准名追加进
+// models、{标准名: 原名} 合并进 model_mapping，客户端即可用标准名调用。
+// 这里只做匹配（只读元数据），不改渠道。
 
 func nameRuleLabel(rule int) string {
 	switch rule {
@@ -61,165 +40,57 @@ func nameRuleLabel(rule int) string {
 	}
 }
 
-// GetConsolidationSuggestions 扫描全部渠道模型名，按元数据名称规则找出
-// 「别名 → 标准模型」的归并关系。别名等于标准名本尊的不产生建议。
-func GetConsolidationSuggestions() ([]ConsolidationSuggestion, error) {
-	var records []Model
-	if err := DB.Select("id", "model_name", "name_rule").Find(&records).Error; err != nil {
-		return nil, err
-	}
-	if len(records) == 0 {
-		return []ConsolidationSuggestion{}, nil
-	}
-	var channels []Channel
-	if err := DB.Select("id", "name", "models").Order("id").Find(&channels).Error; err != nil {
-		return nil, err
-	}
-
-	names := make([]string, 0)
-	for _, channel := range channels {
-		names = append(names, channel.GetModels()...)
-	}
-	resolved := resolveModelMetadata(records, names)
-
-	grouped := make(map[string][]ConsolidationItem)
-	ruleOf := make(map[string]int)
-	for _, channel := range channels {
-		for _, alias := range channel.GetModels() {
-			meta := resolved[alias]
-			if meta == nil || meta.ModelName == alias {
-				continue
-			}
-			grouped[meta.ModelName] = append(grouped[meta.ModelName], ConsolidationItem{
-				ChannelID:   channel.Id,
-				ChannelName: channel.Name,
-				Alias:       alias,
-			})
-			ruleOf[meta.ModelName] = meta.NameRule
-		}
-	}
-
-	standards := make([]string, 0, len(grouped))
-	for standard := range grouped {
-		standards = append(standards, standard)
-	}
-	sort.Strings(standards)
-	suggestions := make([]ConsolidationSuggestion, 0, len(standards))
-	for _, standard := range standards {
-		items := grouped[standard]
-		sort.Slice(items, func(i, j int) bool {
-			if items[i].ChannelID != items[j].ChannelID {
-				return items[i].ChannelID < items[j].ChannelID
-			}
-			return items[i].Alias < items[j].Alias
-		})
-		suggestions = append(suggestions, ConsolidationSuggestion{
-			StandardName: standard,
-			Rule:         nameRuleLabel(ruleOf[standard]),
-			Items:        items,
-		})
-	}
-	return suggestions, nil
+// StandardMatch 是单个候选模型名的匹配结果。Mapped=false 表示没有元数据
+// 归属，名字保持原样（Standard==Name），不产生映射建议。
+type StandardMatch struct {
+	Name     string `json:"name"`
+	Standard string `json:"standard"`
+	Rule     string `json:"rule,omitempty"`
+	Mapped   bool   `json:"mapped"`
 }
 
-// ApplyConsolidation 把勾选的归并写入渠道：models 增补标准名、model_mapping
-// 增加 {标准名: 别名}（客户端请求标准名时中继转换为渠道真实名）。
-// removeAliases 时从渠道模型列表移除别名（标准名本尊不受影响）。
-// 返回实际改写的渠道数。
-func ApplyConsolidation(items []ConsolidationApplyItem, removeAliases bool) (int, error) {
-	if len(items) == 0 {
-		return 0, errors.New("no consolidation items")
+// MatchStandardModels 对候选模型名列表逐个求归属。
+func MatchStandardModels(names []string) []StandardMatch {
+	cleaned := make([]string, 0, len(names))
+	seen := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		if _, exists := seen[name]; exists {
+			continue
+		}
+		seen[name] = struct{}{}
+		cleaned = append(cleaned, name)
 	}
-	byChannel := make(map[int][]ConsolidationApplyItem)
-	channelIDs := make([]int, 0)
-	seenChannel := make(map[int]struct{})
-	for _, item := range items {
-		if item.ChannelID <= 0 {
-			return 0, errors.New("invalid channel ID")
-		}
-		if strings.TrimSpace(item.Standard) == "" || strings.TrimSpace(item.Alias) == "" {
-			return 0, errors.New("invalid consolidation item")
-		}
-		byChannel[item.ChannelID] = append(byChannel[item.ChannelID], item)
-		if _, exists := seenChannel[item.ChannelID]; !exists {
-			seenChannel[item.ChannelID] = struct{}{}
-			channelIDs = append(channelIDs, item.ChannelID)
-		}
+	if len(cleaned) == 0 {
+		return []StandardMatch{}
 	}
-	sort.Ints(channelIDs)
 
-	updated := 0
-	err := DB.Transaction(func(tx *gorm.DB) error {
-		var channels []Channel
-		if err := lockForUpdate(tx).Select("id", "name", "models", "model_mapping").Where("id IN ?", channelIDs).Order("id").Find(&channels).Error; err != nil {
-			return err
+	var records []Model
+	if err := DB.Select("model_name", "name_rule").Find(&records).Error; err != nil || len(records) == 0 {
+		// 元数据为空或查询失败：全部视为无归属，不阻断拉取流程。
+		out := make([]StandardMatch, 0, len(cleaned))
+		for _, name := range cleaned {
+			out = append(out, StandardMatch{Name: name, Standard: name})
 		}
-		for _, channel := range channels {
-			items := byChannel[channel.Id]
-			models := channel.GetModels()
-			modelSet := make(map[string]struct{}, len(models))
-			for _, name := range models {
-				modelSet[name] = struct{}{}
-			}
-			mapping := make(map[string]any)
-			if raw := strings.TrimSpace(channel.GetModelMapping()); raw != "" {
-				if err := json.Unmarshal([]byte(raw), &mapping); err != nil {
-					return errors.New("channel " + channel.Name + " has an invalid model_mapping; fix it before consolidating")
-				}
-			}
-
-			changed := false
-			for _, item := range items {
-				if _, exists := modelSet[item.Alias]; !exists {
-					continue
-				}
-				if mapping[item.Standard] != item.Alias {
-					mapping[item.Standard] = item.Alias
-					changed = true
-				}
-				if _, exists := modelSet[item.Standard]; !exists {
-					models = append(models, item.Standard)
-					modelSet[item.Standard] = struct{}{}
-					changed = true
-				}
-				if removeAliases && item.Alias != item.Standard {
-					remaining := make([]string, 0, len(models))
-					for _, name := range models {
-						if name == item.Alias {
-							delete(modelSet, item.Alias)
-							continue
-						}
-						remaining = append(remaining, name)
-					}
-					models = remaining
-					changed = true
-				}
-			}
-			if !changed {
-				continue
-			}
-			mappingJSON, err := json.Marshal(mapping)
-			if err != nil {
-				return err
-			}
-			mappingStr := string(mappingJSON)
-			if err := tx.Model(&Channel{}).Where("id = ?", channel.Id).Updates(map[string]any{
-				"models":        strings.Join(models, ","),
-				"model_mapping": mappingStr,
-			}).Error; err != nil {
-				return err
-			}
-			channel.Models = strings.Join(models, ",")
-			channel.ModelMapping = &mappingStr
-			if err := channel.UpdateAbilities(tx); err != nil {
-				return err
-			}
-			updated++
-		}
-		return nil
-	})
-	if err != nil {
-		return 0, err
+		return out
 	}
-	return updated, nil
+	resolved := resolveModelMetadata(records, cleaned)
+
+	out := make([]StandardMatch, 0, len(cleaned))
+	for _, name := range cleaned {
+		if meta := resolved[name]; meta != nil && meta.ModelName != name {
+			out = append(out, StandardMatch{
+				Name:     name,
+				Standard: meta.ModelName,
+				Rule:     nameRuleLabel(meta.NameRule),
+				Mapped:   true,
+			})
+			continue
+		}
+		out = append(out, StandardMatch{Name: name, Standard: name})
+	}
+	return out
 }

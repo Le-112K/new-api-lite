@@ -38,7 +38,6 @@ type DialogType =
   | 'vendors'
   | 'update-vendor'
   | 'missing-models'
-  | 'consolidation'
   | 'sync-wizard'
   | 'prefill-groups'
   | 'description'
