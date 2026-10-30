@@ -105,23 +105,6 @@ export async function updateModelStatus(
   return res.data
 }
 
-/**
- * Delete model
- */
-export async function deleteModel(
-  id: number,
-  removeFromChannels = false,
-  removePricing = false
-): Promise<{ success: boolean; message?: string; data: ModelDeleteResult }> {
-  const res = await api.delete(`/api/models/${id}`, {
-    params: {
-      remove_from_channels: removeFromChannels,
-      remove_pricing: removePricing,
-    },
-  })
-  return res.data
-}
-
 // ============================================================================
 // Vendor Management
 // ============================================================================
@@ -292,13 +275,19 @@ export interface ModelDeleteResult {
   updated_channels: number
 }
 
+/**
+ * Delete models. Metadata rows go by id; channel-only models (no metadata
+ * row) go by name and are removed from channels together with the ids.
+ */
 export async function deleteModels(
   modelIds: number[],
+  channelModelNames: string[],
   removeFromChannels = false,
   removePricing = false
 ): Promise<{ success: boolean; message?: string; data: ModelDeleteResult }> {
   const res = await api.post('/api/models/delete', {
     model_ids: modelIds,
+    channel_model_names: channelModelNames,
     remove_from_channels: removeFromChannels,
     remove_pricing: removePricing,
   })

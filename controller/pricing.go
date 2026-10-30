@@ -115,6 +115,9 @@ func GetPricing(c *gin.Context) {
 	usableGroup = service.GetUserUsableGroups(group)
 	pricing = filterPricingByConfiguredPrice(pricing)
 	pricing = filterPricingByUsableGroups(pricing, usableGroup)
+	// 准入过滤之后按标准模型聚合：同元数据的渠道别名合并为一张卡片，
+	// 广场不再出现同模型多卡。计费校验仍按渠道名逐个生效，聚合只影响展示。
+	pricing = model.AggregatePricingByCanonical(pricing)
 	// check groupRatio contains usableGroup
 	for group := range ratio_setting.GetGroupRatioCopy() {
 		if _, ok := usableGroup[group]; !ok {

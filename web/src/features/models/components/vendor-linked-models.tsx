@@ -37,8 +37,8 @@ import { getNameRuleConfig } from '../constants'
 import { modelsQueryKeys } from '../lib'
 import type { Model, Vendor } from '../types'
 import { vendorErrorMessage, type VendorOperation } from '../vendor-api'
+import { ModelMutateDialog } from './dialogs/model-mutate-dialog'
 import { VendorOperationDialog } from './dialogs/vendor-operation-dialog'
-import { ModelMutateDrawer } from './drawers/model-mutate-drawer'
 
 export function VendorLinkedModels({
   vendor,
@@ -236,7 +236,7 @@ export function VendorLinkedModels({
           }}
         />
       )}
-      <ModelMutateDrawer
+      <ModelMutateDialog
         open={Boolean(model)}
         onOpenChange={(open) => {
           if (!open) setModel(null)

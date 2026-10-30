@@ -111,7 +111,6 @@ export interface GetModelsParams {
   page_size?: number
   vendor?: string // vendor ID to filter by
   status?: string // filter by status
-  sync_official?: string // filter by sync_official status
 }
 
 /**
@@ -123,7 +122,6 @@ export interface SearchModelsParams {
   keyword?: string
   vendor?: string // vendor ID to filter by
   status?: string // filter by status
-  sync_official?: string // filter by sync_official status
   group?: string // filter by plan (group key)
   p?: number
   page_size?: number

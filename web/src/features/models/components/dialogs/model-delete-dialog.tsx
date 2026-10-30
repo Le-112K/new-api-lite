@@ -31,7 +31,7 @@ import {
 } from '@/features/model-pricing/api'
 import { createServerError } from '@/lib/server-error-message'
 
-import { deleteModel, deleteModels } from '../../api'
+import { deleteModels } from '../../api'
 import type { Model } from '../../types'
 import { invalidateVendorData } from '../../vendor-api'
 
@@ -46,27 +46,29 @@ export function ModelDeleteDialog(props: ModelDeleteDialogProps) {
   const checkboxId = useId()
   const pricingCheckboxId = useId()
   const canEditPricing = useCanEditModelPricing()
-  const supportsChannelRemoval = props.models.every(
-    (model) => model.name_rule === 0
-  )
+  // 无元数据的纯渠道模型没有可删的元数据行，「删除」对它们只有一种含义：
+  // 从渠道模型列表移除。因此只要选中项里出现这类行，渠道移除就是强制的。
+  const hasChannelOnly = props.models.some((model) => !model.id)
+  const supportsChannelRemoval =
+    hasChannelOnly || props.models.every((model) => model.name_rule === 0)
   const [removePricing, setRemovePricing] = useState(false)
   const [removeFromChannels, setRemoveFromChannels] = useState(false)
+  const effectiveRemoveFromChannels = removeFromChannels || hasChannelOnly
   const client = useQueryClient()
   const mutation = useMutation({
     mutationFn: async () => {
-      const ids = props.models.map((model) => model.id)
-      const response =
-        ids.length === 1
-          ? await deleteModel(
-              ids[0],
-              removeFromChannels && supportsChannelRemoval,
-              removePricing && canEditPricing
-            )
-          : await deleteModels(
-              ids,
-              removeFromChannels && supportsChannelRemoval,
-              removePricing && canEditPricing
-            )
+      const ids = props.models
+        .filter((model) => model.id)
+        .map((model) => model.id)
+      const names = props.models
+        .filter((model) => !model.id)
+        .map((model) => model.model_name)
+      const response = await deleteModels(
+        ids,
+        names,
+        effectiveRemoveFromChannels && supportsChannelRemoval,
+        removePricing && canEditPricing
+      )
       if (!response.success) {
         throw createServerError(response, t('Failed to delete model'))
       }
@@ -75,7 +77,7 @@ export function ModelDeleteDialog(props: ModelDeleteDialogProps) {
     onSuccess: async (result) => {
       await invalidateVendorData(client)
       if (removePricing) await invalidateModelPricing(client)
-      if (removeFromChannels) {
+      if (effectiveRemoveFromChannels) {
         await client.invalidateQueries({ queryKey: ['channels'] })
       }
       toast.success(
@@ -114,8 +116,10 @@ export function ModelDeleteDialog(props: ModelDeleteDialogProps) {
           <Checkbox
             id={checkboxId}
             className='mt-0.5'
-            checked={removeFromChannels && supportsChannelRemoval}
-            disabled={mutation.isPending || !supportsChannelRemoval}
+            checked={supportsChannelRemoval && effectiveRemoveFromChannels}
+            disabled={
+              mutation.isPending || !supportsChannelRemoval || hasChannelOnly
+            }
             onCheckedChange={(checked) =>
               setRemoveFromChannels(checked === true)
             }
@@ -125,6 +129,13 @@ export function ModelDeleteDialog(props: ModelDeleteDialogProps) {
             {!supportsChannelRemoval && (
               <span className='text-muted-foreground text-xs font-normal'>
                 {t('Only available for exact matching')}
+              </span>
+            )}
+            {hasChannelOnly && (
+              <span className='text-muted-foreground text-xs font-normal'>
+                {t(
+                  'Models without metadata are removed from channels as part of the deletion.'
+                )}
               </span>
             )}
           </Label>

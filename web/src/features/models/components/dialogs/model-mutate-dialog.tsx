@@ -24,14 +24,6 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import {
-  SideDrawerSection,
-  sideDrawerContentClassName,
-  sideDrawerFooterClassName,
-  sideDrawerFormClassName,
-  sideDrawerHeaderClassName,
-  sideDrawerSwitchItemClassName,
-} from '@/components/drawer-layout'
 import { ErrorState } from '@/components/error-state'
 import { JsonEditor } from '@/components/json-editor'
 import { LoadingState } from '@/components/loading-state'
@@ -40,6 +32,13 @@ import { TagInput } from '@/components/tag-input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Combobox } from '@/components/ui/combobox'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -52,14 +51,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -73,11 +64,7 @@ import {
 } from '@/lib/server-error-message'
 
 import { createModel, updateModel, getModel, getVendors } from '../../api'
-import {
-  getNameRuleOptions,
-  getThinkingStrengthOptions,
-  ENDPOINT_TEMPLATES,
-} from '../../constants'
+import { getNameRuleOptions, ENDPOINT_TEMPLATES } from '../../constants'
 import { modelsQueryKeys, vendorsQueryKeys } from '../../lib'
 import {
   modelFormSchema,
@@ -87,7 +74,14 @@ import {
 } from '../../lib/model-form'
 import type { Model } from '../../types'
 
-export function ModelMutateDrawer(props: {
+// 表单分组的行样式：短输入并排、全宽字段单列，替代旧抽屉的一整列。
+// items-start 必须保留：grid 默认 stretch 会把矮的那列拉到与高的那列同高，
+// 供应商下拉框因此被拉伸成约 110px 的高空框，内容悬在中间看着像错位。
+const ROW_2COL = 'grid grid-cols-1 items-start gap-4 sm:grid-cols-2'
+const SWITCH_ROW =
+  'flex items-start justify-between gap-6 rounded-lg border p-3.5'
+
+export function ModelMutateDialog(props: {
   open: boolean
   onOpenChange: (open: boolean) => void
   currentRow?: Model | null
@@ -226,19 +220,18 @@ export function ModelMutateDrawer(props: {
 
   return (
     <>
-      <Sheet open={props.open} onOpenChange={close}>
-        <SheetContent
-          className={sideDrawerContentClassName('sm:max-w-[1280px]')}
-        >
-          <SheetHeader className={sideDrawerHeaderClassName()}>
-            {/* 标题与模型列表/广场卡片同源：优先展示名，模型 ID 降为副标题，
-                否则运营在列表里认的是「DeepSeek V4.1 Flash」，点进来却只看到一串 ID。 */}
-            <SheetTitle className='pr-6 break-all'>
+      <Dialog open={props.open} onOpenChange={close}>
+        {/* 居中弹窗替代旧 1280px 侧抽屉：表单本来是单列，抽屉宽度浪费了
+            一半屏幕；弹窗内 header 固定、表单区滚动、footer 固定。 */}
+        <DialogContent className='flex max-h-[min(86vh,860px)] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl'>
+          <DialogHeader className='gap-1.5 border-b px-5 py-4'>
+            {/* 标题与模型列表/广场卡片同源：优先展示名，模型 ID 降为副标题。 */}
+            <DialogTitle className='pr-6 break-all'>
               {hasModelName
                 ? currentRow?.display_name?.trim() || currentRow?.model_name
                 : t('Create Model')}
-            </SheetTitle>
-            <SheetDescription className='flex flex-wrap items-center gap-2'>
+            </DialogTitle>
+            <DialogDescription className='flex flex-wrap items-center gap-2'>
               {hasModelName && currentRow?.display_name?.trim() && (
                 <code className='bg-muted text-muted-foreground rounded px-1.5 py-0.5 font-mono text-[11px]'>
                   {currentRow?.model_name}
@@ -249,27 +242,37 @@ export function ModelMutateDrawer(props: {
                   'Manage this model’s metadata. Changes apply when you save.'
                 )}
               </span>
-            </SheetDescription>
-          </SheetHeader>
+            </DialogDescription>
+          </DialogHeader>
           {props.open && (
             <>
               {modelQuery.isError ? (
-                <ErrorState
-                  title={t('Model metadata could not be loaded')}
-                  // 直接把后端原文（record not found）怼到脸上，运营既看不懂也不知道
-                  // 下一步做什么；这里换成可行动的说明，原文留在 tooltip 里排查用。
-                  description={t(
-                    'The record may have been deleted, or this row came from stale data. Close this panel and refresh the list.'
-                  )}
-                  onRetry={() => void modelQuery.refetch()}
-                  action={
-                    <Button variant='ghost' size='sm' onClick={() => close(false)}>
-                      {t('Close')}
-                    </Button>
-                  }
-                />
+                <div className='min-h-0 flex-1 overflow-y-auto p-5'>
+                  <ErrorState
+                    title={t('Model metadata could not be loaded')}
+                    // 后端原文（record not found）对运营不可读；换成可行动的
+                    // 说明，原文留在 tooltip 里排查用。
+                    description={t(
+                      'The record may have been deleted, or this row came from stale data. Close this panel and refresh the list.'
+                    )}
+                    onRetry={() => void modelQuery.refetch()}
+                    action={
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        onClick={() => close(false)}
+                      >
+                        {t('Close')}
+                      </Button>
+                    }
+                  />
+                </div>
               ) : null}
-              {isEditing && modelQuery.isPending && <LoadingState />}
+              {isEditing && modelQuery.isPending && (
+                <div className='min-h-0 flex-1 overflow-y-auto p-5'>
+                  <LoadingState />
+                </div>
+              )}
               {!modelQuery.isError && !(isEditing && modelQuery.isPending) && (
                 <Form {...form}>
                   <form
@@ -277,64 +280,66 @@ export function ModelMutateDrawer(props: {
                     onSubmit={form.handleSubmit((values) =>
                       save.mutate(values)
                     )}
-                    className={sideDrawerFormClassName()}
+                    className='min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-4'
                   >
                     {/* Basic Information */}
-                    <SideDrawerSection>
+                    <section className='space-y-4'>
                       <h3 className='text-sm font-semibold'>
                         {t('Basic Information')}
                       </h3>
 
-                      <FormField
-                        control={form.control}
-                        name='model_name'
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel required>{t('Model Name')}</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder={t('gpt-4, claude-3-opus, etc.')}
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              {t('The unique identifier for this model')}
-                              {isEditing &&
-                                form.watch('model_name') !==
-                                  currentRow?.model_name && (
-                                  <span className='text-warning mt-1 block'>
-                                    {t(
-                                      'Renaming metadata does not rename channel models or move pricing. Existing prices stay with the original model name.'
-                                    )}
-                                  </span>
-                                )}
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <div className={ROW_2COL}>
+                        <FormField
+                          control={form.control}
+                          name='model_name'
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel required>{t('Model Name')}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder={t('gpt-4, claude-3-opus, etc.')}
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                {t('The unique identifier for this model')}
+                                {isEditing &&
+                                  form.watch('model_name') !==
+                                    currentRow?.model_name && (
+                                    <span className='text-warning mt-1 block'>
+                                      {t(
+                                        'Renaming metadata does not rename channel models or move pricing. Existing prices stay with the original model name.'
+                                      )}
+                                    </span>
+                                  )}
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                      <FormField
-                        control={form.control}
-                        name='display_name'
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('Display name')}</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder={t('Defaults to the model name')}
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              {t(
-                                'Shown on the model square and detail page. Leave empty to derive it from the model name.'
-                              )}
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                        <FormField
+                          control={form.control}
+                          name='display_name'
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t('Display name')}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder={t('Defaults to the model name')}
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                {t(
+                                  'Shown on the model square and detail page. Leave empty to derive it from the model name.'
+                                )}
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
 
                       <FormField
                         control={form.control}
@@ -354,159 +359,119 @@ export function ModelMutateDrawer(props: {
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name='icon'
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('Icon')}</FormLabel>
-                            <FormControl>
-                              <LobeIconField
-                                key={`${currentRow?.id ?? 'new'}-${props.open}`}
-                                value={field.value ?? ''}
-                                onChange={field.onChange}
-                                allowInheritance
-                                inheritedIcon={selectedVendor?.icon}
-                                inheritedName={selectedVendor?.name}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <div className={ROW_2COL}>
+                        <FormField
+                          control={form.control}
+                          name='icon'
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t('Icon')}</FormLabel>
+                              <FormControl>
+                                <LobeIconField
+                                  key={`${currentRow?.id ?? 'new'}-${props.open}`}
+                                  value={field.value ?? ''}
+                                  onChange={field.onChange}
+                                  allowInheritance
+                                  inheritedIcon={selectedVendor?.icon}
+                                  inheritedName={selectedVendor?.name}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                      <FormField
-                        control={form.control}
-                        name='vendor_id'
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('Vendor')}</FormLabel>
-                            <FormControl>
-                              <Combobox
-                                options={vendors.map((vendor) => ({
-                                  value: String(vendor.id),
-                                  label: vendor.name,
-                                }))}
-                                onValueChange={(value) =>
-                                  field.onChange(
-                                    value ? Number.parseInt(value) : undefined
-                                  )
-                                }
-                                value={field.value ? String(field.value) : null}
-                                className='w-full'
-                                placeholder={t('Select vendor')}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                        <FormField
+                          control={form.control}
+                          name='vendor_id'
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t('Vendor')}</FormLabel>
+                              <FormControl>
+                                <Combobox
+                                  options={vendors.map((vendor) => ({
+                                    value: String(vendor.id),
+                                    label: vendor.name,
+                                  }))}
+                                  onValueChange={(value) =>
+                                    field.onChange(
+                                      value ? Number.parseInt(value) : undefined
+                                    )
+                                  }
+                                  value={
+                                    field.value ? String(field.value) : null
+                                  }
+                                  className='w-full'
+                                  placeholder={t('Select vendor')}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
 
-                      <FormField
-                        control={form.control}
-                        name='tags'
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('Tags')}</FormLabel>
-                            <FormControl>
-                              <TagInput
-                                value={field.value || []}
-                                onChange={field.onChange}
-                                placeholder={t('Add tags...')}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              {t('Press Enter or comma to add tags')}
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      {/* 订阅制能力指标：详情页规格区展示的就是这两项。
+                          留空 = 未知，详情显示破折号而不是编造数字。 */}
+                      <div className={ROW_2COL}>
+                        <FormField
+                          control={form.control}
+                          name='context_length'
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t('Context Length')}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type='number'
+                                  min={0}
+                                  placeholder={t('e.g. 200000')}
+                                  value={field.value || ''}
+                                  onChange={(event) => {
+                                    const next = event.target.value
+                                    field.onChange(
+                                      next === '' ? 0 : Number(next)
+                                    )
+                                  }}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                {t('Tokens. Leave 0 when unknown.')}
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                      {/* 订阅制能力指标：模型页卡片上突出展示的就是这两项。
-                          留空 = 未知，卡片显示破折号而不是编造数字。 */}
-                      <FormField
-                        control={form.control}
-                        name='context_length'
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('Context Length')}</FormLabel>
-                            <FormControl>
-                              <Input
-                                type='number'
-                                min={0}
-                                placeholder={t('e.g. 200000')}
-                                value={field.value || ''}
-                                onChange={(event) => {
-                                  const next = event.target.value
-                                  field.onChange(
-                                    next === '' ? 0 : Number(next)
-                                  )
-                                }}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              {t('Tokens. Leave 0 when unknown.')}
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name='thinking_strength'
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('Thinking Strength')}</FormLabel>
-                            <FormControl>
-                              <Combobox
-                                options={getThinkingStrengthOptions(t)}
-                                value={field.value ?? ''}
-                                onValueChange={(next: string | null) =>
-                                  field.onChange(next ?? '')
-                                }
-                                placeholder={t('Unknown')}
-                                className='w-full'
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              {t(
-                                'How hard the model reasons. Maps to reasoning effort.'
-                              )}
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name='max_output_tokens'
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('Max output')}</FormLabel>
-                            <FormControl>
-                              <Input
-                                type='number'
-                                min={0}
-                                placeholder={t('e.g. 384000')}
-                                value={field.value || ''}
-                                onChange={(event) => {
-                                  const next = event.target.value
-                                  field.onChange(
-                                    next === '' ? 0 : Number(next)
-                                  )
-                                }}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              {t('Tokens per response. Leave 0 when unknown.')}
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                        <FormField
+                          control={form.control}
+                          name='max_output_tokens'
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t('Max output')}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type='number'
+                                  min={0}
+                                  placeholder={t('e.g. 384000')}
+                                  value={field.value || ''}
+                                  onChange={(event) => {
+                                    const next = event.target.value
+                                    field.onChange(
+                                      next === '' ? 0 : Number(next)
+                                    )
+                                  }}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                {t(
+                                  'Tokens per response. Leave 0 when unknown.'
+                                )}
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
 
                       <FormField
                         control={form.control}
@@ -556,10 +521,31 @@ export function ModelMutateDrawer(props: {
                           </FormItem>
                         )}
                       />
-                    </SideDrawerSection>
 
-                    {/* Matching Configuration */}
-                    <SideDrawerSection>
+                      <FormField
+                        control={form.control}
+                        name='tags'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t('Tags')}</FormLabel>
+                            <FormControl>
+                              <TagInput
+                                value={field.value || []}
+                                onChange={field.onChange}
+                                placeholder={t('Add tags...')}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              {t('Press Enter or comma to add tags')}
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </section>
+
+                    {/* Matching Rules */}
+                    <section className='space-y-4'>
                       <h3 className='text-sm font-semibold'>
                         {t('Matching Rules')}
                       </h3>
@@ -576,7 +562,7 @@ export function ModelMutateDrawer(props: {
                                   field.onChange(Number.parseInt(value))
                                 }
                                 value={String(field.value)}
-                                className='grid grid-cols-2 gap-4'
+                                className='grid grid-cols-2 gap-3'
                               >
                                 {getNameRuleOptions(t).map((option) => (
                                   <div
@@ -599,17 +585,17 @@ export function ModelMutateDrawer(props: {
                             </FormControl>
                             <FormDescription>
                               {t(
-                                'Matching rules apply to metadata. Pricing is configured for each concrete model.'
+                                'Determines which channel model names this metadata applies to.'
                               )}
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                    </SideDrawerSection>
+                    </section>
 
-                    {/* Endpoints Configuration */}
-                    <SideDrawerSection>
+                    {/* Endpoints */}
+                    <section className='space-y-4'>
                       <div className='flex items-center justify-between'>
                         <h3 className='text-sm font-semibold'>
                           {t('Endpoints')}
@@ -656,10 +642,10 @@ export function ModelMutateDrawer(props: {
                           </FormItem>
                         )}
                       />
-                    </SideDrawerSection>
+                    </section>
 
                     {/* Status & Sync */}
-                    <SideDrawerSection>
+                    <section className='space-y-3'>
                       <h3 className='text-sm font-semibold'>
                         {t('Status & Sync')}
                       </h3>
@@ -668,9 +654,9 @@ export function ModelMutateDrawer(props: {
                         control={form.control}
                         name='status'
                         render={({ field }) => (
-                          <FormItem className={sideDrawerSwitchItemClassName()}>
+                          <FormItem className={SWITCH_ROW}>
                             <div className='flex flex-col gap-0.5'>
-                              <FormLabel className='text-base'>
+                              <FormLabel>
                                 {t('Model square visibility')}
                               </FormLabel>
                               <FormDescription>
@@ -693,11 +679,9 @@ export function ModelMutateDrawer(props: {
                         control={form.control}
                         name='sync_official'
                         render={({ field }) => (
-                          <FormItem className={sideDrawerSwitchItemClassName()}>
+                          <FormItem className={SWITCH_ROW}>
                             <div className='flex flex-col gap-0.5'>
-                              <FormLabel className='text-base'>
-                                {t('Allow metadata sync')}
-                              </FormLabel>
+                              <FormLabel>{t('Allow metadata sync')}</FormLabel>
                               <FormDescription>
                                 {t(
                                   'Allows selected fields to be overwritten after a sync preview. No automatic synchronization.'
@@ -713,44 +697,45 @@ export function ModelMutateDrawer(props: {
                           </FormItem>
                         )}
                       />
-                    </SideDrawerSection>
+                    </section>
                   </form>
                 </Form>
               )}
-              <SheetFooter className={sideDrawerFooterClassName('flex-wrap')}>
-                {form.formState.errors.root?.server?.message && (
-                  <Alert
-                    variant='destructive'
-                    className='col-span-2 basis-full'
-                  >
-                    <AlertDescription className='break-words'>
-                      {form.formState.errors.root.server.message}
-                    </AlertDescription>
-                  </Alert>
-                )}
-                <Button
-                  variant='outline'
-                  onClick={() => close(false)}
-                  disabled={isSubmitting}
-                >
-                  {t('Close')}
-                </Button>
-                <Button
-                  form='model-form'
-                  type='submit'
-                  disabled={
-                    isSubmitting ||
-                    modelQuery.isError ||
-                    (isEditing && modelQuery.isPending)
-                  }
-                >
-                  {isSubmitting ? t('Saving...') : t('Save metadata')}
-                </Button>
-              </SheetFooter>
+              {!modelQuery.isError && !(isEditing && modelQuery.isPending) && (
+                <div className='flex flex-col gap-3 border-t px-5 py-4'>
+                  {form.formState.errors.root?.server?.message && (
+                    <Alert variant='destructive'>
+                      <AlertDescription className='break-words'>
+                        {form.formState.errors.root.server.message}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  <div className='flex justify-end gap-2'>
+                    <Button
+                      variant='outline'
+                      onClick={() => close(false)}
+                      disabled={isSubmitting}
+                    >
+                      {t('Close')}
+                    </Button>
+                    <Button
+                      form='model-form'
+                      type='submit'
+                      disabled={
+                        isSubmitting ||
+                        modelQuery.isError ||
+                        (isEditing && modelQuery.isPending)
+                      }
+                    >
+                      {isSubmitting ? t('Saving...') : t('Save metadata')}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
       <ConfirmDialog
         open={closeConfirm}
         onOpenChange={setCloseConfirm}

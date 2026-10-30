@@ -1,3 +1,4 @@
+import type { ColumnDef } from '@tanstack/react-table'
 /*
 Copyright (C) 2023-2026 QuantumNous
 
@@ -17,7 +18,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { TriangleAlert } from 'lucide-react'
-import type { ColumnDef } from '@tanstack/react-table'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -246,27 +246,6 @@ export function useModelsColumns(
               <StatusBadge key={tag} label={tag} variant='neutral' size='sm' />
             ))}
           />
-        ),
-      },
-      {
-        accessorKey: 'sync_official',
-        header: () => (
-          <TruncatedCell className='max-w-[120px]'>
-            {t('Sync policy')}
-          </TruncatedCell>
-        ),
-        size: 120,
-        minSize: 100,
-        enableSorting: false,
-        meta: { mobileHidden: true, label: t('Sync policy') },
-        cell: ({ row }) => (
-          <TruncatedCell className='text-muted-foreground max-w-[120px] text-sm'>
-            {row.original.id > 0 &&
-              (row.original.sync_official
-                ? t('Allow updates')
-                : t('Keep local'))}
-            {!row.original.id && '—'}
-          </TruncatedCell>
         ),
       },
       {

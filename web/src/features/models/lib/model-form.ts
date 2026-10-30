@@ -46,6 +46,8 @@ export const modelFormSchema = z.object({
   // 订阅制能力指标。0 = 未知（卡片上显示破折号，不编造数字）。
   context_length: z.number().min(0).default(0),
   max_output_tokens: z.number().min(0).default(0),
+  // 广场/详情当前不展示思考强度，表单已下线该输入项；schema 保留字段作为
+  // 数据通道——payload 带上原值提交，避免每次保存把库里已有的值清空。
   thinking_strength: z
     .enum(['', 'none', 'low', 'medium', 'high'])
     .default(''),

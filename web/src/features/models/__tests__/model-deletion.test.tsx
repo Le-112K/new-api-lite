@@ -27,11 +27,16 @@ import { useAuthStore } from '@/stores/auth-store'
 
 import { ModelDeleteDialog } from '../components/dialogs/model-delete-dialog'
 
-const models = [
+type DeletableModel = { id: number; model_name: string; name_rule: number }
+const models: DeletableModel[] = [
   { id: 7, model_name: 'example-model', name_rule: 0 },
   { id: 8, model_name: 'another-model', name_rule: 0 },
 ]
-function Fixture(props: { batch?: boolean; onSuccess?: () => void }) {
+function Fixture(props: {
+  batch?: boolean
+  onSuccess?: () => void
+  models?: DeletableModel[]
+}) {
   const [open, setOpen] = useState(true)
   return (
     <>
@@ -40,7 +45,7 @@ function Fixture(props: { batch?: boolean; onSuccess?: () => void }) {
       </button>
       {open && (
         <ModelDeleteDialog
-          models={props.batch ? models : models.slice(0, 1)}
+          models={props.models ?? (props.batch ? models : models.slice(0, 1))}
           onClose={() => setOpen(false)}
           onSuccess={props.onSuccess}
         />
@@ -48,7 +53,7 @@ function Fixture(props: { batch?: boolean; onSuccess?: () => void }) {
     </>
   )
 }
-function mount(batch = false) {
+function mount(batch = false, models?: DeletableModel[]) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
@@ -56,7 +61,7 @@ function mount(batch = false) {
   const invalidate = vi.spyOn(client, 'invalidateQueries')
   render(
     <QueryClientProvider client={client}>
-      <Fixture batch={batch} onSuccess={onSuccess} />
+      <Fixture batch={batch} onSuccess={onSuccess} models={models} />
     </QueryClientProvider>
   )
   return { onSuccess, invalidate }
@@ -68,7 +73,7 @@ afterEach(() => {
 
 describe('model deletion', () => {
   it('defaults to keeping channels and resets the option after cancelling', async () => {
-    const remove = vi.spyOn(api, 'delete').mockResolvedValue({
+    const post = vi.spyOn(api, 'post').mockResolvedValue({
       data: {
         success: true,
         data: { deleted_count: 1, updated_channels: 0 },
@@ -83,15 +88,18 @@ describe('model deletion', () => {
       screen.getByRole('checkbox', { name: 'Also remove from all channels' })
     )
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
-    expect(remove).not.toHaveBeenCalled()
+    expect(post).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: 'Open deletion' }))
     expect(
       screen.getByRole('checkbox', { name: 'Also remove from all channels' })
     ).not.toBeChecked()
     await user.click(screen.getByRole('button', { name: 'Delete' }))
     await waitFor(() => expect(onSuccess).toHaveBeenCalledOnce())
-    expect(remove).toHaveBeenCalledWith('/api/models/7', {
-      params: { remove_from_channels: false, remove_pricing: false },
+    expect(post).toHaveBeenCalledWith('/api/models/delete', {
+      model_ids: [7],
+      channel_model_names: [],
+      remove_from_channels: false,
+      remove_pricing: false,
     })
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['channels'] })
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
@@ -126,6 +134,7 @@ describe('model deletion', () => {
     await waitFor(() => expect(onSuccess).toHaveBeenCalledOnce())
     expect(post).toHaveBeenLastCalledWith('/api/models/delete', {
       model_ids: [7, 8],
+      channel_model_names: [],
       remove_from_channels: true,
       remove_pricing: false,
     })
@@ -134,7 +143,7 @@ describe('model deletion', () => {
 
   it('disables dismissal and repeated submission while a single removal is pending', async () => {
     let complete!: (response: unknown) => void
-    const remove = vi.spyOn(api, 'delete').mockImplementation(
+    const post = vi.spyOn(api, 'post').mockImplementation(
       () =>
         new Promise((resolve) => {
           complete = resolve
@@ -153,9 +162,12 @@ describe('model deletion', () => {
     ).toHaveAttribute('aria-disabled', 'true')
     await user.keyboard('{Escape}')
     expect(screen.getByRole('alertdialog')).toBeVisible()
-    expect(remove).toHaveBeenCalledTimes(1)
-    expect(remove).toHaveBeenCalledWith('/api/models/7', {
-      params: { remove_from_channels: true, remove_pricing: false },
+    expect(post).toHaveBeenCalledTimes(1)
+    expect(post).toHaveBeenCalledWith('/api/models/delete', {
+      model_ids: [7],
+      channel_model_names: [],
+      remove_from_channels: true,
+      remove_pricing: false,
     })
     complete({
       data: { success: true, data: { deleted_count: 1, updated_channels: 2 } },
@@ -185,6 +197,7 @@ it('lets a super administrator remove pricing independently of channel removal',
   await waitFor(() => expect(onSuccess).toHaveBeenCalledOnce())
   expect(post).toHaveBeenCalledWith('/api/models/delete', {
     model_ids: [7, 8],
+    channel_model_names: [],
     remove_from_channels: false,
     remove_pricing: true,
   })
@@ -225,3 +238,54 @@ it.each([1, 2, 3])(
     expect(screen.getByText('Only available for exact matching')).toBeVisible()
   }
 )
+
+it('deletes channel-only models by name with channel removal forced on', async () => {
+  const post = vi.spyOn(api, 'post').mockResolvedValue({
+    data: { success: true, data: { deleted_count: 1, updated_channels: 2 } },
+  })
+  const channelOnly = [
+    { id: 0, model_name: 'bare-channel-model', name_rule: 0 },
+  ]
+  const { onSuccess, invalidate } = mount(false, channelOnly)
+  const user = userEvent.setup()
+  // 渠道移除是这类行的唯一删除语义：强制勾选且不可取消。
+  const checkbox = screen.getByRole('checkbox', {
+    name: /Also remove from all channels/,
+  })
+  expect(checkbox).toBeChecked()
+  expect(checkbox).toHaveAttribute('aria-disabled', 'true')
+  expect(
+    screen.getByText(
+      'Models without metadata are removed from channels as part of the deletion.'
+    )
+  ).toBeVisible()
+  await user.click(screen.getByRole('button', { name: 'Delete' }))
+  await waitFor(() => expect(onSuccess).toHaveBeenCalledOnce())
+  expect(post).toHaveBeenCalledWith('/api/models/delete', {
+    model_ids: [],
+    channel_model_names: ['bare-channel-model'],
+    remove_from_channels: true,
+    remove_pricing: false,
+  })
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['channels'] })
+})
+
+it('deletes a mixed selection by id for metadata rows and by name for channel-only rows', async () => {
+  const post = vi.spyOn(api, 'post').mockResolvedValue({
+    data: { success: true, data: { deleted_count: 2, updated_channels: 1 } },
+  })
+  const mixed = [
+    { id: 7, model_name: 'example-model', name_rule: 0 },
+    { id: 0, model_name: 'bare-channel-model', name_rule: 0 },
+  ]
+  const { onSuccess } = mount(true, mixed)
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: 'Delete' }))
+  await waitFor(() => expect(onSuccess).toHaveBeenCalledOnce())
+  expect(post).toHaveBeenCalledWith('/api/models/delete', {
+    model_ids: [7],
+    channel_model_names: ['bare-channel-model'],
+    remove_from_channels: true,
+    remove_pricing: false,
+  })
+})

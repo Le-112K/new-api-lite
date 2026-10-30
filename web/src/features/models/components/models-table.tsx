@@ -64,7 +64,6 @@ export function ModelsTable() {
       { columnId: 'status', searchKey: 'status', type: 'array' },
       { columnId: 'square_state', searchKey: 'square_state', type: 'array' },
       { columnId: 'vendor_id', searchKey: 'vendor', type: 'array' },
-      { columnId: 'sync_official', searchKey: 'sync', type: 'array' },
       { columnId: 'plans', searchKey: 'plans', type: 'array' },
     ],
   })
@@ -79,9 +78,6 @@ export function ModelsTable() {
   )?.[0]
   const vendorFilter =
     (columnFilters.find((f) => f.id === 'vendor_id')?.value as string[]) || []
-  const syncFilter =
-    (columnFilters.find((f) => f.id === 'sync_official')?.value as string[]) ||
-    []
   const planFilterValue = (
     columnFilters.find((f) => f.id === 'plans')?.value as string[] | undefined
   )?.[0]
@@ -116,18 +112,13 @@ export function ModelsTable() {
     statusFilter.length > 0 && !statusFilter.includes('all')
       ? statusFilter[0]
       : undefined
-  const syncFilterValue =
-    syncFilter.length > 0 && !syncFilter.includes('all')
-      ? syncFilter[0]
-      : undefined
 
-  // Use search API whenever any filter is active so status/sync are applied server-side
+  // Use search API whenever any filter is active so status is applied server-side
   const shouldSearch = Boolean(
     globalFilter?.trim() ||
     activeVendorFilter ||
     statusFilterValue ||
     squareState ||
-    syncFilterValue ||
     planFilterValue
   )
 
@@ -140,7 +131,6 @@ export function ModelsTable() {
       vendor: activeVendorFilter,
       status: statusFilterValue,
       square_state: squareState,
-      sync_official: syncFilterValue,
       p: pagination.pageIndex + 1,
       page_size: pagination.pageSize,
     }),
@@ -153,7 +143,6 @@ export function ModelsTable() {
             vendor: activeVendorFilter,
             status: statusFilterValue,
             square_state: squareState,
-            sync_official: syncFilterValue,
             group: planFilterValue,
             p: pagination.pageIndex + 1,
             page_size: pagination.pageSize,
@@ -286,15 +275,6 @@ export function ModelsTable() {
             columnId: 'vendor_id',
             title: t('Vendor'),
             options: vendorFilterOptions,
-            singleSelect: true,
-          },
-          {
-            columnId: 'sync_official',
-            title: t('Sync policy'),
-            options: [
-              { label: t('Allow updates'), value: 'yes' },
-              { label: t('Keep local'), value: 'no' },
-            ],
             singleSelect: true,
           },
         ],

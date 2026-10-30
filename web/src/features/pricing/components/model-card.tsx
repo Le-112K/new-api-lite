@@ -130,7 +130,8 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
 
       {/* Line 2 — callable model id. The well hugs short ids and truncates long
           ones (`min-w-0` lets it shrink); the copy button is `shrink-0` so it
-          always stays reachable. */}
+          always stays reachable. Same-canonical channel aliases surface as a
+          compact +N badge; the full list lives on the detail page. */}
       <div className='relative mt-1.5 flex min-w-0 items-center gap-2'>
         <code
           className='bg-muted text-foreground/85 min-w-0 truncate rounded-md px-2 py-1 font-mono text-[12px]'
@@ -138,6 +139,14 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
         >
           {modelName}
         </code>
+        {(props.model.aliases?.length ?? 0) > 0 && (
+          <span
+            className='border-border text-muted-foreground shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-medium'
+            title={props.model.aliases?.join('\n')}
+          >
+            +{props.model.aliases!.length}
+          </span>
+        )}
         <span
           className='shrink-0'
           onClick={(event) => event.stopPropagation()}

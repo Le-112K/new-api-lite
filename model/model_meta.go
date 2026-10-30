@@ -205,14 +205,13 @@ func GetConfiguredModelChannels() (map[string][]int, error) {
 
 // SearchModelsWithChannels augments metadata with concrete configured names.
 // Synthetic rows never persist and never affect the public pricing catalog.
-func SearchModelsWithChannels(keyword, vendor, status, syncOfficial string, offset, limit int) ([]*Model, int64, error) {
-	records, _, err := SearchModels(keyword, vendor, status, syncOfficial, 0, -1)
+func SearchModelsWithChannels(keyword, vendor, status string, offset, limit int) ([]*Model, int64, error) {
+	records, _, err := SearchModels(keyword, vendor, status, 0, -1)
 	if err != nil {
 		return nil, 0, err
 	}
 	_, filterStatus := parseModelStatusFilter(status)
-	_, filterSync := parseModelSyncFilter(syncOfficial)
-	if !filterStatus && !filterSync && (vendor == "" || vendor == "0") {
+	if !filterStatus && (vendor == "" || vendor == "0") {
 		configured, err := GetConfiguredModelChannels()
 		if err != nil {
 			return nil, 0, err
@@ -294,7 +293,7 @@ func (mi *Model) Update() error {
 }
 
 func (mi *Model) Delete() error {
-	_, err := DeleteModelMetadata([]int{mi.Id}, false, false)
+	_, err := DeleteModelMetadata([]int{mi.Id}, nil, false, false)
 	return err
 }
 
@@ -306,10 +305,27 @@ type ModelDeleteResult struct {
 // DeleteModelMetadata optionally removes exact model names from every channel.
 // Channel removal requires exact-match metadata records. Pricing removal
 // clears the selected names without expanding metadata matching rules.
-func DeleteModelMetadata(ids []int, removeFromChannels, removePricing bool) (ModelDeleteResult, error) {
+// channelNames carries channel-only model names that have no metadata row:
+// they never touch the metadata table and only join the channel-removal set,
+// so operators can delete a channel model without creating metadata first.
+func DeleteModelMetadata(ids []int, channelNames []string, removeFromChannels, removePricing bool) (ModelDeleteResult, error) {
 	result := ModelDeleteResult{}
-	if len(ids) == 0 || len(ids) > 1000 {
+	if len(ids) == 0 && len(channelNames) == 0 {
 		return result, errors.New("select between 1 and 1000 models")
+	}
+	if len(ids) > 1000 || len(channelNames) > 1000 {
+		return result, errors.New("select between 1 and 1000 models")
+	}
+	if len(channelNames) > 0 && !removeFromChannels {
+		return result, errors.New("channel-only models can only be removed together with their channels")
+	}
+	channelOnly := make(map[string]struct{}, len(channelNames))
+	for _, name := range channelNames {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			return result, errors.New("invalid model name")
+		}
+		channelOnly[name] = struct{}{}
 	}
 	selected := make(map[int]struct{}, len(ids))
 	for _, id := range ids {
@@ -323,20 +339,25 @@ func DeleteModelMetadata(ids []int, removeFromChannels, removePricing bool) (Mod
 		modelIDs = append(modelIDs, id)
 	}
 	sort.Ints(modelIDs)
-	names := make(map[string]struct{}, len(modelIDs))
+	names := make(map[string]struct{}, len(modelIDs)+len(channelOnly))
+	for name := range channelOnly {
+		names[name] = struct{}{}
+	}
 	deleteRecords := func(tx *gorm.DB) error {
 		var records []Model
-		if err := lockForUpdate(tx).Where("id IN ?", modelIDs).Order("id").Find(&records).Error; err != nil {
-			return err
-		}
-		if len(records) != len(modelIDs) {
-			return errors.New("selected models changed; reload before deleting")
-		}
-		for _, record := range records {
-			if removeFromChannels && record.NameRule != NameRuleExact {
-				return errors.New("only exact-match models can be removed from channels")
+		if len(modelIDs) > 0 {
+			if err := lockForUpdate(tx).Where("id IN ?", modelIDs).Order("id").Find(&records).Error; err != nil {
+				return err
 			}
-			names[record.ModelName] = struct{}{}
+			if len(records) != len(modelIDs) {
+				return errors.New("selected models changed; reload before deleting")
+			}
+			for _, record := range records {
+				if removeFromChannels && record.NameRule != NameRuleExact {
+					return errors.New("only exact-match models can be removed from channels")
+				}
+				names[record.ModelName] = struct{}{}
+			}
 		}
 		if removeFromChannels {
 			var channels []Channel
@@ -366,10 +387,12 @@ func DeleteModelMetadata(ids []int, removeFromChannels, removePricing bool) (Mod
 				result.UpdatedChannels++
 			}
 		}
-		if err := tx.Where("id IN ?", modelIDs).Delete(&Model{}).Error; err != nil {
-			return err
+		if len(modelIDs) > 0 {
+			if err := tx.Where("id IN ?", modelIDs).Delete(&Model{}).Error; err != nil {
+				return err
+			}
 		}
-		result.DeletedCount = len(records)
+		result.DeletedCount = len(records) + len(channelOnly)
 		return nil
 	}
 	var err error
@@ -425,7 +448,7 @@ func GetVendorModelCounts() (map[int64]int64, error) {
 }
 
 func GetAllModels(offset int, limit int) ([]*Model, error) {
-	models, _, err := SearchModels("", "", "", "", offset, limit)
+	models, _, err := SearchModels("", "", "", offset, limit)
 	return models, err
 }
 
@@ -502,7 +525,7 @@ func GetPreferredModelOwnerChannelTypes(modelNames []string, groups []string) (m
 	return result, nil
 }
 
-func SearchModels(keyword string, vendor string, status string, syncOfficial string, offset int, limit int) ([]*Model, int64, error) {
+func SearchModels(keyword string, vendor string, status string, offset int, limit int) ([]*Model, int64, error) {
 	var models []*Model
 	db := DB.Model(&Model{})
 	if keyword != "" {
@@ -518,9 +541,6 @@ func SearchModels(keyword string, vendor string, status string, syncOfficial str
 	}
 	if statusValue, ok := parseModelStatusFilter(status); ok {
 		db = db.Where("models.status = ?", statusValue)
-	}
-	if syncValue, ok := parseModelSyncFilter(syncOfficial); ok {
-		db = db.Where("models.sync_official = ?", syncValue)
 	}
 	var total int64
 	if err := db.Count(&total).Error; err != nil {
@@ -544,25 +564,6 @@ func parseModelStatusFilter(status string) (value int, ok bool) {
 		return 0, true
 	default:
 		n, err := strconv.Atoi(status)
-		if err != nil {
-			return 0, false
-		}
-		return n, true
-	}
-}
-
-// parseModelSyncFilter maps UI/API sync values to the models.sync_official column.
-// Returns ok=false when no sync filter should be applied.
-func parseModelSyncFilter(syncOfficial string) (value int, ok bool) {
-	switch strings.ToLower(strings.TrimSpace(syncOfficial)) {
-	case "", "all":
-		return 0, false
-	case "yes", "1":
-		return 1, true
-	case "no", "0":
-		return 0, true
-	default:
-		n, err := strconv.Atoi(syncOfficial)
 		if err != nil {
 			return 0, false
 		}

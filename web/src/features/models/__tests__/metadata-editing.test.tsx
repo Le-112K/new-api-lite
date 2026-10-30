@@ -27,7 +27,7 @@ import { api } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { DataTableRowActions } from '../components/data-table-row-actions'
-import { ModelMutateDrawer } from '../components/drawers/model-mutate-drawer'
+import { ModelMutateDialog } from '../components/dialogs/model-mutate-dialog'
 import { ModelsDialogs } from '../components/models-dialogs'
 import { ModelsProvider } from '../components/models-provider'
 import type { Model } from '../types'
@@ -139,7 +139,7 @@ describe('metadata editing', () => {
       })
       render(
         <QueryClientProvider client={client}>
-          <ModelMutateDrawer open onOpenChange={close} />
+          <ModelMutateDialog open onOpenChange={close} />
         </QueryClientProvider>
       )
       const user = userEvent.setup()
@@ -207,7 +207,7 @@ describe('metadata editing', () => {
     render(
       <QueryClientProvider client={client}>
         <ModelsProvider>
-          <ModelMutateDrawer open onOpenChange={() => {}} currentRow={model} />
+          <ModelMutateDialog open onOpenChange={() => {}} currentRow={model} />
         </ModelsProvider>
       </QueryClientProvider>
     )

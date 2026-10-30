@@ -140,10 +140,18 @@ export function ComboboxInput({
       input.closest<HTMLElement>('[role="dialog"]') ?? document.body
     const measure = () => {
       const rect = input.getBoundingClientRect()
+      // 面板 portal 进 dialog 后，position:fixed 的定位基准不再是视口——
+      // 弹窗的居中 transform（-translate-x-1/2 等）会让它成为 fixed 后代的
+      // containing block。getBoundingClientRect 给的是视口坐标，必须减去
+      // 弹窗盒左上角换算成相对坐标，否则面板整体错位一个弹窗左上角的量。
+      const base =
+        container === document.body
+          ? { left: 0, top: 0 }
+          : container.getBoundingClientRect()
       setDropdown({
         container,
-        top: rect.bottom + 4,
-        left: rect.left,
+        top: rect.bottom + 4 - base.top,
+        left: rect.left - base.left,
         width: rect.width,
       })
     }

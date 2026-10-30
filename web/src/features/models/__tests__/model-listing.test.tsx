@@ -278,10 +278,13 @@ it('keeps channel rows individually selectable and disables metadata mutations f
     'Clear vendor',
     'Show selected models in model square',
     'Hide selected models from model square',
-    'Delete selected models',
   ]) {
     expect(within(toolbar).getByRole('button', { name })).toBeDisabled()
   }
+  // 删除不依赖元数据：混合选择时纯渠道行按名字从渠道移除，元数据行按 id 删除。
+  expect(
+    within(toolbar).getByRole('button', { name: 'Delete selected models' })
+  ).toBeEnabled()
   expect(
     within(toolbar).getByRole('button', { name: 'Copy model names' })
   ).toBeEnabled()
@@ -550,8 +553,8 @@ it('keeps the subscription-era columns while collapsing tags', async () => {
     screen.getByRole('columnheader', { name: 'Plans' })
   ).toBeVisible()
   expect(
-    screen.getByRole('columnheader', { name: 'Sync policy' })
-  ).toBeVisible()
+    screen.queryByRole('columnheader', { name: 'Sync policy' })
+  ).not.toBeInTheDocument()
   expect(screen.getByRole('columnheader', { name: 'Tags' })).toBeVisible()
   expect(
     screen.queryByRole('columnheader', { name: 'Channels and groups' })

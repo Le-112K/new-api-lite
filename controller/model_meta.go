@@ -52,7 +52,7 @@ func listModelsMeta(c *gin.Context, keyword, vendor string) {
 	if c.Query("include_channel_models") == "true" {
 		search = model.SearchModelsWithChannels
 	}
-	modelsMeta, total, err := search(keyword, vendor, c.Query("status"), c.Query("sync_official"), offset, limit)
+	modelsMeta, total, err := search(keyword, vendor, c.Query("status"), offset, limit)
 	if err != nil {
 		common.ApiError(c, err)
 		return
@@ -220,7 +220,7 @@ func DeleteModelMeta(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"success": false, "message": "Model pricing is managed by a super administrator."})
 		return
 	}
-	result, err := model.DeleteModelMetadata([]int{id}, removeFromChannels, removePricing)
+	result, err := model.DeleteModelMetadata([]int{id}, nil, removeFromChannels, removePricing)
 	if err != nil {
 		common.ApiError(c, err)
 		return
@@ -231,9 +231,10 @@ func DeleteModelMeta(c *gin.Context) {
 
 func BatchDeleteModelMeta(c *gin.Context) {
 	var request struct {
-		ModelIDs           []int `json:"model_ids"`
-		RemoveFromChannels bool  `json:"remove_from_channels"`
-		RemovePricing      bool  `json:"remove_pricing"`
+		ModelIDs           []int   `json:"model_ids"`
+		ChannelModelNames  []string `json:"channel_model_names"`
+		RemoveFromChannels bool    `json:"remove_from_channels"`
+		RemovePricing      bool    `json:"remove_pricing"`
 	}
 	if err := common.DecodeJson(c.Request.Body, &request); err != nil {
 		common.ApiError(c, err)
@@ -243,12 +244,12 @@ func BatchDeleteModelMeta(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"success": false, "message": "Model pricing is managed by a super administrator."})
 		return
 	}
-	result, err := model.DeleteModelMetadata(request.ModelIDs, request.RemoveFromChannels, request.RemovePricing)
+	result, err := model.DeleteModelMetadata(request.ModelIDs, request.ChannelModelNames, request.RemoveFromChannels, request.RemovePricing)
 	if err != nil {
 		common.ApiError(c, err)
 		return
 	}
-	recordManageAudit(c, "model.delete_batch", map[string]any{"model_ids": request.ModelIDs, "remove_from_channels": request.RemoveFromChannels, "remove_pricing": request.RemovePricing, "updated_channels": result.UpdatedChannels})
+	recordManageAudit(c, "model.delete_batch", map[string]any{"model_ids": request.ModelIDs, "channel_model_names": request.ChannelModelNames, "remove_from_channels": request.RemoveFromChannels, "remove_pricing": request.RemovePricing, "updated_channels": result.UpdatedChannels})
 	common.ApiSuccess(c, result)
 }
 

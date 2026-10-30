@@ -368,6 +368,15 @@ function ModelBackendProviderSection(props: {
     )
   }
 
+  const aliases = normalizeCatalogItems(model.aliases)
+  if (aliases.length > 0) {
+    cells.push(
+      <CatalogInfoCell key='aliases' label={t('Callable names')}>
+        <CatalogPillList items={aliases} />
+      </CatalogInfoCell>
+    )
+  }
+
   if (model.parameter_count) {
     cells.push(
       <CatalogInfoCell key='parameters' label={t('Parameters')}>
@@ -655,6 +664,28 @@ function ModelDetailsModal(props: ModelDetailsModalProps) {
       </header>
 
       {/* 按需付费的价格区块已随订阅制移除 */}
+
+      {/* 可调用名称段：标准模型聚合后，同名多渠道别名收在这里逐个可复制。
+          主名（model_name）排首位，其余为同一标准模型的渠道别名。 */}
+      <DetailsModalSection title={t('Callable names')}>
+        <ul className='flex flex-wrap gap-2'>
+          {[model.model_name, ...(model.aliases ?? [])].map((name) => (
+            <li
+              key={name}
+              className='border-border bg-background text-foreground flex items-center gap-1 rounded-full border py-1 pr-1 pl-2.5'
+            >
+              <span className='font-mono text-[13px]'>{name}</span>
+              <CopyButton
+                value={name}
+                tooltip={t('Copy model name')}
+                successTooltip={t('Copied!')}
+                className='size-6'
+                iconClassName='size-3'
+              />
+            </li>
+          ))}
+        </ul>
+      </DetailsModalSection>
 
       <DetailsModalSection title={t('Protocol endpoints')}>
         {endpoints.length > 0 ? (

@@ -39,19 +39,6 @@ export function getNameRuleOptions(t: TFunction) {
   ] as const
 }
 
-/** '' 表示未知，其余取值与中继层 reasoning effort 一一对应。 */
-export function getThinkingStrengthOptions(
-  t: TFunction
-): { label: string; value: string }[] {
-  return [
-    { label: t('Unknown'), value: '' },
-    { label: t('None'), value: 'none' },
-    { label: t('Low'), value: 'low' },
-    { label: t('Medium'), value: 'medium' },
-    { label: t('High'), value: 'high' },
-  ]
-}
-
 export function getNameRuleConfig(
   t: TFunction
 ): Record<NameRule, { label: string; color: string; description: string }> {
