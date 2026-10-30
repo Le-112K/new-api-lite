@@ -2956,7 +2956,6 @@ export function ChannelMutateDrawer({
                       createLabel='Add custom model "{{value}}"'
                       maxVisibleChips={8}
                       copyChipOnClick
-                      variant='plain'
                     />
                   </FormControl>
                   <div className='text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-xs'>

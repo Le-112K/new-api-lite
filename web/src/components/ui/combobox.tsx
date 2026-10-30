@@ -462,7 +462,12 @@ function ComboboxChipsInput({
   return (
     <ComboboxPrimitive.Input
       data-slot='combobox-chip-input'
-      className={cn('min-w-16 flex-1 outline-none', className)}
+      // 原生 <input> 自带边框与背景，会渲染成 chips 末尾的一个小方框；
+      // 在 chips 容器里它只是一段透明输入位，必须显式清掉。
+      className={cn(
+        'min-w-16 flex-1 border-0 bg-transparent p-0 outline-none focus-visible:ring-0',
+        className
+      )}
       {...props}
     />
   )
