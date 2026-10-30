@@ -20,24 +20,13 @@ import type { ColumnDef } from '@tanstack/react-table'
 
 import { DataTableColumnHeader } from '@/components/data-table/core/column-header'
 import { StaticRowActions } from '@/components/data-table/static/static-row-actions'
-import { StatusBadge } from '@/components/status-badge'
 import { Checkbox } from '@/components/ui/checkbox'
 
 import {
-  getModeLabel,
-  getModeVariant,
   getPriceDetail,
   getPriceSummary,
   type ModelRow,
 } from './model-pricing-snapshots'
-
-const filterBySelectedValues = (
-  rowValue: unknown,
-  filterValue: unknown
-): boolean => {
-  if (!Array.isArray(filterValue) || filterValue.length === 0) return true
-  return filterValue.includes(String(rowValue))
-}
 
 type BuildModelRatioColumnsOptions = {
   onDelete: (name: string) => void
@@ -85,35 +74,10 @@ export function buildModelRatioColumns({
         return (
           <div className='flex min-w-0 items-center gap-2 font-medium'>
             <span className='min-w-0 truncate'>{row.getValue('name')}</span>
-            {row.original.hasConflict && (
-              <StatusBadge
-                label={t('Conflict')}
-                variant='danger'
-                copyable={false}
-                className='shrink-0'
-              />
-            )}
           </div>
         )
       },
       enableHiding: false,
-    },
-    {
-      accessorKey: 'billingMode',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('Mode')} />
-      ),
-      cell: ({ row }) => (
-        <StatusBadge
-          label={t(getModeLabel(row.original.billingMode))}
-          variant={getModeVariant(row.original.billingMode)}
-          copyable={false}
-          showDot={false}
-          className='-ml-1.5 px-0'
-        />
-      ),
-      filterFn: (row, id, value) => filterBySelectedValues(row.getValue(id), value),
-      meta: { label: t('Mode') },
     },
     {
       id: 'priceSummary',

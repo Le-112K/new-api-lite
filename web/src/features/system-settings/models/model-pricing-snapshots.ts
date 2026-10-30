@@ -17,31 +17,15 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { safeJsonParse } from '../utils/json-parser'
-import { formatPricingNumber } from './pricing-format'
 
+/** 站点按调用次数计费，一份定价快照只描述「单次价格」。 */
 export type ModelPricingSnapshotInput = {
   modelPrice: string
-  modelRatio: string
-  cacheRatio: string
-  createCacheRatio: string
-  completionRatio: string
-  imageRatio: string
-  audioRatio: string
-  audioCompletionRatio: string
 }
 
 export type ModelPricingSnapshot = {
   name: string
   price?: string
-  ratio?: string
-  cacheRatio?: string
-  createCacheRatio?: string
-  completionRatio?: string
-  imageRatio?: string
-  audioRatio?: string
-  audioCompletionRatio?: string
-  billingMode?: string
-  hasConflict: boolean
 }
 
 export type ModelRow = ModelPricingSnapshot & {
@@ -56,170 +40,37 @@ export const hasPricingValue = (value?: string) =>
   value !== undefined && value !== ''
 
 export const isBasePricingUnset = (snapshot?: ModelPricingSnapshot) =>
-  !snapshot ||
-  (!hasPricingValue(snapshot.price) && !hasPricingValue(snapshot.ratio))
-
-const toNumberOrNull = (value?: string) => {
-  if (!hasPricingValue(value)) return null
-  const num = Number(value)
-  return Number.isFinite(num) ? num : null
-}
-
-const ratioToPrice = (ratio?: string, denominator?: string) => {
-  const ratioNumber = toNumberOrNull(ratio)
-  const denominatorNumber = denominator ? toNumberOrNull(denominator) : 2
-  if (ratioNumber === null || denominatorNumber === null) return ''
-  return formatPricingNumber(ratioNumber * denominatorNumber)
-}
-
-export const getModeLabel = (mode?: string) => {
-  if (mode === 'per-request') return 'Per-request (deprecated)'
-  return 'Per-token (deprecated)'
-}
-
-export const getModeVariant = (mode?: string): 'warning' | 'success' => {
-  if (mode === 'per-request') return 'warning'
-  return 'success'
-}
+  !snapshot || !hasPricingValue(snapshot.price)
 
 export const getPriceSummary = (
   row: ModelPricingSnapshot,
   t: (key: string) => string
 ) => {
-  if (row.billingMode === 'per-request') {
-    return row.price ? `$${row.price} / ${t('request')}` : t('Unset price')
-  }
-
-  const inputPrice = ratioToPrice(row.ratio)
-  if (!inputPrice) return t('Unset price')
-
-  return `${t('Input')} $${inputPrice}`
+  return row.price ? `$${row.price} / ${t('request')}` : t('Unset price')
 }
 
 export const getPriceDetail = (
   row: ModelPricingSnapshot,
   t: (key: string) => string
 ) => {
-  if (row.billingMode === 'per-request') {
-    return t('Fixed request price')
-  }
-
-  const inputPrice = ratioToPrice(row.ratio)
-  if (!inputPrice) return t('No base input price')
-
-  const details = [
-    row.completionRatio &&
-      `${t('Output')} $${ratioToPrice(row.completionRatio, inputPrice)}`,
-    row.cacheRatio &&
-      `${t('Cache')} $${ratioToPrice(row.cacheRatio, inputPrice)}`,
-    row.createCacheRatio &&
-      `${t('Cache write')} $${ratioToPrice(row.createCacheRatio, inputPrice)}`,
-  ]
-    .filter(Boolean)
-    .slice(0, 2)
-
-  return details.length > 0 ? details.join(' · ') : t('Base input price only')
+  return row.price ? t('Fixed request price') : t('Unset price')
 }
 
 export const buildModelSnapshots = ({
   modelPrice,
-  modelRatio,
-  cacheRatio,
-  createCacheRatio,
-  completionRatio,
-  imageRatio,
-  audioRatio,
-  audioCompletionRatio,
 }: ModelPricingSnapshotInput): ModelPricingSnapshot[] => {
   const priceMap = safeJsonParse<Record<string, number>>(modelPrice, {
     fallback: {},
     context: 'model prices',
   })
-  const ratioMap = safeJsonParse<Record<string, number>>(modelRatio, {
-    fallback: {},
-    context: 'model ratios',
-  })
-  const cacheMap = safeJsonParse<Record<string, number>>(cacheRatio, {
-    fallback: {},
-    context: 'cache ratios',
-  })
-  const createCacheMap = safeJsonParse<Record<string, number>>(
-    createCacheRatio,
-    { fallback: {}, context: 'create cache ratios' }
-  )
-  const completionMap = safeJsonParse<Record<string, number>>(completionRatio, {
-    fallback: {},
-    context: 'completion ratios',
-  })
-  const imageMap = safeJsonParse<Record<string, number>>(imageRatio, {
-    fallback: {},
-    context: 'image ratios',
-  })
-  const audioMap = safeJsonParse<Record<string, number>>(audioRatio, {
-    fallback: {},
-    context: 'audio ratios',
-  })
-  const audioCompletionMap = safeJsonParse<Record<string, number>>(
-    audioCompletionRatio,
-    { fallback: {}, context: 'audio completion ratios' }
-  )
 
-  const modelNames = new Set([
-    ...Object.keys(priceMap),
-    ...Object.keys(ratioMap),
-    ...Object.keys(cacheMap),
-    ...Object.keys(createCacheMap),
-    ...Object.keys(completionMap),
-    ...Object.keys(imageMap),
-    ...Object.keys(audioMap),
-    ...Object.keys(audioCompletionMap),
-  ])
-
-  return [...modelNames].map((name) => {
-    const price = priceMap[name]?.toString() || ''
-    const ratio = ratioMap[name]?.toString() || ''
-    const cache = cacheMap[name]?.toString() || ''
-    const createCache = createCacheMap[name]?.toString() || ''
-    const completion = completionMap[name]?.toString() || ''
-    const image = imageMap[name]?.toString() || ''
-    const audio = audioMap[name]?.toString() || ''
-    const audioCompletion = audioCompletionMap[name]?.toString() || ''
-
-    return {
-      name,
-      price,
-      ratio,
-      cacheRatio: cache,
-      createCacheRatio: createCache,
-      completionRatio: completion,
-      imageRatio: image,
-      audioRatio: audio,
-      audioCompletionRatio: audioCompletion,
-      billingMode: price !== '' ? 'per-request' : 'per-token',
-      hasConflict:
-        price !== '' &&
-        (ratio !== '' ||
-          completion !== '' ||
-          cache !== '' ||
-          createCache !== '' ||
-          image !== '' ||
-          audio !== '' ||
-          audioCompletion !== ''),
-    }
-  })
+  return Object.keys(priceMap).map((name) => ({
+    name,
+    price: priceMap[name]?.toString() || '',
+  }))
 }
 
 export const getSnapshotSignature = (snapshot?: ModelPricingSnapshot) => {
   if (!snapshot) return ''
-  return JSON.stringify({
-    price: snapshot.price || '',
-    ratio: snapshot.ratio || '',
-    cacheRatio: snapshot.cacheRatio || '',
-    createCacheRatio: snapshot.createCacheRatio || '',
-    completionRatio: snapshot.completionRatio || '',
-    imageRatio: snapshot.imageRatio || '',
-    audioRatio: snapshot.audioRatio || '',
-    audioCompletionRatio: snapshot.audioCompletionRatio || '',
-    billingMode: snapshot.billingMode || 'per-token',
-  })
+  return JSON.stringify({ price: snapshot.price || '' })
 }

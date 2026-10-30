@@ -1,31 +1,14 @@
 package model
 
 import (
-	"errors"
-	"math"
-	"strings"
-
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/setting/operation_setting"
-	"github.com/shopspring/decimal"
 )
 
 // ModelPricingDescription is shared by previews and snapshot entries. It
 // describes effective prices without adding persisted settings.
 type ModelPricingDescription struct {
 	Effective      PricingValues        `json:"effective,omitempty"`
-	CacheWriteMode CacheWriteMode       `json:"cache_write_mode,omitempty"`
 	BillingDetails LegacyBillingDetails `json:"billing_details"`
-}
-
-func legacyInputPricePerMillion(ratio float64) (decimal.Decimal, error) {
-	if common.QuotaPerUnit <= 0 || math.IsInf(common.QuotaPerUnit, 0) || math.IsNaN(common.QuotaPerUnit) {
-		return decimal.Zero, errors.New("invalid quota unit")
-	}
-	if ratio < 0 || math.IsInf(ratio, 0) || math.IsNaN(ratio) {
-		return decimal.Zero, errors.New("input ratio must be finite and non-negative")
-	}
-	return decimal.NewFromFloat(ratio).Mul(decimal.NewFromInt(1_000_000)).Div(decimal.NewFromFloat(common.QuotaPerUnit)), nil
 }
 
 type LegacyPricingRule struct {
@@ -33,92 +16,19 @@ type LegacyPricingRule struct {
 	Multiplier float64 `json:"multiplier"`
 }
 
-// LegacyBillingDetails is display-only. Absolute audio prices cannot always be
-// represented by a ratio: Gemini audio can be billable with a zero text price.
+// LegacyBillingDetails is display-only. It explains how a fixed per-call
+// price is settled: charged once per image, or adjusted by request rules.
 type LegacyBillingDetails struct {
-	AudioInputPrice        *float64            `json:"audio_input_price,omitempty"`
-	AudioOutputPrice       *float64            `json:"audio_output_price,omitempty"`
-	ImageCount             bool                `json:"image_count,omitempty"`
-	RequestRules           []LegacyPricingRule `json:"request_rules,omitempty"`
-	AudioTextBranches      bool                `json:"audio_text_branches,omitempty"`
-	InvalidAudioPrice      bool                `json:"-"`
-	ConflictingAudioPrices bool                `json:"-"`
+	ImageCount   bool                `json:"image_count,omitempty"`
+	RequestRules []LegacyPricingRule `json:"request_rules,omitempty"`
 }
 
-func ResolveLegacyBillingDetails(name string, effective, configured PricingValues) LegacyBillingDetails {
+func ResolveLegacyBillingDetails(name string, effective PricingValues) LegacyBillingDetails {
 	details := LegacyBillingDetails{}
-	if _, fixed := effective["ModelPrice"]; fixed {
-		details.ImageCount = common.IsImageGenerationModel(name)
-		details.RequestRules = legacyDallePricingRules(name)
+	if _, fixed := effective["ModelPrice"]; !fixed {
 		return details
 	}
-	ratio, priced := effective["ModelRatio"].(float64)
-	if !priced {
-		return details
-	}
-	base, err := legacyInputPricePerMillion(ratio)
-	if err != nil {
-		return details
-	}
-	if price := operation_setting.GetGeminiInputAudioPricePerMillionTokens(name); price > 0 {
-		details.AudioInputPrice = &price
-		// Native Gemini settles with its dedicated input price; compatible
-		// chat enters the audio-ratio path when those ratios are configured.
-		// Do not silently replace one price with the other during migration.
-		audio, hasInput := effective["AudioRatio"].(float64)
-		output, hasOutput := effective["AudioCompletionRatio"].(float64)
-		if hasInput || hasOutput {
-			if !hasInput {
-				audio = 1
-			}
-			if !hasOutput {
-				output = 1
-			}
-			audioPrice := base.Mul(decimal.NewFromFloat(audio))
-			textOutput := base.Mul(decimal.NewFromFloat(effective["CompletionRatio"].(float64)))
-			details.ConflictingAudioPrices = !audioPrice.Equal(decimal.NewFromFloat(price)) || !audioPrice.Mul(decimal.NewFromFloat(output)).Equal(textOutput)
-		}
-		return details
-	}
-	audioRatio, hasAudio := effective["AudioRatio"].(float64)
-	audioCompletionRatio, hasAudioCompletion := effective["AudioCompletionRatio"].(float64)
-	if !hasAudio && !hasAudioCompletion {
-		return details
-	}
-	if !hasAudio {
-		audioRatio = 1
-	}
-	if !hasAudioCompletion {
-		audioCompletionRatio = 1
-	}
-	input := base.Mul(decimal.NewFromFloat(audioRatio))
-	inPrice, outPrice := input.InexactFloat64(), input.Mul(decimal.NewFromFloat(audioCompletionRatio)).InexactFloat64()
-	if math.IsInf(inPrice, 0) || math.IsInf(outPrice, 0) {
-		details.InvalidAudioPrice = true
-		return details
-	}
-	details.AudioInputPrice, details.AudioOutputPrice = &inPrice, &outPrice
-	details.AudioTextBranches = effective["CacheRatio"] != float64(1) || effective["ImageRatio"] != float64(1) || ResolveCacheWriteMode(name, configured) != CacheWriteNone
+	details.ImageCount = common.IsImageGenerationModel(name)
+	details.RequestRules = legacyDallePricingRules(name)
 	return details
-}
-
-type CacheWriteMode string
-
-const (
-	CacheWriteNone      CacheWriteMode = "none"
-	CacheWriteStandard  CacheWriteMode = "standard"
-	CacheWriteClaudeTTL CacheWriteMode = "claude_ttl"
-)
-
-// ResolveCacheWriteMode describes display and migration only. A generic engine
-// fallback is not configured cache-write pricing. Only Claude names inherit the
-// legacy dual-TTL rule; other models retain their configured write price.
-func ResolveCacheWriteMode(name string, configured PricingValues) CacheWriteMode {
-	if strings.Contains(strings.ToLower(name), "claude") {
-		return CacheWriteClaudeTTL
-	}
-	if _, exists := configured["CreateCacheRatio"]; exists {
-		return CacheWriteStandard
-	}
-	return CacheWriteNone
 }

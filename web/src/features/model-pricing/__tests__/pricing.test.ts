@@ -27,47 +27,22 @@ import {
 } from '../pricing'
 
 describe('shared model pricing', () => {
-  it('preserves explicit zero prices and cache-write configuration', () => {
-    expect(
-      pricingFromDraft({
-        name: 'example',
-        billingMode: 'per-token',
-        ratio: '0',
-        completionRatio: '2',
-        cacheRatio: '0',
-        createCacheRatio: '1.25',
-      })
-    ).toEqual({
-      ModelRatio: 0,
-      CompletionRatio: 2,
-      CacheRatio: 0,
-      CreateCacheRatio: 1.25,
+  it('keeps an explicit zero price and drops an empty one', () => {
+    expect(pricingFromDraft({ name: 'example', price: '' })).toEqual({})
+    expect(pricingFromDraft({ name: 'example', price: '0' })).toEqual({
+      ModelPrice: 0,
     })
-    expect(
-      pricingFromDraft({
-        name: 'example',
-        billingMode: 'per-request',
-        price: '',
-      })
-    ).not.toHaveProperty('ModelPrice')
-    expect(
-      pricingFromDraft({
-        name: 'example',
-        billingMode: 'per-request',
-        price: '0',
-      })
-    ).toHaveProperty('ModelPrice', 0)
+    expect(pricingFromDraft({ name: 'example', price: '0.25' })).toEqual({
+      ModelPrice: 0.25,
+    })
   })
 
   it('round-trips a fixed price without inventing token ratios', () => {
-    const values = pricingFromDraft(
-      pricingRow('example', { ModelPrice: 0.4, CompletionRatio: 3 })
-    )
+    const values = pricingFromDraft(pricingRow('example', { ModelPrice: 0.4 }))
     expect(values).toEqual({ ModelPrice: 0.4 })
     expect(pricingRow('example', values)).toMatchObject({
       name: 'example',
       price: '0.4',
-      billingMode: 'per-request',
     })
   })
 
@@ -95,7 +70,6 @@ describe('shared model pricing', () => {
     }
     const after = applyPricingDraft(options, {
       name: 'edited',
-      billingMode: 'per-request',
       price: '2',
     })
     expect(buildPricingChanges(snapshot, options, after)).toEqual([
@@ -111,11 +85,10 @@ describe('shared model pricing', () => {
     const options = pricingOptions({
       ModelPrice: '{"source":1,"target":5,"untouched":7}',
     })
-    const after = applyPricingDraft(
-      options,
-      { name: 'source', billingMode: 'per-request', price: '3' },
-      ['source', 'target']
-    )
+    const after = applyPricingDraft(options, { name: 'source', price: '3' }, [
+      'source',
+      'target',
+    ])
     expect(JSON.parse(after.ModelPrice)).toEqual({
       source: 3,
       target: 3,
@@ -125,9 +98,7 @@ describe('shared model pricing', () => {
 
   it('rejects invalid prices instead of silently coercing them', () => {
     for (const price of ['-1', 'NaN', 'Infinity', 'invalid']) {
-      expect(() =>
-        pricingFromDraft({ name: 'example', billingMode: 'per-request', price })
-      ).toThrow()
+      expect(() => pricingFromDraft({ name: 'example', price })).toThrow()
     }
   })
 })

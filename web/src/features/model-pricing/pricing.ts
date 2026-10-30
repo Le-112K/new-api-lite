@@ -18,123 +18,51 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { t } from 'i18next'
 
-import type { PricingModel } from '@/features/pricing/types'
 import type { ModelRatioData } from '@/features/system-settings/models/model-pricing-core'
-import {
-  buildModelSnapshots,
-  type ModelPricingSnapshot,
-} from '@/features/system-settings/models/model-pricing-snapshots'
+import { buildModelSnapshots } from '@/features/system-settings/models/model-pricing-snapshots'
 
-import type { ModelPricingEntry } from './api'
-
-export const PRICING_KEYS = [
-  'ModelPrice',
-  'ModelRatio',
-  'CompletionRatio',
-  'CacheRatio',
-  'CreateCacheRatio',
-  'ImageRatio',
-  'AudioRatio',
-  'AudioCompletionRatio',
-] as const
+/**
+ * 站点只按调用次数计费，定价配置只剩「单次价格」一个键。
+ * ModelPrice 的 JSON map 形如 `{ "gpt-4o": 0.01 }`，单位是「货币单位 / 次」。
+ */
+export const PRICING_KEYS = ['ModelPrice'] as const
 export type PricingKey = (typeof PRICING_KEYS)[number]
 export type PricingValues = Partial<Record<PricingKey, number | string>>
 export type PricingOptions = Record<PricingKey, string>
 
-export type CacheWriteMode = 'none' | 'standard' | 'claude_ttl'
-
+/** 仅作展示：后端可能附带按图计费与请求级倍率的说明。 */
 export type LegacyBillingDetails = {
-  audio_input_price?: number
-  audio_output_price?: number
-  audio_text_branches?: boolean
   image_count?: boolean
   request_rules?: { condition: string; multiplier: number }[]
 }
 
-export function modelPricingDisplay(
-  entry: Pick<ModelPricingEntry, 'model_name' | 'effective'> &
-    Partial<Pick<ModelPricingEntry, 'configured' | 'cache_write_mode'>>
-): PricingModel {
-  const values = entry.effective
-  return {
-    id: 0,
-    model_name: entry.model_name,
-    enable_groups: [],
-    model_price:
-      values.ModelPrice === undefined ? undefined : Number(values.ModelPrice),
-  }
-}
-
-export const pricingFieldMap = {
-  price: 'ModelPrice',
-  ratio: 'ModelRatio',
-  completionRatio: 'CompletionRatio',
-  cacheRatio: 'CacheRatio',
-  createCacheRatio: 'CreateCacheRatio',
-  imageRatio: 'ImageRatio',
-  audioRatio: 'AudioRatio',
-  audioCompletionRatio: 'AudioCompletionRatio',
-} as const
-
 export function pricingOptions(
   values: Record<string, string | boolean>
 ): PricingOptions {
-  return Object.fromEntries(
-    PRICING_KEYS.map((key) => {
-      const value = values[key]
-      return [key, typeof value === 'string' ? value : '{}']
-    })
-  ) as PricingOptions
-}
-
-export function pricingRows(options: PricingOptions): ModelPricingSnapshot[] {
-  return buildModelSnapshots({
-    modelPrice: options.ModelPrice,
-    modelRatio: options.ModelRatio,
-    completionRatio: options.CompletionRatio,
-    cacheRatio: options.CacheRatio,
-    createCacheRatio: options.CreateCacheRatio,
-    imageRatio: options.ImageRatio,
-    audioRatio: options.AudioRatio,
-    audioCompletionRatio: options.AudioCompletionRatio,
-  })
+  const value = values.ModelPrice
+  return { ModelPrice: typeof value === 'string' ? value : '{}' }
 }
 
 export function pricingRow(
   name: string,
   values: PricingValues
 ): ModelRatioData {
-  const options = Object.fromEntries(
-    PRICING_KEYS.map((key) => [
-      key,
-      JSON.stringify(values[key] === undefined ? {} : { [name]: values[key] }),
-    ])
-  ) as PricingOptions
-  const row = pricingRows(options).find((entry) => entry.name === name)
-  const billingMode: ModelRatioData['billingMode'] = row?.price
-    ? 'per-request'
-    : 'per-token'
-  return { ...row, name, billingMode }
+  const price = values.ModelPrice
+  if (price === undefined) return { name, price: '' }
+  const row = buildModelSnapshots({
+    modelPrice: JSON.stringify({ [name]: price }),
+  }).find((entry) => entry.name === name)
+  return { name, price: row?.price ?? '' }
 }
 
 export function pricingFromDraft(data: ModelRatioData): PricingValues {
-  const values: PricingValues = {}
-  for (const [field, key] of Object.entries(pricingFieldMap)) {
-    const value = data[field as keyof typeof pricingFieldMap]
-    if (value === undefined || value === '') continue
-    const number = Number(value)
-    if (!Number.isFinite(number) || number < 0) {
-      throw new Error(t('Enter a finite, non-negative price'))
-    }
-    if (
-      data.billingMode === 'per-request'
-        ? key === 'ModelPrice'
-        : key !== 'ModelPrice'
-    ) {
-      values[key] = number
-    }
+  const raw = data.price ?? ''
+  if (raw === '') return {}
+  const value = Number(raw)
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(t('Enter a finite, non-negative price'))
   }
-  return values
+  return { ModelPrice: value }
 }
 
 export function applyPricingDraft(
@@ -142,53 +70,43 @@ export function applyPricingDraft(
   data: ModelRatioData,
   names: string[] = [data.name]
 ): PricingOptions {
-  return applyPricingValues(options, pricingFromDraft(data), names)
-}
-
-function applyPricingValues(
-  options: PricingOptions,
-  values: PricingValues,
-  names: string[]
-): PricingOptions {
-  return Object.fromEntries(
-    PRICING_KEYS.map((key) => {
-      const map = JSON.parse(options[key] ?? '{}') as Record<
-        string,
-        number | string
-      >
-      for (const name of names) {
-        delete map[name]
-        if (values[key] !== undefined) {
-          Object.defineProperty(map, name, {
-            value: values[key],
-            enumerable: true,
-            writable: true,
-            configurable: true,
-          })
-        }
-      }
-      return [key, JSON.stringify(map)]
-    })
-  ) as PricingOptions
+  const values = pricingFromDraft(data)
+  const map = parsePriceMap(options.ModelPrice)
+  for (const name of names) {
+    delete map[name]
+    if (values.ModelPrice !== undefined) {
+      Object.defineProperty(map, name, {
+        value: values.ModelPrice,
+        enumerable: true,
+        writable: true,
+        configurable: true,
+      })
+    }
+  }
+  return { ModelPrice: JSON.stringify(map) }
 }
 
 export function pricingValuesByModel(
   options: PricingOptions
 ): Map<string, PricingValues> {
   const models = new Map<string, PricingValues>()
-  for (const key of PRICING_KEYS) {
-    const map: unknown = JSON.parse(options[key] ?? '{}')
-    if (map === null || typeof map !== 'object' || Array.isArray(map)) {
-      throw new Error(t('Pricing must be a JSON object'))
+  for (const [name, value] of Object.entries(
+    parsePriceMap(options.ModelPrice)
+  )) {
+    if (typeof value !== 'number' && typeof value !== 'string') {
+      throw new Error(t('Invalid pricing value'))
     }
-    for (const [name, value] of Object.entries(map)) {
-      if (typeof value !== 'number' && typeof value !== 'string') {
-        throw new Error(t('Invalid pricing value'))
-      }
-      const model = models.get(name) ?? {}
-      model[key] = value
-      models.set(name, model)
-    }
+    models.set(name, { ModelPrice: value })
   }
   return models
+}
+
+function parsePriceMap(
+  raw: string | undefined
+): Record<string, number | string> {
+  const parsed: unknown = JSON.parse(raw ?? '{}')
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(t('Pricing must be a JSON object'))
+  }
+  return parsed as Record<string, number | string>
 }

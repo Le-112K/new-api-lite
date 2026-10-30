@@ -95,11 +95,3 @@ export async function deleteSystemTaskHistory(
   )
   return res.data
 }
-
-export async function resetModelRatios() {
-  const res = await api.post<UpdateOptionResponse>(
-    '/api/option/rest_model_ratio'
-  )
-  return res.data
-}
-

@@ -173,13 +173,6 @@ export type BillingSettings = {
   DisplayInCurrencyEnabled: boolean
   DisplayTokenStatEnabled: boolean
   ModelPrice: string
-  ModelRatio: string
-  CacheRatio: string
-  CreateCacheRatio: string
-  CompletionRatio: string
-  ImageRatio: string
-  AudioRatio: string
-  AudioCompletionRatio: string
   TopupGroupRatio: string
   GroupRatio: string
   UserUsableGroups: string
@@ -248,4 +241,3 @@ export type SecuritySettings = {
   'fetch_setting.apply_ip_filter_for_domain': boolean
   'token_setting.max_user_tokens': number
 }
-

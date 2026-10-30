@@ -45,13 +45,6 @@ import {
 
 type ModelFormValues = {
   ModelPrice: string
-  ModelRatio: string
-  CacheRatio: string
-  CreateCacheRatio: string
-  CompletionRatio: string
-  ImageRatio: string
-  AudioRatio: string
-  AudioCompletionRatio: string
 }
 
 type ModelRatioFormProps = {
@@ -64,15 +57,7 @@ type ModelRatioFormProps = {
   variant?: 'default' | 'unset'
 }
 
-type ModelJsonFieldName =
-  | 'ModelPrice'
-  | 'ModelRatio'
-  | 'CacheRatio'
-  | 'CreateCacheRatio'
-  | 'CompletionRatio'
-  | 'ImageRatio'
-  | 'AudioRatio'
-  | 'AudioCompletionRatio'
+type ModelJsonFieldName = 'ModelPrice'
 
 const modelJsonFields: Array<{
   name: ModelJsonFieldName
@@ -230,21 +215,7 @@ export const ModelRatioForm = memo(function ModelRatioForm({
             <ModelRatioVisualEditor
               ref={visualEditorRef}
               savedModelPrice={savedValues.ModelPrice}
-              savedModelRatio={savedValues.ModelRatio}
-              savedCacheRatio={savedValues.CacheRatio}
-              savedCreateCacheRatio={savedValues.CreateCacheRatio}
-              savedCompletionRatio={savedValues.CompletionRatio}
-              savedImageRatio={savedValues.ImageRatio}
-              savedAudioRatio={savedValues.AudioRatio}
-              savedAudioCompletionRatio={savedValues.AudioCompletionRatio}
               modelPrice={form.watch('ModelPrice')}
-              modelRatio={form.watch('ModelRatio')}
-              cacheRatio={form.watch('CacheRatio')}
-              createCacheRatio={form.watch('CreateCacheRatio')}
-              completionRatio={form.watch('CompletionRatio')}
-              imageRatio={form.watch('ImageRatio')}
-              audioRatio={form.watch('AudioRatio')}
-              audioCompletionRatio={form.watch('AudioCompletionRatio')}
               candidateModelNames={
                 isUnsetVariant ? enabledModelsQuery.data?.data : undefined
               }

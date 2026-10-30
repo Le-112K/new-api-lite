@@ -46,7 +46,7 @@ async function renderEditor() {
     }
     return { data: { success: true, data: {} } }
   })
-  const modelRatio = JSON.stringify({
+  const modelPrice = JSON.stringify({
     'gpt-4.1-mini': 0.2,
     'claude-sonnet': 1.5,
   })
@@ -57,22 +57,8 @@ async function renderEditor() {
   const view = render(
     <QueryClientProvider client={client}>
       <ModelRatioVisualEditor
-        savedModelPrice='{}'
-        savedModelRatio={modelRatio}
-        savedCacheRatio='{}'
-        savedCreateCacheRatio='{}'
-        savedCompletionRatio='{}'
-        savedImageRatio='{}'
-        savedAudioRatio='{}'
-        savedAudioCompletionRatio='{}'
-        modelPrice='{}'
-        modelRatio={modelRatio}
-        cacheRatio='{}'
-        createCacheRatio='{}'
-        completionRatio='{}'
-        imageRatio='{}'
-        audioRatio='{}'
-        audioCompletionRatio='{}'
+        savedModelPrice={modelPrice}
+        modelPrice={modelPrice}
         onChange={vi.fn()}
         onSave={vi.fn()}
         isSaving={false}

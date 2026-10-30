@@ -107,14 +107,3 @@ export type PricingData = {
   auto_groups: string[]
   subscription_plans?: PricingSubscriptionPlan[]
 }
-
-export type TokenUnit = 'M' | 'K'
-export type PriceType =
-  | 'input'
-  | 'output'
-  | 'cache'
-  | 'create_cache'
-  | 'image'
-  | 'audio_input'
-  | 'audio_output'
-export type QuotaType = 0 | 1 // 0: token-based, 1: per-request

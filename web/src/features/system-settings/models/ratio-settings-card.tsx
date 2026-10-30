@@ -115,13 +115,6 @@ function createJsonStringField(
 const createModelSchema = (t: Translate) =>
   z.object({
     ModelPrice: createJsonStringField(t),
-    ModelRatio: createJsonStringField(t),
-    CacheRatio: createJsonStringField(t),
-    CreateCacheRatio: createJsonStringField(t),
-    CompletionRatio: createJsonStringField(t),
-    ImageRatio: createJsonStringField(t),
-    AudioRatio: createJsonStringField(t),
-    AudioCompletionRatio: createJsonStringField(t),
   })
 
 const createGroupSchema = (t: Translate) =>
@@ -201,15 +194,6 @@ export function RatioSettingsCard({
 
   const modelNormalizedDefaults = useRef({
     ModelPrice: normalizeJsonString(modelDefaults.ModelPrice),
-    ModelRatio: normalizeJsonString(modelDefaults.ModelRatio),
-    CacheRatio: normalizeJsonString(modelDefaults.CacheRatio),
-    CreateCacheRatio: normalizeJsonString(modelDefaults.CreateCacheRatio),
-    CompletionRatio: normalizeJsonString(modelDefaults.CompletionRatio),
-    ImageRatio: normalizeJsonString(modelDefaults.ImageRatio),
-    AudioRatio: normalizeJsonString(modelDefaults.AudioRatio),
-    AudioCompletionRatio: normalizeJsonString(
-      modelDefaults.AudioCompletionRatio
-    ),
   })
   const [savedModelValues, setSavedModelValues] = useState(
     modelNormalizedDefaults.current
@@ -236,15 +220,6 @@ export function RatioSettingsCard({
     defaultValues: {
       ...modelDefaults,
       ModelPrice: formatJsonForTextarea(modelDefaults.ModelPrice),
-      ModelRatio: formatJsonForTextarea(modelDefaults.ModelRatio),
-      CacheRatio: formatJsonForTextarea(modelDefaults.CacheRatio),
-      CreateCacheRatio: formatJsonForTextarea(modelDefaults.CreateCacheRatio),
-      CompletionRatio: formatJsonForTextarea(modelDefaults.CompletionRatio),
-      ImageRatio: formatJsonForTextarea(modelDefaults.ImageRatio),
-      AudioRatio: formatJsonForTextarea(modelDefaults.AudioRatio),
-      AudioCompletionRatio: formatJsonForTextarea(
-        modelDefaults.AudioCompletionRatio
-      ),
     },
   })
 
@@ -267,30 +242,12 @@ export function RatioSettingsCard({
   useEffect(() => {
     modelNormalizedDefaults.current = {
       ModelPrice: normalizeJsonString(modelDefaults.ModelPrice),
-      ModelRatio: normalizeJsonString(modelDefaults.ModelRatio),
-      CacheRatio: normalizeJsonString(modelDefaults.CacheRatio),
-      CreateCacheRatio: normalizeJsonString(modelDefaults.CreateCacheRatio),
-      CompletionRatio: normalizeJsonString(modelDefaults.CompletionRatio),
-      ImageRatio: normalizeJsonString(modelDefaults.ImageRatio),
-      AudioRatio: normalizeJsonString(modelDefaults.AudioRatio),
-      AudioCompletionRatio: normalizeJsonString(
-        modelDefaults.AudioCompletionRatio
-      ),
     }
     setSavedModelValues(modelNormalizedDefaults.current)
 
     modelForm.reset({
       ...modelDefaults,
       ModelPrice: formatJsonForTextarea(modelDefaults.ModelPrice),
-      ModelRatio: formatJsonForTextarea(modelDefaults.ModelRatio),
-      CacheRatio: formatJsonForTextarea(modelDefaults.CacheRatio),
-      CreateCacheRatio: formatJsonForTextarea(modelDefaults.CreateCacheRatio),
-      CompletionRatio: formatJsonForTextarea(modelDefaults.CompletionRatio),
-      ImageRatio: formatJsonForTextarea(modelDefaults.ImageRatio),
-      AudioRatio: formatJsonForTextarea(modelDefaults.AudioRatio),
-      AudioCompletionRatio: formatJsonForTextarea(
-        modelDefaults.AudioCompletionRatio
-      ),
     })
   }, [modelDefaults, modelForm])
 
@@ -325,13 +282,6 @@ export function RatioSettingsCard({
     async (values: ModelFormValues) => {
       const normalized = {
         ModelPrice: normalizeJsonString(values.ModelPrice),
-        ModelRatio: normalizeJsonString(values.ModelRatio),
-        CacheRatio: normalizeJsonString(values.CacheRatio),
-        CreateCacheRatio: normalizeJsonString(values.CreateCacheRatio),
-        CompletionRatio: normalizeJsonString(values.CompletionRatio),
-        ImageRatio: normalizeJsonString(values.ImageRatio),
-        AudioRatio: normalizeJsonString(values.AudioRatio),
-        AudioCompletionRatio: normalizeJsonString(values.AudioCompletionRatio),
       }
 
       if (!pricingBaseline) return

@@ -34,14 +34,12 @@ import {
   pricingValuesByModel,
   type PricingOptions,
   type PricingValues,
-  type CacheWriteMode,
   type LegacyBillingDetails,
 } from './pricing'
 
 export type ModelPricingDescription = {
   billing_details?: LegacyBillingDetails
   effective: PricingValues
-  cache_write_mode?: CacheWriteMode
 }
 
 export type ModelPricingEntry = ModelPricingDescription & {
@@ -60,25 +58,6 @@ export type ModelPricingChange = {
   expected_version: string
   pricing: PricingValues
   reset?: boolean
-}
-
-export async function previewModelPricing(request: {
-  model_name: string
-  pricing: PricingValues
-}): Promise<{
-  effective: PricingValues
-  cacheWriteMode?: CacheWriteMode
-  billingDetails?: LegacyBillingDetails
-}> {
-  const response = await api.post('/api/option/model_pricing/preview', request)
-  if (!response.data.success) {
-    throw createServerError(response.data, t('Failed to load model pricing'))
-  }
-  return {
-    effective: response.data.data.effective,
-    cacheWriteMode: response.data.data.cache_write_mode,
-    billingDetails: response.data.data.billing_details,
-  }
 }
 
 export function useCanEditModelPricing() {
@@ -149,7 +128,9 @@ export function buildPricingChanges(
   for (const name of new Set([...previous.keys(), ...next.keys()])) {
     const oldValues = previous.get(name) ?? {}
     const newValues = next.get(name) ?? {}
-    const dirty = PRICING_KEYS.filter((key) => oldValues[key] !== newValues[key])
+    const dirty = PRICING_KEYS.filter(
+      (key) => oldValues[key] !== newValues[key]
+    )
     if (!dirty.length) continue
     const entry = entries.get(name)
     const pricing = { ...entry?.configured }

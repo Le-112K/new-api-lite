@@ -42,8 +42,6 @@ import {
   useSystemConfigStore,
 } from '@/stores/system-config-store'
 
-import { previewModelPricing } from '../api'
-
 const clients: QueryClient[] = []
 
 beforeEach(() => {
@@ -71,24 +69,6 @@ afterEach(() => {
   localStorage.clear()
 })
 
-it('reads preview prices and billing metadata from the common data envelope', async () => {
-  const effective = { ModelRatio: 0, CompletionRatio: 2 }
-  const billingDetails = { audio_input_price: 1 }
-  vi.spyOn(api, 'post').mockResolvedValue({
-    data: {
-      success: true,
-      data: {
-        effective,
-        cache_write_mode: 'none',
-        billing_details: billingDetails,
-      },
-    },
-  })
-  await expect(
-    previewModelPricing({ model_name: 'gemini-2.5-flash', pricing: effective })
-  ).resolves.toEqual({ effective, cacheWriteMode: 'none', billingDetails })
-})
-
 function renderEditor(data: Partial<ModelRatioData> = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -103,9 +83,7 @@ function renderEditor(data: Partial<ModelRatioData> = {}) {
         ref={ref}
         editData={{
           name: 'currency-model',
-          billingMode: 'per-token',
-          ratio: '1',
-          completionRatio: '2',
+          price: '2',
           ...entry,
         }}
         onDirtyChange={dirty}
@@ -142,9 +120,9 @@ it('defaults to USD, remembers a currency choice and restores it when reopened',
   expect(
     screen.getByRole('combobox', { name: 'Pricing currency' })
   ).toHaveTextContent('US dollar (USD)')
-  expect(screen.getByRole('textbox', { name: 'Input price' })).toHaveValue('2')
+  expect(screen.getByRole('textbox', { name: 'Fixed price' })).toHaveValue('2')
   await selectCurrency('Site currency (CNY)')
-  expect(screen.getByRole('textbox', { name: 'Input price' })).toHaveValue('14')
+  expect(screen.getByRole('textbox', { name: 'Fixed price' })).toHaveValue('14')
   editor.unmount()
   // Rehydrate from browser storage, rather than relying on the live store.
   const stored = localStorage.getItem('model-pricing-preferences') ?? ''
@@ -178,7 +156,7 @@ it('opens currency help by keyboard and restores focus after Escape', async () =
 })
 
 it('switches currencies and refreshes exchange rates without changing stored prices or dirty state', async () => {
-  const editor = renderEditor({ ratio: '0.123456789123', cacheRatio: '0' })
+  const editor = renderEditor({ price: '2' })
   const before = await commit(editor.ref)
   editor.dirty.mockClear()
   await selectCurrency('Site currency (CNY)')
@@ -195,37 +173,13 @@ it('switches currencies and refreshes exchange rates without changing stored pri
   )
   expect(await commit(editor.ref)).toEqual(before)
   expect(editor.dirty).not.toHaveBeenCalledWith(true)
-  expect(screen.getByRole('textbox', { name: 'Cache read price' })).toHaveValue(
-    '0'
-  )
-})
-
-it('converts edited token prices to USD ratios while preserving unfinished decimals and disabled lanes', async () => {
-  const editor = renderEditor()
-  await selectCurrency('Site currency (CNY)')
-  const input = screen.getByRole('textbox', { name: 'Input price' })
-  fireEvent.change(input, { target: { value: '21.' } })
-  expect(input).toHaveValue('21.')
-  fireEvent.change(screen.getByRole('textbox', { name: 'Completion price' }), {
-    target: { value: '42' },
-  })
-  expect(await commit(editor.ref)).toMatchObject({
-    ratio: '1.5',
-    completionRatio: '2',
-    cacheRatio: '',
-  })
-  await selectCurrency('US dollar (USD)')
-  expect(input).toHaveValue('3')
-  expect(await commit(editor.ref)).toMatchObject({
-    ratio: '1.5',
-    completionRatio: '2',
-  })
+  expect(screen.getByRole('textbox', { name: 'Fixed price' })).toHaveValue('6')
 })
 
 it.each(['0', '0.0000007', '14'])(
   'saves the CNY per-request price %s as USD without display rounding',
   async (price) => {
-    const editor = renderEditor({ billingMode: 'per-request', price: '1' })
+    const editor = renderEditor({ price: '1' })
     await selectCurrency('Site currency (CNY)')
     const fixed = screen.getByRole('textbox', { name: 'Fixed price' })
     fireEvent.change(fixed, { target: { value: price } })
@@ -246,7 +200,7 @@ it('uses the custom currency exchange rate instead of the CNY exchange rate', as
       customCurrencyExchangeRate: 0.5,
     },
   })
-  const editor = renderEditor({ price: '2', billingMode: 'per-request' })
+  const editor = renderEditor({ price: '2' })
   await selectCurrency('Site currency (€)')
   const fixed = screen.getByRole('textbox', { name: 'Fixed price' })
   expect(fixed).toHaveValue('1')
@@ -266,7 +220,7 @@ it.each([0, -1, Infinity, Number.NaN, undefined])(
       },
     })
     renderEditor()
-    expect(screen.getByRole('textbox', { name: 'Input price' })).toHaveValue(
+    expect(screen.getByRole('textbox', { name: 'Fixed price' })).toHaveValue(
       '2'
     )
     expect(
@@ -309,7 +263,7 @@ it('blocks a non-finite conversion and allows saving after the amount is correct
       usdExchangeRate: 1e-308,
     },
   })
-  const editor = renderEditor({ price: '1', billingMode: 'per-request' })
+  const editor = renderEditor({ price: '1' })
   await selectCurrency('Site currency (CNY)')
   const fixed = screen.getByRole('textbox', { name: 'Fixed price' })
   fireEvent.change(fixed, { target: { value: '14' } })
@@ -336,13 +290,8 @@ it('switches currency using the keyboard without changing the saved configuratio
   expect(await commit(editor.ref)).toEqual(original)
 })
 
-it('keeps an empty per-request amount empty when currencies change', async () => {
-  const editor = renderEditor({
-    billingMode: 'per-request',
-    price: '1',
-    ratio: '',
-    completionRatio: '',
-  })
+it('keeps an empty amount empty when currencies change', async () => {
+  const editor = renderEditor({ price: '1' })
   const fixed = screen.getByRole('textbox', { name: 'Fixed price' })
   fireEvent.change(fixed, { target: { value: '' } })
   await selectCurrency('Site currency (CNY)')
@@ -351,12 +300,7 @@ it('keeps an empty per-request amount empty when currencies change', async () =>
 })
 
 it('clears an invalid amount draft when pricing is reloaded with the same saved value', async () => {
-  const saved: Partial<ModelRatioData> = {
-    billingMode: 'per-request',
-    price: '1',
-    ratio: '',
-    completionRatio: '',
-  }
+  const saved: Partial<ModelRatioData> = { price: '1' }
   const editor = renderEditor(saved)
   await selectCurrency('Site currency (CNY)')
   fireEvent.change(screen.getByRole('textbox', { name: 'Fixed price' }), {

@@ -54,7 +54,6 @@ import {
 import { useMediaQuery } from '@/hooks'
 
 import { safeJsonParse } from '../utils/json-parser'
-import type { PricingMode } from './model-pricing-core'
 import {
   ModelPricingEditorPanel,
   type ModelPricingEditorPanelHandle,
@@ -71,21 +70,7 @@ import { buildModelRatioColumns } from './model-ratio-table-columns'
 
 type ModelRatioVisualEditorProps = {
   savedModelPrice: string
-  savedModelRatio: string
-  savedCacheRatio: string
-  savedCreateCacheRatio: string
-  savedCompletionRatio: string
-  savedImageRatio: string
-  savedAudioRatio: string
-  savedAudioCompletionRatio: string
   modelPrice: string
-  modelRatio: string
-  cacheRatio: string
-  createCacheRatio: string
-  completionRatio: string
-  imageRatio: string
-  audioRatio: string
-  audioCompletionRatio: string
   candidateModelNames?: string[]
   candidateModelsLoading?: boolean
   filterMode?: 'all' | 'unset'
@@ -106,21 +91,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
 >(function ModelRatioVisualEditor(
   {
     savedModelPrice,
-    savedModelRatio,
-    savedCacheRatio,
-    savedCreateCacheRatio,
-    savedCompletionRatio,
-    savedImageRatio,
-    savedAudioRatio,
-    savedAudioCompletionRatio,
     modelPrice,
-    modelRatio,
-    cacheRatio,
-    createCacheRatio,
-    completionRatio,
-    imageRatio,
-    audioRatio,
-    audioCompletionRatio,
     candidateModelNames,
     candidateModelsLoading,
     filterMode = 'all',
@@ -157,32 +128,14 @@ const ModelRatioVisualEditorComponent = forwardRef<
       if (saved) {
         try {
           return safeJsonParse<VisibilityState>(saved, {
-            fallback: {
-              cacheRatio: false,
-              createCacheRatio: false,
-              imageRatio: false,
-              audioRatio: false,
-              audioCompletionRatio: false,
-            },
+            fallback: {},
             silent: true,
           })
         } catch {
-          return {
-            cacheRatio: false,
-            createCacheRatio: false,
-            imageRatio: false,
-            audioRatio: false,
-            audioCompletionRatio: false,
-          }
+          return {}
         }
       }
-      return {
-        cacheRatio: false,
-        createCacheRatio: false,
-        imageRatio: false,
-        audioRatio: false,
-        audioCompletionRatio: false,
-      }
+      return {}
     }
   )
 
@@ -191,26 +144,8 @@ const ModelRatioVisualEditorComponent = forwardRef<
   }, [columnVisibility])
 
   const models = useMemo(() => {
-    const savedRows = buildModelSnapshots({
-      modelPrice: savedModelPrice,
-      modelRatio: savedModelRatio,
-      cacheRatio: savedCacheRatio,
-      createCacheRatio: savedCreateCacheRatio,
-      completionRatio: savedCompletionRatio,
-      imageRatio: savedImageRatio,
-      audioRatio: savedAudioRatio,
-      audioCompletionRatio: savedAudioCompletionRatio,
-    })
-    const draftRows = buildModelSnapshots({
-      modelPrice,
-      modelRatio,
-      cacheRatio,
-      createCacheRatio,
-      completionRatio,
-      imageRatio,
-      audioRatio,
-      audioCompletionRatio,
-    })
+    const savedRows = buildModelSnapshots({ modelPrice: savedModelPrice })
+    const draftRows = buildModelSnapshots({ modelPrice })
 
     const savedByName = new Map(savedRows.map((row) => [row.name, row]))
     const draftByName = new Map(draftRows.map((row) => [row.name, row]))
@@ -223,8 +158,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
       .map((name) => {
         const saved = savedByName.get(name)
         const draft = draftByName.get(name)
-        const displayed = saved ??
-          draft ?? { name, billingMode: 'per-token', hasConflict: false }
+        const displayed = saved ?? draft ?? { name }
         const savedSignature = getSnapshotSignature(saved)
         const draftSignature = getSnapshotSignature(draft)
 
@@ -240,58 +174,14 @@ const ModelRatioVisualEditorComponent = forwardRef<
       .filter((row) => !row.isDraftDeleted)
       .filter((row) => filterMode !== 'unset' || isBasePricingUnset(row.saved))
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [
-    candidateModelNames,
-    filterMode,
-    savedModelPrice,
-    savedModelRatio,
-    savedCacheRatio,
-    savedCreateCacheRatio,
-    savedCompletionRatio,
-    savedImageRatio,
-    savedAudioRatio,
-    savedAudioCompletionRatio,
-    modelPrice,
-    modelRatio,
-    cacheRatio,
-    createCacheRatio,
-    completionRatio,
-    imageRatio,
-    audioRatio,
-    audioCompletionRatio,
-  ])
-
-  const modeCounts = useMemo(() => {
-    const counts = {
-      'per-token': 0,
-      'per-request': 0,
-    }
-    for (const model of models) {
-      const mode =
-        model.billingMode === 'per-request' ? 'per-request' : 'per-token'
-      counts[mode] += 1
-    }
-    return counts
-  }, [models])
+  }, [candidateModelNames, filterMode, savedModelPrice, modelPrice])
 
   const handleEdit = useCallback(
     (model: ModelRow) => {
       const editableModel = model.draft ?? model.saved ?? model
-      let editBillingMode: PricingMode = 'per-token'
-      if (editableModel.price && editableModel.price !== '') {
-        editBillingMode = 'per-request'
-      }
       setEditData({
         name: editableModel.name,
         price: editableModel.price,
-        ratio: editableModel.ratio,
-        cacheRatio: editableModel.cacheRatio,
-        createCacheRatio: editableModel.createCacheRatio,
-        completionRatio: editableModel.completionRatio,
-        imageRatio: editableModel.imageRatio,
-        audioRatio: editableModel.audioRatio,
-        audioCompletionRatio: editableModel.audioCompletionRatio,
-        billingMode: editBillingMode,
       })
       setEditorOpen(true)
       if (isMobile) setSheetOpen(true)
@@ -326,55 +216,9 @@ const ModelRatioVisualEditorComponent = forwardRef<
         fallback: {},
         silent: true,
       })
-      const ratioMap = safeJsonParse<Record<string, number>>(modelRatio, {
-        fallback: {},
-        silent: true,
-      })
-      const cacheMap = safeJsonParse<Record<string, number>>(cacheRatio, {
-        fallback: {},
-        silent: true,
-      })
-      const createCacheMap = safeJsonParse<Record<string, number>>(
-        createCacheRatio,
-        { fallback: {}, silent: true }
-      )
-      const completionMap = safeJsonParse<Record<string, number>>(
-        completionRatio,
-        { fallback: {}, silent: true }
-      )
-      const imageMap = safeJsonParse<Record<string, number>>(imageRatio, {
-        fallback: {},
-        silent: true,
-      })
-      const audioMap = safeJsonParse<Record<string, number>>(audioRatio, {
-        fallback: {},
-        silent: true,
-      })
-      const audioCompletionMap = safeJsonParse<Record<string, number>>(
-        audioCompletionRatio,
-        { fallback: {}, silent: true }
-      )
-
       delete priceMap[name]
-      delete ratioMap[name]
-      delete cacheMap[name]
-      delete createCacheMap[name]
-      delete completionMap[name]
-      delete imageMap[name]
-      delete audioMap[name]
-      delete audioCompletionMap[name]
 
       onChange('ModelPrice', JSON.stringify(priceMap, null, 2))
-      onChange('ModelRatio', JSON.stringify(ratioMap, null, 2))
-      onChange('CacheRatio', JSON.stringify(cacheMap, null, 2))
-      onChange('CreateCacheRatio', JSON.stringify(createCacheMap, null, 2))
-      onChange('CompletionRatio', JSON.stringify(completionMap, null, 2))
-      onChange('ImageRatio', JSON.stringify(imageMap, null, 2))
-      onChange('AudioRatio', JSON.stringify(audioMap, null, 2))
-      onChange(
-        'AudioCompletionRatio',
-        JSON.stringify(audioCompletionMap, null, 2)
-      )
 
       if (editingModelNameRef.current === name) {
         setEditData(null)
@@ -382,17 +226,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
         setSheetOpen(false)
       }
     },
-    [
-      modelPrice,
-      modelRatio,
-      cacheRatio,
-      createCacheRatio,
-      completionRatio,
-      imageRatio,
-      audioRatio,
-      audioCompletionRatio,
-      onChange,
-    ]
+    [modelPrice, onChange]
   )
 
   const columns = useMemo(
@@ -441,30 +275,11 @@ const ModelRatioVisualEditorComponent = forwardRef<
 
   const persistPricingData = useCallback(
     (data: ModelRatioData, targetNames: string[] = [data.name]) => {
-      const options = pricingOptions({
-        ModelPrice: modelPrice,
-        ModelRatio: modelRatio,
-        CompletionRatio: completionRatio,
-        CacheRatio: cacheRatio,
-        CreateCacheRatio: createCacheRatio,
-        ImageRatio: imageRatio,
-        AudioRatio: audioRatio,
-        AudioCompletionRatio: audioCompletionRatio,
-      })
+      const options = pricingOptions({ ModelPrice: modelPrice })
       const updated = applyPricingDraft(options, data, targetNames)
       for (const [key, value] of Object.entries(updated)) onChange(key, value)
     },
-    [
-      modelPrice,
-      modelRatio,
-      completionRatio,
-      cacheRatio,
-      createCacheRatio,
-      imageRatio,
-      audioRatio,
-      audioCompletionRatio,
-      onChange,
-    ]
+    [modelPrice, onChange]
   )
 
   const handleBatchCopy = useCallback(async () => {
@@ -542,24 +357,6 @@ const ModelRatioVisualEditorComponent = forwardRef<
             table={table}
             searchPlaceholder={t('Search models...')}
             searchDebounceMs={250}
-            filters={[
-              {
-                columnId: 'billingMode',
-                title: t('Mode'),
-                options: [
-                  {
-                    label: 'Per-token (deprecated)',
-                    value: 'per-token',
-                    count: modeCounts['per-token'],
-                  },
-                  {
-                    label: 'Per-request (deprecated)',
-                    value: 'per-request',
-                    count: modeCounts['per-request'],
-                  },
-                ],
-              },
-            ]}
             preActions={
               filterMode === 'unset' ? undefined : (
                 <Button onClick={handleAdd}>
@@ -594,7 +391,6 @@ const ModelRatioVisualEditorComponent = forwardRef<
                 <colgroup>
                   <col className='w-9' />
                   <col className='w-[300px]' />
-                  <col className='w-[120px]' />
                   <col className='w-[300px]' />
                   <col className='w-auto' />
                 </colgroup>
@@ -686,22 +482,7 @@ export const ModelRatioVisualEditor = memo(
   (prevProps, nextProps) => {
     return (
       prevProps.savedModelPrice === nextProps.savedModelPrice &&
-      prevProps.savedModelRatio === nextProps.savedModelRatio &&
-      prevProps.savedCacheRatio === nextProps.savedCacheRatio &&
-      prevProps.savedCreateCacheRatio === nextProps.savedCreateCacheRatio &&
-      prevProps.savedCompletionRatio === nextProps.savedCompletionRatio &&
-      prevProps.savedImageRatio === nextProps.savedImageRatio &&
-      prevProps.savedAudioRatio === nextProps.savedAudioRatio &&
-      prevProps.savedAudioCompletionRatio ===
-        nextProps.savedAudioCompletionRatio &&
       prevProps.modelPrice === nextProps.modelPrice &&
-      prevProps.modelRatio === nextProps.modelRatio &&
-      prevProps.cacheRatio === nextProps.cacheRatio &&
-      prevProps.createCacheRatio === nextProps.createCacheRatio &&
-      prevProps.completionRatio === nextProps.completionRatio &&
-      prevProps.imageRatio === nextProps.imageRatio &&
-      prevProps.audioRatio === nextProps.audioRatio &&
-      prevProps.audioCompletionRatio === nextProps.audioCompletionRatio &&
       prevProps.candidateModelNames === nextProps.candidateModelNames &&
       prevProps.candidateModelsLoading === nextProps.candidateModelsLoading &&
       prevProps.filterMode === nextProps.filterMode &&
