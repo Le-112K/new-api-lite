@@ -19,6 +19,8 @@ For commercial licensing, please contact support@quantumnous.com
 import { api } from '@/lib/api'
 
 import type {
+  ConsolidationApplyResponse,
+  ConsolidationSuggestionsResponse,
   GetModelsParams,
   GetModelsResponse,
   GetModelResponse,
@@ -273,6 +275,26 @@ export async function deletePrefillGroup(
 export interface ModelDeleteResult {
   deleted_count: number
   updated_channels: number
+}
+
+/**
+ * Alias consolidation: channel model names that match a metadata rule can be
+ * normalized to the standard model name (models + model_mapping rewrite).
+ */
+export async function getConsolidationSuggestions(): Promise<ConsolidationSuggestionsResponse> {
+  const res = await api.get('/api/models/consolidation_suggestions')
+  return res.data
+}
+
+export async function applyConsolidation(
+  items: { channel_id: number; standard_name: string; alias_name: string }[],
+  removeAliases: boolean
+): Promise<ConsolidationApplyResponse> {
+  const res = await api.post('/api/models/consolidation_apply', {
+    items,
+    remove_aliases: removeAliases,
+  })
+  return res.data
 }
 
 /**

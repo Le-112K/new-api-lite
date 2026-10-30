@@ -35,6 +35,30 @@ export interface BoundChannel {
  */
 export type ModelSquareState = 'visible' | 'unavailable' | 'hidden' | 'partial'
 
+export type ConsolidationItem = {
+  channel_id: number
+  channel_name: string
+  alias: string
+}
+
+export type ConsolidationSuggestion = {
+  standard_name: string
+  rule: string
+  items: ConsolidationItem[]
+}
+
+export interface ConsolidationSuggestionsResponse {
+  success: boolean
+  message?: string
+  data?: ConsolidationSuggestion[]
+}
+
+export interface ConsolidationApplyResponse {
+  success: boolean
+  message?: string
+  data?: { updated_channels: number }
+}
+
 export interface Model {
   square_state?: ModelSquareState
   /** 是否配了模型倍率或按次价；false 的模型不会出现在公开广场上。 */

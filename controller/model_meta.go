@@ -253,6 +253,39 @@ func BatchDeleteModelMeta(c *gin.Context) {
 	common.ApiSuccess(c, result)
 }
 
+// GetConsolidationSuggestions 返回「渠道别名 → 标准模型」的归并建议清单。
+func GetConsolidationSuggestions(c *gin.Context) {
+	suggestions, err := model.GetConsolidationSuggestions()
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	common.ApiSuccess(c, suggestions)
+}
+
+func ApplyConsolidation(c *gin.Context) {
+	var request struct {
+		Items         []model.ConsolidationApplyItem `json:"items"`
+		RemoveAliases bool                           `json:"remove_aliases"`
+	}
+	if err := common.DecodeJson(c.Request.Body, &request); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	updated, err := model.ApplyConsolidation(request.Items, request.RemoveAliases)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	aliases := make([]string, 0, len(request.Items))
+	for _, item := range request.Items {
+		aliases = append(aliases, item.Alias)
+	}
+	recordManageAudit(c, "model.consolidate", map[string]any{"aliases": aliases, "remove_aliases": request.RemoveAliases, "updated_channels": updated})
+	model.InvalidatePricingCache()
+	common.ApiSuccess(c, gin.H{"updated_channels": updated})
+}
+
 // enrichModels keeps configured endpoints intact and derives connections from
 // enabled routes, including hidden or unpriced models absent from the catalog.
 func enrichModels(models []*model.Model) error {

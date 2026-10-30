@@ -1,3 +1,4 @@
+import { ConsolidationDialog } from './dialogs/consolidation-dialog'
 /*
 Copyright (C) 2023-2026 QuantumNous
 
@@ -54,6 +55,12 @@ export function ModelsDialogs() {
       {/* Missing Models Dialog */}
       <MissingModelsDialog
         open={open === 'missing-models'}
+        onOpenChange={(v) => !v && setOpen(null)}
+      />
+
+      {/* Alias Consolidation Dialog */}
+      <ConsolidationDialog
+        open={open === 'consolidation'}
         onOpenChange={(v) => !v && setOpen(null)}
       />
 
