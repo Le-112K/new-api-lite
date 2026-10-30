@@ -22,6 +22,7 @@ import { CheckinSettingsSection } from '../general/checkin-settings-section'
 import { PricingSection } from '../general/pricing-section'
 import { QuotaSettingsSection } from '../general/quota-settings-section'
 import { PaymentSettingsSection } from '../integrations/payment-settings-section'
+import { ModelAliasSection } from '../models/model-alias-section'
 import { RatioSettingsCard } from '../models/ratio-settings-card'
 import type { BillingSettings } from '../types'
 import { createSectionRegistry } from '../utils/section-registry'
@@ -67,6 +68,12 @@ const BILLING_SECTIONS = [
         visibleTabs={['models', 'unset-models']}
       />
     ),
+  },
+  {
+    id: 'model-alias',
+    titleKey: 'Model Aliases',
+    layout: { width: 'wide' },
+    build: () => <ModelAliasSection />,
   },
   {
     id: 'group-pricing',

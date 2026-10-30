@@ -59,6 +59,11 @@ type ModelMappingEditorProps = {
   disabled?: boolean
   sourceModelOptions?: string[]
   targetModelOptions?: string[]
+  /**
+   * 上游名 → 统一请求名的固定映射表。选中上游名时若请求名为空，
+   * 自动带出统一名（用户仍可修改）。
+   */
+  aliasMap?: Record<string, string>
   /** Shows the batch button; the caller owns the batch dialog. */
   onBatchAdd?: () => void
   /**
@@ -321,6 +326,20 @@ export function ModelMappingEditor(props: ModelMappingEditorProps) {
     syncRows(updatedRows)
   }
 
+  // 上游模型名变化：命中统一名称表且请求名尚为空时，把统一名带进左列。
+  // 请求名已有内容时不覆盖（用户可能刻意用了别的别名）。
+  const handleUpstreamChange = (id: string, upstream: string) => {
+    const standard = props.aliasMap?.[upstream]
+    const updatedRows = rows.map((row) => {
+      if (row.id !== id) return row
+      if (standard && !row.from.trim()) {
+        return { ...row, to: upstream, from: standard }
+      }
+      return { ...row, to: upstream }
+    })
+    syncRows(updatedRows)
+  }
+
   const handleJsonChange = (newJson: string) => {
     setJsonValue(newJson)
     lastEmittedRef.current = newJson
@@ -487,7 +506,7 @@ export function ModelMappingEditor(props: ModelMappingEditorProps) {
                     options={targetOptions}
                     value={row.to}
                     onValueChange={(value) =>
-                      handleRowChange(row.id, 'to', value)
+                      handleUpstreamChange(row.id, value)
                     }
                     placeholder='gpt-3.5-turbo-0125'
                     emptyText='No matching items'

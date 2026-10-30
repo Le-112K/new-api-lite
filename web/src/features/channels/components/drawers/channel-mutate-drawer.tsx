@@ -104,6 +104,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { SecureVerificationDialog } from '@/features/auth/secure-verification'
+import { getSystemOptions } from '@/features/system-settings/api'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { useHiddenClickUnlock } from '@/hooks/use-hidden-click-unlock'
 import {
@@ -116,6 +117,10 @@ import {
   type ChannelConnectionInfo,
 } from '@/lib/channel-connection-info'
 import { handleServerError } from '@/lib/handle-server-error'
+import {
+  MODEL_ALIAS_MAP_OPTION_KEY,
+  parseModelAliasMap,
+} from '@/lib/model-alias-map'
 import { ROLE } from '@/lib/roles'
 import {
   requireServerSuccess,
@@ -888,6 +893,21 @@ export function ChannelMutateDrawer({
     }
   }, [currentSettings])
 
+  // 统一名称表（上游名 → 统一请求名）：渠道映射的填表模板。
+  // options 体积不大且全站共用，React Query 缓存 5 分钟，避免每次开抽屉重拉。
+  const { data: systemOptionsData } = useQuery({
+    queryKey: ['system-options'],
+    queryFn: () => getSystemOptions(),
+    enabled: open,
+    staleTime: 5 * 60_000,
+  })
+  const modelAliasMap = useMemo(() => {
+    const raw = systemOptionsData?.data?.find(
+      (option) => option.key === MODEL_ALIAS_MAP_OPTION_KEY
+    )?.value
+    return parseModelAliasMap(typeof raw === 'string' ? raw : '')
+  }, [systemOptionsData])
+
   const upstreamDetectedModelsPreview = upstreamUpdateMeta.detectedModels.slice(
     0,
     UPSTREAM_DETECTED_MODEL_PREVIEW_LIMIT
@@ -972,10 +992,14 @@ export function ChannelMutateDrawer({
 
     // The coding plan speaks the OpenAI protocol under /api/coding/v3, not
     // the standard /api/v3 surface.
-    form.setValue('base_url', 'https://ark.cn-beijing.volces.com/api/coding/v3', {
-      shouldDirty: false,
-      shouldValidate: true,
-    })
+    form.setValue(
+      'base_url',
+      'https://ark.cn-beijing.volces.com/api/coding/v3',
+      {
+        shouldDirty: false,
+        shouldValidate: true,
+      }
+    )
   }, [currentBaseUrl, currentType, form])
 
   useEffect(() => {
@@ -1090,6 +1114,19 @@ export function ChannelMutateDrawer({
   })
   const upstreamModelList =
     discovery.status === 'success' ? discovery.models : NO_UPSTREAM_MODELS
+  // 映射下拉的候选只来自「这个渠道自己的模型」：本次拉取的上游清单、
+  // 渠道历史检测缓存与渠道 models。绝不再混入全站模型（getAllModels）。
+  const upstreamCandidates = useMemo(
+    () =>
+      [
+        ...new Set([
+          ...upstreamModelList,
+          ...upstreamUpdateMeta.detectedModels,
+          ...currentModelsArray,
+        ]),
+      ].sort(),
+    [upstreamModelList, upstreamUpdateMeta.detectedModels, currentModelsArray]
+  )
   const batchMappingSource: ModelMappingBatchSource =
     upstreamModelList.length > 0 ? 'upstream' : 'channel'
   const canBatchMap =
@@ -2253,7 +2290,8 @@ export function ChannelMutateDrawer({
                 onChange={field.onChange}
                 disabled={isSubmitting}
                 sourceModelOptions={currentModelsArray}
-                targetModelOptions={modelOptions.map((option) => option.value)}
+                targetModelOptions={upstreamCandidates}
+                aliasMap={modelAliasMap}
                 onBatchAdd={
                   canBatchMap
                     ? () =>
@@ -3728,7 +3766,8 @@ export function ChannelMutateDrawer({
                           label: t('https://ark.cn-beijing.volces.com/api/v3'),
                         },
                         {
-                          value: 'https://ark.ap-southeast.bytepluses.com/api/v3',
+                          value:
+                            'https://ark.ap-southeast.bytepluses.com/api/v3',
                           label: t(
                             'https://ark.ap-southeast.bytepluses.com/api/v3'
                           ),
@@ -3738,7 +3777,8 @@ export function ChannelMutateDrawer({
                       value={
                         field.value === 'doubao-coding-plan'
                           ? 'https://ark.cn-beijing.volces.com/api/v3'
-                          : field.value || 'https://ark.cn-beijing.volces.com/api/v3'
+                          : field.value ||
+                            'https://ark.cn-beijing.volces.com/api/v3'
                       }
                     >
                       <FormControl>
@@ -4571,13 +4611,9 @@ export function ChannelMutateDrawer({
               }
               syncModels={redirectSyncModels}
               onSyncModelsChange={setRedirectSyncModels}
-              sourceModelOptions={modelOptions.map((option) => option.value)}
-              targetModelOptions={[
-                ...new Set([
-                  ...upstreamModelList,
-                  ...modelOptions.map((option) => option.value),
-                ]),
-              ]}
+              sourceModelOptions={currentModelsArray}
+              targetModelOptions={upstreamCandidates}
+              aliasMap={modelAliasMap}
               draftRequest={mappingDraftRequest}
               onDraftRequestHandled={() => setMappingDraftRequest(null)}
               disabled={isSubmitting}
