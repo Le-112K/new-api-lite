@@ -99,19 +99,19 @@ func initModelListColumnNames(t *testing.T) {
 func withModelRatios(t *testing.T, models ...string) {
 	t.Helper()
 
-	original := ratio_setting.ModelRatio2JSONString()
+	original := ratio_setting.ModelPrice2JSONString()
 	t.Cleanup(func() {
-		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(original))
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(original))
 		model.InvalidatePricingCache()
 	})
 
-	ratios := ratio_setting.GetModelRatioCopy()
+	prices := ratio_setting.GetModelPriceMap()
 	for _, name := range models {
-		ratios[name] = 1
+		prices[name] = 0.01
 	}
-	payload, err := common.Marshal(ratios)
+	payload, err := common.Marshal(prices)
 	require.NoError(t, err)
-	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(payload)))
+	require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(string(payload)))
 	model.InvalidatePricingCache()
 }
 

@@ -26,36 +26,24 @@ func (b *stubBillingSettler) Reserve(targetQuota int) error {
 	return nil
 }
 
-// TestPrepareImageBillingForRequestPricesEveryImage locks the two billing
-// shapes behind /v1/images/generations and /v1/images/edits: a fixed price is
-// multiplied by the requested image count, while ratio billing keeps the frozen
-// per-request estimate and only applies the group ratio.
+// TestPrepareImageBillingForRequestPricesEveryImage 固定按次计价：
+// 每张图都按单次价计费，并叠加分组倍率。
 func TestPrepareImageBillingForRequestPricesEveryImage(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	tests := []struct {
 		name                 string
-		usePrice             bool
 		modelPrice           float64
-		imageQuotaBeforeGrou float64
 		groupRatio           float64
 		count                int
 		wantQuota            int
 	}{
 		{
 			name:       "fixed price charges every requested image",
-			usePrice:   true,
 			modelPrice: 0.1,
 			groupRatio: 1,
 			count:      3,
 			wantQuota:  150000,
-		},
-		{
-			name:                 "ratio billing keeps the frozen estimate and applies the group ratio",
-			imageQuotaBeforeGrou: 1000,
-			groupRatio:           1.5,
-			count:                2,
-			wantQuota:            1500,
 		},
 	}
 
@@ -63,10 +51,8 @@ func TestPrepareImageBillingForRequestPricesEveryImage(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			info := &relaycommon.RelayInfo{
 				PriceData: hosttypes.PriceData{
-					UsePrice:   test.usePrice,
 					ModelPrice: test.modelPrice,
 				},
-				ImageQuotaBeforeGroup: test.imageQuotaBeforeGrou,
 			}
 			info.PriceData.GroupRatioInfo = hosttypes.GroupRatioInfo{GroupRatio: test.groupRatio}
 			billing := &stubBillingSettler{}

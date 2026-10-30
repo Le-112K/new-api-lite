@@ -9,7 +9,6 @@ import (
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
 	hosttypes "github.com/QuantumNous/new-api/types"
 
@@ -95,15 +94,12 @@ func AppendRelayLogAdminInfo(ctx *gin.Context, relayInfo *relaycommon.RelayInfo,
 	}
 }
 
-func GenerateTextOtherInfo(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, modelRatio, groupRatio, completionRatio float64,
-	cacheTokens int, cacheRatio float64, modelPrice float64, userGroupRatio float64) *model.LogOther {
+func GenerateTextOtherInfo(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, groupRatio float64,
+	cacheTokens int, modelPrice float64, userGroupRatio float64) *model.LogOther {
 	MarkRequestPolicySuccess(ctx, relayInfo.StreamStatus)
 	other := model.NewLogOther()
-	other.SetPublic("model_ratio", modelRatio)
 	other.SetPublic("group_ratio", groupRatio)
-	other.SetPublic("completion_ratio", completionRatio)
 	other.SetPublic("cache_tokens", cacheTokens)
-	other.SetPublic("cache_ratio", cacheRatio)
 	other.SetPublic("model_price", modelPrice)
 	other.SetPublic("user_group_ratio", userGroupRatio)
 	other.SetPublic("frt", float64(relayInfo.FirstResponseTime.UnixMilli()-relayInfo.StartTime.UnixMilli()))
@@ -271,35 +267,21 @@ func appendFinalRequestFormat(relayInfo *relaycommon.RelayInfo, other *model.Log
 	}
 }
 
-func GenerateAudioOtherInfo(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usage *dto.Usage, modelRatio, groupRatio, completionRatio, audioRatio, audioCompletionRatio, modelPrice, userGroupRatio float64) *model.LogOther {
-	info := GenerateTextOtherInfo(ctx, relayInfo, modelRatio, groupRatio, completionRatio, 0, 0.0, modelPrice, userGroupRatio)
-	info.SetPublic("audio", true)
-	info.SetPublic("audio_input", usage.PromptTokensDetails.AudioTokens)
-	info.SetPublic("audio_output", usage.CompletionTokenDetails.AudioTokens)
-	info.SetPublic("text_input", usage.PromptTokensDetails.TextTokens)
-	info.SetPublic("text_output", usage.CompletionTokenDetails.TextTokens)
-	info.SetPublic("audio_ratio", audioRatio)
-	info.SetPublic("audio_completion_ratio", audioCompletionRatio)
-	return info
-}
 
-func GenerateClaudeOtherInfo(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, modelRatio, groupRatio, completionRatio float64,
-	cacheTokens int, cacheRatio float64,
-	cacheCreationTokens int, cacheCreationRatio float64,
-	cacheCreationTokens5m int, cacheCreationRatio5m float64,
-	cacheCreationTokens1h int, cacheCreationRatio1h float64,
+func GenerateClaudeOtherInfo(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, groupRatio float64,
+	cacheTokens int,
+	cacheCreationTokens int,
+	cacheCreationTokens5m int,
+	cacheCreationTokens1h int,
 	modelPrice float64, userGroupRatio float64) *model.LogOther {
-	info := GenerateTextOtherInfo(ctx, relayInfo, modelRatio, groupRatio, completionRatio, cacheTokens, cacheRatio, modelPrice, userGroupRatio)
+	info := GenerateTextOtherInfo(ctx, relayInfo, groupRatio, cacheTokens, modelPrice, userGroupRatio)
 	info.SetPublic("claude", true)
 	info.SetPublic("cache_creation_tokens", cacheCreationTokens)
-	info.SetPublic("cache_creation_ratio", cacheCreationRatio)
 	if cacheCreationTokens5m != 0 {
 		info.SetPublic("cache_creation_tokens_5m", cacheCreationTokens5m)
-		info.SetPublic("cache_creation_ratio_5m", cacheCreationRatio5m)
 	}
 	if cacheCreationTokens1h != 0 {
 		info.SetPublic("cache_creation_tokens_1h", cacheCreationTokens1h)
-		info.SetPublic("cache_creation_ratio_1h", cacheCreationRatio1h)
 	}
 	return info
 }

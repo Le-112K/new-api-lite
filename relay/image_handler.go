@@ -161,7 +161,7 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 	// The log content shows the settled count: the count the handler derived
 	// from the upstream response when it did, otherwise the reserved quantity.
 	imageN := info.RequestedImageCount()
-	if count, ok := info.PriceData.OtherRatios()["n"]; ok && info.PriceData.UsePrice && count >= 1 && count <= dto.MaxImageN {
+	if count, ok := info.PriceData.OtherRatios()["n"]; ok && count >= 1 && count <= dto.MaxImageN {
 		imageN = common.QuotaRound(count)
 	}
 

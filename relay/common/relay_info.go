@@ -77,7 +77,6 @@ type RelayInfo struct {
 	isFirstResponse   bool
 	//SendLastReasoningResponse bool
 	IsStream bool
-	UsePrice  bool
 	RelayMode              int
 	OriginModelName        string
 	ResponseModel          *ResponseModel
@@ -146,10 +145,8 @@ type RelayInfo struct {
 	// It is surfaced onto the consume/task log's admin_info for auditing.
 	QuotaClamp *common.QuotaClamp
 
-	// ImageRequestCount is the effective quantity sent on the current attempt;
-	// ImageQuotaBeforeGroup is the frozen legacy estimate before request ratios.
-	ImageRequestCount     int
-	ImageQuotaBeforeGroup float64
+	// ImageRequestCount is the effective quantity sent on the current attempt.
+	ImageRequestCount int
 
 	Request dto.Request
 
@@ -189,9 +186,7 @@ func (info *RelayInfo) UpdateImageCount(count int64) {
 	if info == nil || count <= 0 || count > int64(dto.MaxImageN) {
 		return
 	}
-	if info.PriceData.UsePrice {
-		info.PriceData.AddOtherRatio("n", float64(count))
-	}
+	info.PriceData.AddOtherRatio("n", float64(count))
 }
 
 func (info *RelayInfo) RequestedImageCount() int {
@@ -324,9 +319,7 @@ func (info *RelayInfo) ToString() string {
 	}
 
 	// Price data (non-sensitive)
-	if info.PriceData.UsePrice {
-		fmt.Fprintf(b, "PriceData{ %s }, ", info.PriceData.ToSetting())
-	}
+	fmt.Fprintf(b, "PriceData{ %s }, ", info.PriceData.ToSetting())
 
 	// Channel metadata (mask ApiKey)
 	if info.ChannelMeta != nil {

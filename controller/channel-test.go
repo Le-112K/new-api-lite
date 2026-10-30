@@ -467,23 +467,12 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 
 
 func settleTestQuota(info *relaycommon.RelayInfo, priceData hosttypes.PriceData, usage *dto.Usage) int {
-	quota := 0
-	if !priceData.UsePrice {
-		completionQuota := common.QuotaRound(float64(usage.CompletionTokens) * priceData.CompletionRatio)
-		quota = common.QuotaRound(float64(usage.PromptTokens) + float64(completionQuota))
-		quota = common.QuotaRound(float64(quota) * priceData.ModelRatio)
-		if priceData.ModelRatio != 0 && quota <= 0 {
-			quota = 1
-		}
-		return quota
-	}
-
 	return common.QuotaFromFloat(priceData.ModelPrice * common.QuotaPerUnit)
 }
 
 func buildTestLogOther(c *gin.Context, info *relaycommon.RelayInfo, priceData hosttypes.PriceData, usage *dto.Usage) *model.LogOther {
-	return service.GenerateTextOtherInfo(c, info, priceData.ModelRatio, priceData.GroupRatioInfo.GroupRatio, priceData.CompletionRatio,
-		usage.PromptTokensDetails.CachedTokens, priceData.CacheRatio, priceData.ModelPrice, priceData.GroupRatioInfo.GroupSpecialRatio)
+	return service.GenerateTextOtherInfo(c, info, priceData.GroupRatioInfo.GroupRatio,
+		usage.PromptTokensDetails.CachedTokens, priceData.ModelPrice, priceData.GroupRatioInfo.GroupSpecialRatio)
 }
 
 func coerceTestUsage(usageAny any, isStream bool, estimatePromptTokens int) (*dto.Usage, error) {

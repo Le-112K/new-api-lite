@@ -1,8 +1,6 @@
 package helper
 
 import (
-	"fmt"
-	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -10,9 +8,7 @@ import (
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
-	"github.com/QuantumNous/new-api/setting/config"
 	"github.com/QuantumNous/new-api/setting/model_setting"
-	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -22,10 +18,10 @@ import (
 func TestModelPriceHelperRequestBillingRatiosOnlyApplyToFixedPrice(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	savedModelPrices := ratio_setting.ModelPrice2JSONString()
-	savedModelRatios := ratio_setting.ModelRatio2JSONString()
+	savedModelRatios := ratio_setting.ModelPrice2JSONString()
 	t.Cleanup(func() {
 		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(savedModelPrices))
-		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(savedModelRatios))
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(savedModelRatios))
 	})
 
 	modelPrices, err := common.Marshal(map[string]float64{
@@ -35,29 +31,18 @@ func TestModelPriceHelperRequestBillingRatiosOnlyApplyToFixedPrice(t *testing.T)
 	})
 	require.NoError(t, err)
 	require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(string(modelPrices)))
-	modelRatios, err := common.Marshal(map[string]float64{"ratio-image-price": 15})
-	require.NoError(t, err)
-	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(modelRatios)))
 
 	tests := []struct {
 		name           string
 		model          string
 		wantQuota      int
-		wantUsePrice   bool
 		wantImageCount bool
 	}{
 		{
 			name:           "fixed price applies image count",
 			model:          "fixed-image-price",
 			wantQuota:      180000,
-			wantUsePrice:   true,
 			wantImageCount: true,
-		},
-		{
-			name:         "ratio price ignores request billing ratios",
-			model:        "ratio-image-price",
-			wantQuota:    15000,
-			wantUsePrice: false,
 		},
 	}
 
@@ -79,7 +64,6 @@ func TestModelPriceHelperRequestBillingRatiosOnlyApplyToFixedPrice(t *testing.T)
 
 			require.NoError(t, err)
 			require.Equal(t, tt.wantQuota, priceData.QuotaToPreConsume)
-			require.Equal(t, tt.wantUsePrice, priceData.UsePrice)
 			require.Equal(t, tt.wantImageCount, priceData.HasOtherRatio("n"))
 			require.Equal(t, priceData.OtherRatios(), info.PriceData.OtherRatios())
 		})
@@ -120,16 +104,16 @@ func TestModelPriceHelperRequestBillingRatiosOnlyApplyToFixedPrice(t *testing.T)
 func TestModelPriceHelperUsesSuffixedOriginLikeMain(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	savedRatios := ratio_setting.ModelRatio2JSONString()
+	savedPrices := ratio_setting.ModelPrice2JSONString()
 	t.Cleanup(func() {
-		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(savedRatios))
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(savedPrices))
 	})
-	ratios := ratio_setting.GetModelRatioCopy()
-	ratios["gemini-2.5-flash"] = 0.15
-	ratios["gemini-2.5-flash-thinking-*"] = 0.075
-	ratioJSON, err := common.Marshal(ratios)
+	prices := ratio_setting.GetModelPriceMap()
+	prices["gemini-2.5-flash"] = 0.15
+	prices["gemini-2.5-flash-thinking-*"] = 0.075
+	priceJSON, err := common.Marshal(prices)
 	require.NoError(t, err)
-	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(ratioJSON)))
+	require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(string(priceJSON)))
 
 
 	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
@@ -144,7 +128,7 @@ func TestModelPriceHelperUsesSuffixedOriginLikeMain(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, suffixed.BillingModelName)
 	assert.Equal(t, "gemini-2.5-flash-thinking-8192", suffixed.GetBillingModelName())
-	assert.Equal(t, 0.075, suffixedPrice.ModelRatio)
+	assert.Equal(t, 0.075, suffixedPrice.ModelPrice)
 
 	geminiSettings := model_setting.GetGeminiSettings()
 	oldThinking := geminiSettings.ThinkingAdapterEnabled
@@ -160,7 +144,7 @@ func TestModelPriceHelperUsesSuffixedOriginLikeMain(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, adapterOn.BillingModelName)
 	assert.Equal(t, "gemini-2.5-flash-thinking-8192", adapterOn.GetBillingModelName())
-	assert.Equal(t, 0.075, adapterOnPrice.ModelRatio)
+	assert.Equal(t, 0.075, adapterOnPrice.ModelPrice)
 
 	base := &relaycommon.RelayInfo{
 		OriginModelName: "gemini-2.5-flash",
@@ -171,22 +155,22 @@ func TestModelPriceHelperUsesSuffixedOriginLikeMain(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, base.BillingModelName)
 	assert.Equal(t, "gemini-2.5-flash", base.GetBillingModelName())
-	assert.Equal(t, 0.15, basePrice.ModelRatio)
+	assert.Equal(t, 0.15, basePrice.ModelPrice)
 }
 
 func TestModelPriceHelperHonorsCustomClaudeThinkingAlias(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	savedRatios := ratio_setting.ModelRatio2JSONString()
+	savedPrices := ratio_setting.ModelPrice2JSONString()
 	t.Cleanup(func() {
-		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(savedRatios))
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(savedPrices))
 	})
-	ratios := ratio_setting.GetModelRatioCopy()
-	ratios["claude-3-7-sonnet"] = 1.5
-	ratios["claude-3-7-sonnet-thinking"] = 3.0
-	ratioJSON, err := common.Marshal(ratios)
+	prices := ratio_setting.GetModelPriceMap()
+	prices["claude-3-7-sonnet"] = 1.5
+	prices["claude-3-7-sonnet-thinking"] = 3.0
+	priceJSON, err := common.Marshal(prices)
 	require.NoError(t, err)
-	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(ratioJSON)))
+	require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(string(priceJSON)))
 
 
 	claudeSettings := model_setting.GetClaudeSettings()
@@ -205,28 +189,28 @@ func TestModelPriceHelperHonorsCustomClaudeThinkingAlias(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, info.BillingModelName)
 	assert.Equal(t, "claude-3-7-sonnet-thinking", info.GetBillingModelName())
-	assert.Equal(t, 3.0, priceData.ModelRatio)
+	assert.Equal(t, 3.0, priceData.ModelPrice)
 }
 
 func TestModelPriceHelperCanonicalBillingLadder(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	savedRatios := ratio_setting.ModelRatio2JSONString()
+	savedPrices := ratio_setting.ModelPrice2JSONString()
 	t.Cleanup(func() {
-		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(savedRatios))
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(savedPrices))
 	})
 
 	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
 	ctx.Set("group", "default")
 
 	t.Run("level2 full form", func(t *testing.T) {
-		ratios := ratio_setting.GetModelRatioCopy()
-		delete(ratios, "qwen3-max")
-		ratios["qwen3-max@effort:high@thinking:on"] = 4.0
-		ratios["qwen3-max@thinking:on"] = 3.0
-		ratioJSON, err := common.Marshal(ratios)
+		prices := ratio_setting.GetModelPriceMap()
+		delete(prices, "qwen3-max")
+		prices["qwen3-max@effort:high@thinking:on"] = 4.0
+		prices["qwen3-max@thinking:on"] = 3.0
+		priceJSON, err := common.Marshal(prices)
 		require.NoError(t, err)
-		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(ratioJSON)))
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(string(priceJSON)))
 
 		info := &relaycommon.RelayInfo{
 			OriginModelName: "qwen3-max@thinking:on@effort:high@temperature:0.2",
@@ -236,17 +220,17 @@ func TestModelPriceHelperCanonicalBillingLadder(t *testing.T) {
 		priceData, err := ModelPriceHelper(ctx, info, 1000, &types.TokenCountMeta{})
 		require.NoError(t, err)
 		assert.Equal(t, "qwen3-max@effort:high@thinking:on", info.BillingModelName)
-		assert.Equal(t, 4.0, priceData.ModelRatio)
+		assert.Equal(t, 4.0, priceData.ModelPrice)
 	})
 
 	t.Run("level3 thinking form shuffled budget", func(t *testing.T) {
-		ratios := ratio_setting.GetModelRatioCopy()
-		delete(ratios, "qwen3-max")
-		delete(ratios, "qwen3-max@effort:high@thinking:on")
-		ratios["qwen3-max@thinking:on"] = 3.0
-		ratioJSON, err := common.Marshal(ratios)
+		prices := ratio_setting.GetModelPriceMap()
+		delete(prices, "qwen3-max")
+		delete(prices, "qwen3-max@effort:high@thinking:on")
+		prices["qwen3-max@thinking:on"] = 3.0
+		priceJSON, err := common.Marshal(prices)
 		require.NoError(t, err)
-		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(ratioJSON)))
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(string(priceJSON)))
 
 		info := &relaycommon.RelayInfo{
 			OriginModelName: "qwen3-max@temperature:0.3@thinking:8192",
@@ -256,17 +240,17 @@ func TestModelPriceHelperCanonicalBillingLadder(t *testing.T) {
 		priceData, err := ModelPriceHelper(ctx, info, 1000, &types.TokenCountMeta{})
 		require.NoError(t, err)
 		assert.Equal(t, "qwen3-max@thinking:on", info.BillingModelName)
-		assert.Equal(t, 3.0, priceData.ModelRatio)
+		assert.Equal(t, 3.0, priceData.ModelPrice)
 	})
 
 	t.Run("level4 base fallback", func(t *testing.T) {
-		ratios := ratio_setting.GetModelRatioCopy()
-		delete(ratios, "qwen3-max@thinking:on")
-		delete(ratios, "qwen3-max@effort:high@thinking:on")
-		ratios["qwen3-max"] = 1.25
-		ratioJSON, err := common.Marshal(ratios)
+		prices := ratio_setting.GetModelPriceMap()
+		delete(prices, "qwen3-max@thinking:on")
+		delete(prices, "qwen3-max@effort:high@thinking:on")
+		prices["qwen3-max"] = 1.25
+		priceJSON, err := common.Marshal(prices)
 		require.NoError(t, err)
-		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(ratioJSON)))
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(string(priceJSON)))
 
 		info := &relaycommon.RelayInfo{
 			OriginModelName: "qwen3-max@thinking:off",
@@ -276,15 +260,15 @@ func TestModelPriceHelperCanonicalBillingLadder(t *testing.T) {
 		priceData, err := ModelPriceHelper(ctx, info, 1000, &types.TokenCountMeta{})
 		require.NoError(t, err)
 		assert.Equal(t, "qwen3-max", info.BillingModelName)
-		assert.Equal(t, 1.25, priceData.ModelRatio)
+		assert.Equal(t, 1.25, priceData.ModelPrice)
 	})
 
 	t.Run("thinking minus one bills as on", func(t *testing.T) {
-		ratios := ratio_setting.GetModelRatioCopy()
-		ratios["qwen3-max@thinking:on"] = 3.0
-		ratioJSON, err := common.Marshal(ratios)
+		prices := ratio_setting.GetModelPriceMap()
+		prices["qwen3-max@thinking:on"] = 3.0
+		priceJSON, err := common.Marshal(prices)
 		require.NoError(t, err)
-		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(ratioJSON)))
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(string(priceJSON)))
 
 		info := &relaycommon.RelayInfo{
 			OriginModelName: "qwen3-max@thinking:-1",
@@ -294,24 +278,24 @@ func TestModelPriceHelperCanonicalBillingLadder(t *testing.T) {
 		priceData, err := ModelPriceHelper(ctx, info, 1000, &types.TokenCountMeta{})
 		require.NoError(t, err)
 		assert.Equal(t, "qwen3-max@thinking:on", info.BillingModelName)
-		assert.Equal(t, 3.0, priceData.ModelRatio)
+		assert.Equal(t, 3.0, priceData.ModelPrice)
 	})
 }
 
 func TestModelPriceHelperMigratesLegacyGeminiWildcardToCanonical(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	savedRatios := ratio_setting.ModelRatio2JSONString()
+	savedPrices := ratio_setting.ModelPrice2JSONString()
 	t.Cleanup(func() {
-		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(savedRatios))
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(savedPrices))
 	})
-	ratios := ratio_setting.GetModelRatioCopy()
-	delete(ratios, "gemini-2.5-flash-thinking-*")
-	ratios["gemini-2.5-flash"] = 0.15
-	ratios["gemini-2.5-flash@thinking:on"] = 0.09
-	ratioJSON, err := common.Marshal(ratios)
+	prices := ratio_setting.GetModelPriceMap()
+	delete(prices, "gemini-2.5-flash-thinking-*")
+	prices["gemini-2.5-flash"] = 0.15
+	prices["gemini-2.5-flash@thinking:on"] = 0.09
+	priceJSON, err := common.Marshal(prices)
 	require.NoError(t, err)
-	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(ratioJSON)))
+	require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(string(priceJSON)))
 
 
 	geminiSettings := model_setting.GetGeminiSettings()
@@ -329,21 +313,21 @@ func TestModelPriceHelperMigratesLegacyGeminiWildcardToCanonical(t *testing.T) {
 	priceData, err := ModelPriceHelper(ctx, info, 1000, &types.TokenCountMeta{})
 	require.NoError(t, err)
 	assert.Equal(t, "gemini-2.5-flash@thinking:on", info.BillingModelName)
-	assert.Equal(t, 0.09, priceData.ModelRatio)
+	assert.Equal(t, 0.09, priceData.ModelPrice)
 }
 
 func TestModelPriceHelperModifierNameFallsBackToBase(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	savedRatios := ratio_setting.ModelRatio2JSONString()
+	savedPrices := ratio_setting.ModelPrice2JSONString()
 	t.Cleanup(func() {
-		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(savedRatios))
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(savedPrices))
 	})
-	ratios := ratio_setting.GetModelRatioCopy()
-	ratios["qwen3.8-max"] = 2.0
-	ratioJSON, err := common.Marshal(ratios)
+	prices := ratio_setting.GetModelPriceMap()
+	prices["qwen3.8-max"] = 2.0
+	priceJSON, err := common.Marshal(prices)
 	require.NoError(t, err)
-	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(ratioJSON)))
+	require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(string(priceJSON)))
 
 
 	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
@@ -356,7 +340,7 @@ func TestModelPriceHelperModifierNameFallsBackToBase(t *testing.T) {
 	priceData, err := ModelPriceHelper(ctx, info, 1000, &types.TokenCountMeta{})
 	require.NoError(t, err)
 	assert.Equal(t, "qwen3.8-max", info.BillingModelName)
-	assert.Equal(t, 2.0, priceData.ModelRatio)
+	assert.Equal(t, 2.0, priceData.ModelPrice)
 }
 
 func TestModelPriceHelperExemptAtNameBillsVerbatim(t *testing.T) {
@@ -367,16 +351,16 @@ func TestModelPriceHelperExemptAtNameBillsVerbatim(t *testing.T) {
 	t.Cleanup(func() { settings.ThinkingModelBlacklist = originalBlacklist })
 	settings.ThinkingModelBlacklist = append(originalBlacklist, "re:.*@sha256:.*")
 
-	savedRatios := ratio_setting.ModelRatio2JSONString()
+	savedPrices := ratio_setting.ModelPrice2JSONString()
 	t.Cleanup(func() {
-		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(savedRatios))
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(savedPrices))
 	})
-	ratios := ratio_setting.GetModelRatioCopy()
-	ratios["opaque"] = 1.0
-	ratios["opaque@sha256:deadbeef"] = 7.0
-	ratioJSON, err := common.Marshal(ratios)
+	prices := ratio_setting.GetModelPriceMap()
+	prices["opaque"] = 1.0
+	prices["opaque@sha256:deadbeef"] = 7.0
+	priceJSON, err := common.Marshal(prices)
 	require.NoError(t, err)
-	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(ratioJSON)))
+	require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(string(priceJSON)))
 
 
 	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
@@ -390,22 +374,22 @@ func TestModelPriceHelperExemptAtNameBillsVerbatim(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, info.BillingModelName)
 	assert.Equal(t, "opaque@sha256:deadbeef", info.GetBillingModelName())
-	assert.Equal(t, 7.0, priceData.ModelRatio)
+	assert.Equal(t, 7.0, priceData.ModelPrice)
 }
 
 func TestModelPriceHelperPreservesGpt51CodexMaxIdentity(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	savedRatios := ratio_setting.ModelRatio2JSONString()
+	savedPrices := ratio_setting.ModelPrice2JSONString()
 	t.Cleanup(func() {
-		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(savedRatios))
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(savedPrices))
 	})
-	ratios := ratio_setting.GetModelRatioCopy()
-	ratios["gpt-5.1-codex-max"] = 1.75
-	ratios["gpt-5.1-codex"] = 9.9
-	ratioJSON, err := common.Marshal(ratios)
+	prices := ratio_setting.GetModelPriceMap()
+	prices["gpt-5.1-codex-max"] = 1.75
+	prices["gpt-5.1-codex"] = 9.9
+	priceJSON, err := common.Marshal(prices)
 	require.NoError(t, err)
-	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(ratioJSON)))
+	require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(string(priceJSON)))
 
 
 	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
@@ -419,21 +403,21 @@ func TestModelPriceHelperPreservesGpt51CodexMaxIdentity(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, info.BillingModelName)
 	assert.Equal(t, "gpt-5.1-codex-max", info.GetBillingModelName())
-	assert.Equal(t, 1.75, priceData.ModelRatio)
+	assert.Equal(t, 1.75, priceData.ModelPrice)
 }
 
 func TestModelPriceHelperNativeGeminiNoThinkingDoesNotAliasBillingModel(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	savedRatios := ratio_setting.ModelRatio2JSONString()
+	savedPrices := ratio_setting.ModelPrice2JSONString()
 	t.Cleanup(func() {
-		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(savedRatios))
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(savedPrices))
 	})
-	ratios := ratio_setting.GetModelRatioCopy()
-	ratios["gemini-3-pro"] = 1.25
-	ratioJSON, err := common.Marshal(ratios)
+	prices := ratio_setting.GetModelPriceMap()
+	prices["gemini-3-pro"] = 1.25
+	priceJSON, err := common.Marshal(prices)
 	require.NoError(t, err)
-	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(string(ratioJSON)))
+	require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(string(priceJSON)))
 
 
 	geminiSettings := model_setting.GetGeminiSettings()
@@ -461,41 +445,6 @@ func TestModelPriceHelperNativeGeminiNoThinkingDoesNotAliasBillingModel(t *testi
 	require.NoError(t, err)
 	assert.Empty(t, info.BillingModelName)
 	assert.Equal(t, "gemini-3-pro", info.GetBillingModelName())
-	assert.Equal(t, 1.25, priceData.ModelRatio)
-	assert.NotEqual(t, 37.5, priceData.ModelRatio)
-}
-
-func TestInputPreConsumeMultiplierLegacyAndRequestPrices(t *testing.T) {
-	previous := config.GlobalConfig.ExportAllConfigs()
-	previousRatios, previousPrices := ratio_setting.ModelRatio2JSONString(), ratio_setting.ModelPrice2JSONString()
-	t.Cleanup(func() {
-		require.NoError(t, config.GlobalConfig.LoadFromDB(previous))
-		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(previousRatios))
-		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(previousPrices))
-	})
-	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(`{"legacy-input-policy":1.5}`))
-	require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(`{"request-input-policy":0.01}`))
-	require.NoError(t, config.GlobalConfig.LoadFromDB(map[string]string{
-		"group_ratio_setting.group_ratio": `{"default":1}`,
-	}))
-	for _, tc := range []struct {
-		model        string
-		multiplier   float64
-		prompt, want int
-	}{
-		{"legacy-input-policy", 0.5, 100, 75},
-		{"legacy-input-policy", 2.5, 100, 375},
-		{"legacy-input-policy", 1, 0, 0},
-		{"request-input-policy", 2.5, 100, 5000},
-	} {
-		t.Run(tc.model+"/"+fmt.Sprint(tc.multiplier, "/", tc.prompt), func(t *testing.T) {
-			operation_setting.GetQuotaSetting().PreConsumeMultiplier = tc.multiplier
-			ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
-			ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
-			info := &relaycommon.RelayInfo{OriginModelName: tc.model, UserGroup: "default", UsingGroup: "default"}
-			price, err := ModelPriceHelper(ctx, info, tc.prompt, &types.TokenCountMeta{MaxTokens: 10000})
-			require.NoError(t, err)
-			assert.Equal(t, tc.want, price.QuotaToPreConsume)
-		})
-	}
+	assert.Equal(t, 1.25, priceData.ModelPrice)
+	assert.NotEqual(t, 37.5, priceData.ModelPrice)
 }

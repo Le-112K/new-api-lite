@@ -22,17 +22,11 @@ func PrepareImageBillingForRequest(c *gin.Context, info *relaycommon.RelayInfo, 
 	info.ImageRequestCount = count
 	var quota int
 	var err error
-	quantity := 1
-	if info.PriceData.UsePrice {
-		quantity = count
-	}
+	quantity := count
 	// Overwrite the per-attempt ratio so a failed attempt cannot leak its
 	// quantity into another channel.
 	info.PriceData.AddOtherRatio("n", float64(quantity))
-	base := info.ImageQuotaBeforeGroup
-	if info.PriceData.UsePrice {
-		base = info.PriceData.ModelPrice * common.QuotaPerUnit
-	}
+	base := info.PriceData.ModelPrice * common.QuotaPerUnit
 	quota, err = common.QuotaFromFloatStrict(info.PriceData.ApplyOtherRatiosToFloat(base * info.PriceData.GroupRatioInfo.GroupRatio))
 	if err != nil {
 		return types.NewErrorWithStatusCode(err, types.ErrorCodeModelPriceError, http.StatusBadRequest, types.ErrOptionWithSkipRetry())

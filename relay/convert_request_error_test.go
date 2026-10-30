@@ -85,7 +85,7 @@ func TestImageRequestReservesFinalQuantityBeforeUpstream(t *testing.T) {
 			}
 			info := &relaycommon.RelayInfo{Request: request, OriginModelName: "gpt-image-2", RelayMode: relayconstant.RelayModeImagesGenerations,
 				RequestURLPath: c.Request.URL.Path, Billing: reservation,
-				PriceData: hosttypes.PriceData{UsePrice: true, ModelPrice: 0.04, GroupRatioInfo: hosttypes.GroupRatioInfo{GroupRatio: 1}},
+				PriceData: hosttypes.PriceData{ModelPrice: 0.04, GroupRatioInfo: hosttypes.GroupRatioInfo{GroupRatio: 1}},
 			}
 			if tc.retryReset {
 				reservation.held = 80000
@@ -149,7 +149,7 @@ func TestOptInSafeToolLossRejectedAsBadRequestWithAdminDiagnostics(t *testing.T)
 	require.NotEmpty(t, diagnostics)
 	assert.True(t, hasHostDiagnosticCode(diagnostics, "unsupported_hosted_tool"))
 
-	other := service.GenerateTextOtherInfo(c, info, 1, 1, 1, 0, 0, 0, 1)
+	other := service.GenerateTextOtherInfo(c, info, 1, 0, 0, 1)
 	adminInfo, ok := other.Snapshot()["admin_info"].(map[string]any)
 	require.True(t, ok)
 	require.Contains(t, adminInfo, "conversion_diagnostics")

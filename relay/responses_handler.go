@@ -3,7 +3,6 @@ package relay
 import (
 	"fmt"
 	"net/http"
-	"strings"
 
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
@@ -103,9 +102,10 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 // ConsumeResponsesQuota applies the same settlement dispatch to HTTP and
 // WebSocket Responses usage. Compact requests keep their separate repricing.
 func ConsumeResponsesQuota(c *gin.Context, info *relaycommon.RelayInfo, usage *dto.Usage) {
-	if strings.HasPrefix(info.OriginModelName, "gpt-4o-audio") {
-		service.PostAudioConsumeQuota(c, info, usage, "")
-		return
+	// 上游以错误终止、或整条响应没有任何用量：本次请求没有产出结果。
+	// 仍走一次结算以便留下审计日志，但把单次价归零，实际扣费为 0。
+	if usage == nil || (usage.TotalTokens == 0 && usage.PromptTokens == 0 && usage.CompletionTokens == 0) {
+		info.PriceData.ModelPrice = 0
 	}
 	service.PostTextConsumeQuota(c, info, usage, nil)
 }

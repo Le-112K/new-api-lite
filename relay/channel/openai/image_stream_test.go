@@ -155,8 +155,7 @@ func TestOpenaiImageStreamHandlerForwardsSSEAndUsage(t *testing.T) {
 	}, "\n")
 
 	c, recorder, resp, info := newImageTestContext(t, body, "text/event-stream", true)
-	info.PriceData.UsePrice = true
-	info.PriceData.AddOtherRatio("n", 3)
+		info.PriceData.AddOtherRatio("n", 3)
 
 	usage, err := OpenaiImageStreamHandler(c, info, resp)
 	require.Nil(t, err)
@@ -194,8 +193,7 @@ func TestOpenaiImageStreamHandlerUsesCompletedEventCount(t *testing.T) {
 	}, "\n")
 
 	c, _, resp, info := newImageTestContext(t, body, "text/event-stream", true)
-	info.PriceData.UsePrice = true
-	info.PriceData.AddOtherRatio("n", 3)
+		info.PriceData.AddOtherRatio("n", 3)
 
 	usage, err := OpenaiImageStreamHandler(c, info, resp)
 
@@ -296,8 +294,7 @@ func TestOpenaiImageStreamHandlerClientDisconnectKeepsRequestedCount(t *testing.
 
 	body := "data: {\"type\":\"image_generation.completed\",\"b64_json\":\"first\"}\n\n"
 	c, recorder, resp, info := newDisconnectingImageStream(t, body, "first")
-	info.PriceData.UsePrice = true
-	info.PriceData.AddOtherRatio("n", 3)
+		info.PriceData.AddOtherRatio("n", 3)
 
 	usage, err := OpenaiImageStreamHandler(c, info, resp)
 
@@ -333,8 +330,7 @@ func TestOpenaiImageStreamHandlerClientDisconnectRaisesCount(t *testing.T) {
 		``,
 	}, "\n")
 	c, _, resp, info := newDisconnectingImageStream(t, body, "second")
-	info.PriceData.UsePrice = true
-	info.PriceData.AddOtherRatio("n", 1)
+		info.PriceData.AddOtherRatio("n", 1)
 
 	usage, err := OpenaiImageStreamHandler(c, info, resp)
 
@@ -357,8 +353,7 @@ func TestOpenaiImageStreamHandlerWrapsJSONResponse(t *testing.T) {
 	body := `{"created":1710000000,"data":[{"b64_json":"first","revised_prompt":"draw a cat"},{"b64_json":"second"}],"usage":{"input_tokens":3,"output_tokens":4,"total_tokens":7,"input_tokens_details":{"image_tokens":2,"text_tokens":1}}}`
 
 	c, recorder, resp, info := newImageTestContext(t, body, "application/json", true)
-	info.PriceData.UsePrice = true
-	info.PriceData.AddOtherRatio("n", 3)
+		info.PriceData.AddOtherRatio("n", 3)
 
 	usage, err := OpenaiImageStreamHandler(c, info, resp)
 	require.Nil(t, err)
@@ -388,43 +383,31 @@ func TestOpenaiImageHandlerUsesPositiveActualCountForFixedPrice(t *testing.T) {
 	tests := []struct {
 		name      string
 		body      string
-		usePrice  bool
 		wantCount float64
 	}{
 		{
 			name:      "fixed price uses data length",
 			body:      `{"data":[{"b64_json":"` + longImage + `"},{"b64_json":"second"}]}`,
-			usePrice:  true,
 			wantCount: 2,
 		},
 		{
 			name:      "empty data keeps requested count",
 			body:      `{"data":[]}`,
-			usePrice:  true,
-			wantCount: 3,
-		},
-		{
-			name:      "ratio billing ignores data length",
-			body:      `{"data":[{"b64_json":"first"},{"b64_json":"second"}]}`,
-			usePrice:  false,
 			wantCount: 3,
 		},
 		{
 			name:      "object data with url and b64_json counts one image",
 			body:      `{"data":{"url":"https://example.com/a.png","b64_json":"` + longImage + `"}}`,
-			usePrice:  true,
 			wantCount: 1,
 		},
 		{
 			name:      "url and b64_json split across entries count one image",
 			body:      `{"data":[{"url":"https://example.com/a.png"},{"b64_json":"` + longImage + `"}]}`,
-			usePrice:  true,
 			wantCount: 1,
 		},
 		{
 			name:      "entries without image payload keep requested count",
 			body:      `{"data":[{"revised_prompt":"draw a cat"}]}`,
-			usePrice:  true,
 			wantCount: 3,
 		},
 	}
@@ -432,7 +415,6 @@ func TestOpenaiImageHandlerUsesPositiveActualCountForFixedPrice(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c, recorder, resp, info := newImageTestContext(t, tt.body, "application/json", false)
-			info.PriceData.UsePrice = tt.usePrice
 			info.PriceData.AddOtherRatio("n", 3)
 
 			_, err := OpenaiImageHandler(c, info, resp)
@@ -483,8 +465,7 @@ func TestOpenaiImageStreamHandlerWrapsNonStandardDataShapes(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			c, recorder, resp, info := newImageTestContext(t, tc.body, "application/json", true)
-			info.PriceData.UsePrice = true
-			info.PriceData.AddOtherRatio("n", 3)
+						info.PriceData.AddOtherRatio("n", 3)
 
 			_, err := OpenaiImageStreamHandler(c, info, resp)
 			require.Nil(t, err)

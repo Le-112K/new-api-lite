@@ -12,7 +12,6 @@ import (
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
-	"github.com/QuantumNous/new-api/setting/operation_setting"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -31,19 +30,11 @@ type textQuotaSummary struct {
 	ModelName             string
 	TokenName             string
 	UseTimeSeconds        int64
-	CompletionRatio       float64
-	CacheRatio            float64
-	ImageRatio            float64
-	ModelRatio            float64
 	GroupRatio            float64
 	ModelPrice            float64
-	CacheCreationRatio    float64
-	CacheCreationRatio5m  float64
-	CacheCreationRatio1h  float64
 	Quota                 int
 	IsClaudeUsageSemantic bool
 	UsageSemantic         string
-	AudioInputPrice       float64
 }
 
 // hasBillableUsage reports whether this request should incur any charge.
@@ -92,19 +83,12 @@ func noteQuotaClamp(relayInfo *relaycommon.RelayInfo, clamp *common.QuotaClamp) 
 // the result with affinity observation and logging.
 func calculateTextQuotaSummary(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usage *dto.Usage) textQuotaSummary {
 	summary := textQuotaSummary{
-		ModelName:            relayInfo.GetBillingModelName(),
-		TokenName:            ctx.GetString("token_name"),
-		UseTimeSeconds:       time.Now().Unix() - relayInfo.StartTime.Unix(),
-		CompletionRatio:      relayInfo.PriceData.CompletionRatio,
-		CacheRatio:           relayInfo.PriceData.CacheRatio,
-		ImageRatio:           relayInfo.PriceData.ImageRatio,
-		ModelRatio:           relayInfo.PriceData.ModelRatio,
-		GroupRatio:           relayInfo.PriceData.GroupRatioInfo.GroupRatio,
-		ModelPrice:           relayInfo.PriceData.ModelPrice,
-		CacheCreationRatio:   relayInfo.PriceData.CacheCreationRatio,
-		CacheCreationRatio5m: relayInfo.PriceData.CacheCreation5mRatio,
-		CacheCreationRatio1h: relayInfo.PriceData.CacheCreation1hRatio,
-		UsageSemantic:        usageSemanticFromUsage(relayInfo, usage),
+		ModelName:      relayInfo.GetBillingModelName(),
+		TokenName:      ctx.GetString("token_name"),
+		UseTimeSeconds: time.Now().Unix() - relayInfo.StartTime.Unix(),
+		GroupRatio:     relayInfo.PriceData.GroupRatioInfo.GroupRatio,
+		ModelPrice:     relayInfo.PriceData.ModelPrice,
+		UsageSemantic:  usageSemanticFromUsage(relayInfo, usage),
 	}
 	summary.IsClaudeUsageSemantic = summary.UsageSemantic == "anthropic"
 
@@ -125,117 +109,19 @@ func calculateTextQuotaSummary(ctx *gin.Context, relayInfo *relaycommon.RelayInf
 	summary.CacheCreationTokens1h = usage.ClaudeCacheCreation1hTokens
 	summary.ImageTokens = usage.PromptTokensDetails.ImageTokens
 	summary.AudioTokens = usage.PromptTokensDetails.AudioTokens
-	legacyClaudeDerived := isLegacyClaudeDerivedOpenAIUsage(relayInfo, usage)
-	isOpenRouterClaudeBilling := relayInfo.ChannelMeta != nil &&
-		relayInfo.ChannelType == constant.ChannelTypeOpenRouter &&
-		summary.IsClaudeUsageSemantic
 
-	if isOpenRouterClaudeBilling {
-		summary.PromptTokens -= summary.CacheTokens
-		isUsingCustomSettings := relayInfo.PriceData.UsePrice || hasCustomModelRatio(summary.ModelName, relayInfo.PriceData.ModelRatio)
-		if summary.CacheCreationTokens == 0 && relayInfo.PriceData.CacheCreationRatio != 1 && usage.Cost != 0 && !isUsingCustomSettings {
-			maybeCacheCreationTokens := CalcOpenRouterCacheCreateTokens(*usage, relayInfo.PriceData)
-			if maybeCacheCreationTokens >= 0 && summary.PromptTokens >= maybeCacheCreationTokens {
-				summary.CacheCreationTokens = maybeCacheCreationTokens
-			}
-		}
-		summary.PromptTokens -= summary.CacheCreationTokens
-	}
-
-	dPromptTokens := decimal.NewFromInt(int64(summary.PromptTokens))
-	dCacheTokens := decimal.NewFromInt(int64(summary.CacheTokens))
-	dImageTokens := decimal.NewFromInt(int64(summary.ImageTokens))
-	dAudioTokens := decimal.NewFromInt(int64(summary.AudioTokens))
-	dCompletionTokens := decimal.NewFromInt(int64(summary.CompletionTokens))
-	dCachedCreationTokens := decimal.NewFromInt(int64(summary.CacheCreationTokens))
-	dCompletionRatio := decimal.NewFromFloat(summary.CompletionRatio)
-	dCacheRatio := decimal.NewFromFloat(summary.CacheRatio)
-	dImageRatio := decimal.NewFromFloat(summary.ImageRatio)
-	dModelRatio := decimal.NewFromFloat(summary.ModelRatio)
-	dGroupRatio := decimal.NewFromFloat(summary.GroupRatio)
 	dModelPrice := decimal.NewFromFloat(summary.ModelPrice)
-	dCacheCreationRatio := decimal.NewFromFloat(summary.CacheCreationRatio)
-	dCacheCreationRatio5m := decimal.NewFromFloat(summary.CacheCreationRatio5m)
-	dCacheCreationRatio1h := decimal.NewFromFloat(summary.CacheCreationRatio1h)
+	dGroupRatio := decimal.NewFromFloat(summary.GroupRatio)
 	dQuotaPerUnit := decimal.NewFromFloat(common.QuotaPerUnit)
 
-	ratio := dModelRatio.Mul(dGroupRatio)
-
-	var audioInputQuota decimal.Decimal
-	if !relayInfo.PriceData.UsePrice {
-		baseTokens := dPromptTokens
-
-		var cachedTokensWithRatio decimal.Decimal
-		if !dCacheTokens.IsZero() {
-			if !summary.IsClaudeUsageSemantic && !legacyClaudeDerived {
-				baseTokens = baseTokens.Sub(dCacheTokens)
-			}
-			cachedTokensWithRatio = dCacheTokens.Mul(dCacheRatio)
-		}
-
-		var cachedCreationTokensWithRatio decimal.Decimal
-		hasSplitCacheCreationTokens := summary.CacheCreationTokens5m > 0 || summary.CacheCreationTokens1h > 0
-		if !dCachedCreationTokens.IsZero() || hasSplitCacheCreationTokens {
-			if !summary.IsClaudeUsageSemantic && !legacyClaudeDerived {
-				baseTokens = baseTokens.Sub(dCachedCreationTokens)
-				cachedCreationTokensWithRatio = dCachedCreationTokens.Mul(dCacheCreationRatio)
-			} else {
-				remaining := max(summary.CacheCreationTokens-summary.CacheCreationTokens5m-summary.CacheCreationTokens1h, 0)
-				cachedCreationTokensWithRatio = decimal.NewFromInt(int64(remaining)).Mul(dCacheCreationRatio)
-				cachedCreationTokensWithRatio = cachedCreationTokensWithRatio.Add(decimal.NewFromInt(int64(summary.CacheCreationTokens5m)).Mul(dCacheCreationRatio5m))
-				cachedCreationTokensWithRatio = cachedCreationTokensWithRatio.Add(decimal.NewFromInt(int64(summary.CacheCreationTokens1h)).Mul(dCacheCreationRatio1h))
-			}
-		}
-
-		var imageTokensWithRatio decimal.Decimal
-		if !dImageTokens.IsZero() {
-			baseTokens = baseTokens.Sub(dImageTokens)
-			imageTokensWithRatio = dImageTokens.Mul(dImageRatio)
-		}
-
-		if !dAudioTokens.IsZero() {
-			summary.AudioInputPrice = operation_setting.GetGeminiInputAudioPricePerMillionTokens(summary.ModelName)
-			if summary.AudioInputPrice > 0 {
-				baseTokens = baseTokens.Sub(dAudioTokens)
-				audioInputQuota = decimal.NewFromFloat(summary.AudioInputPrice).
-					Div(decimal.NewFromInt(1000000)).Mul(dAudioTokens).Mul(dGroupRatio).Mul(dQuotaPerUnit)
-			}
-		}
-
-		// OpenAI cache-write usage reports unadjusted prefix counts, so
-		// cached_tokens + cache_write_tokens can exceed prompt_tokens and the
-		// remainder can go negative. Clamp at zero so overlap never turns into
-		// a negative base charge.
-		if baseTokens.IsNegative() {
-			baseTokens = decimal.Zero
-		}
-
-		promptQuota := baseTokens.Add(cachedTokensWithRatio).Add(imageTokensWithRatio).Add(cachedCreationTokensWithRatio)
-		completionQuota := dCompletionTokens.Mul(dCompletionRatio)
-		quotaCalculateDecimal := promptQuota.Add(completionQuota).Mul(ratio)
-		quotaCalculateDecimal = quotaCalculateDecimal.Add(audioInputQuota)
-		quotaCalculateDecimal = relayInfo.PriceData.ApplyOtherRatiosToDecimal(quotaCalculateDecimal)
-
-		if !ratio.IsZero() && quotaCalculateDecimal.LessThanOrEqual(decimal.Zero) {
-			quotaCalculateDecimal = decimal.NewFromInt(1)
-		}
-		quota, clamp := common.QuotaFromDecimalChecked(quotaCalculateDecimal)
-		summary.Quota = quota
-		noteQuotaClamp(relayInfo, clamp)
-	} else {
-		quotaCalculateDecimal := dModelPrice.Mul(dQuotaPerUnit).Mul(dGroupRatio)
-		quotaCalculateDecimal = quotaCalculateDecimal.Add(audioInputQuota)
-		quotaCalculateDecimal = relayInfo.PriceData.ApplyOtherRatiosToDecimal(quotaCalculateDecimal)
-		quota, clamp := common.QuotaFromDecimalChecked(quotaCalculateDecimal)
-		summary.Quota = quota
-		noteQuotaClamp(relayInfo, clamp)
-	}
-
-	if !summary.hasBillableUsage() {
-		summary.Quota = 0
-	} else if !ratio.IsZero() && summary.Quota == 0 {
-		summary.Quota = 1
-	}
+	// 站点只按调用次数计费：额度 = 单次价 × QuotaPerUnit × 分组倍率 × 其他倍率，
+	// 与输入输出 token 数量完全无关。上游是否返回 usage、返回多少 token，
+	// 都不影响本次结算金额。
+	quotaCalculateDecimal := dModelPrice.Mul(dQuotaPerUnit).Mul(dGroupRatio)
+	quotaCalculateDecimal = relayInfo.PriceData.ApplyOtherRatiosToDecimal(quotaCalculateDecimal)
+	quota, clamp := common.QuotaFromDecimalChecked(quotaCalculateDecimal)
+	summary.Quota = quota
+	noteQuotaClamp(relayInfo, clamp)
 
 	return summary
 }
@@ -263,18 +149,13 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 	adminRejectReason := common.GetContextKeyString(ctx, constant.ContextKeyAdminRejectReason)
 	summary := calculateTextQuotaSummary(ctx, relayInfo, billingUsage)
 
-	if summary.AudioInputPrice > 0 && summary.AudioTokens > 0 {
-		q := decimal.NewFromFloat(summary.AudioInputPrice).Div(decimal.NewFromInt(1000000)).Mul(decimal.NewFromInt(int64(summary.AudioTokens))).Mul(decimal.NewFromFloat(summary.GroupRatio)).Mul(decimal.NewFromFloat(common.QuotaPerUnit))
-		extraContent = append(extraContent, fmt.Sprintf("Audio Input 花费 %s", logger.LogQuota(common.QuotaFromDecimal(q))))
-	}
-
+	// 按次计费不依赖 usage：只要请求走到结算，就按单次价计费。
+	// 上游没返回用量只影响日志展示，不影响金额（否则会出现"拿到内容却不收费"）。
 	if !summary.hasBillableUsage() {
-		extraContent = append(extraContent, "上游没有返回计费信息，无法扣费（可能是上游超时）")
-		logger.LogError(ctx, fmt.Sprintf("total tokens is 0, cannot consume quota, userId %d, channelId %d, tokenId %d, model %s， pre-consumed quota %d", relayInfo.UserId, relayInfo.ChannelId, relayInfo.TokenId, summary.ModelName, relayInfo.FinalPreConsumedQuota))
-	} else {
-		model.UpdateUserUsedQuotaAndRequestCount(relayInfo.UserId, summary.Quota)
-		model.UpdateChannelUsedQuota(relayInfo.ChannelId, summary.Quota)
+		extraContent = append(extraContent, "上游未返回用量信息")
 	}
+	model.UpdateUserUsedQuotaAndRequestCount(relayInfo.UserId, summary.Quota)
+	model.UpdateChannelUsedQuota(relayInfo.ChannelId, summary.Quota)
 
 	if err := SettleBilling(ctx, relayInfo, summary.Quota); err != nil {
 		logger.LogError(ctx, "error settling billing: "+err.Error())
@@ -293,16 +174,15 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 	logContent := strings.Join(extraContent, ", ")
 	var other *model.LogOther
 	if summary.IsClaudeUsageSemantic {
-		other = GenerateClaudeOtherInfo(ctx, relayInfo,
-			summary.ModelRatio, summary.GroupRatio, summary.CompletionRatio,
-			summary.CacheTokens, summary.CacheRatio,
-			summary.CacheCreationTokens, summary.CacheCreationRatio,
-			summary.CacheCreationTokens5m, summary.CacheCreationRatio5m,
-			summary.CacheCreationTokens1h, summary.CacheCreationRatio1h,
+		other = GenerateClaudeOtherInfo(ctx, relayInfo, summary.GroupRatio,
+			summary.CacheTokens,
+			summary.CacheCreationTokens,
+			summary.CacheCreationTokens5m,
+			summary.CacheCreationTokens1h,
 			summary.ModelPrice, relayInfo.PriceData.GroupRatioInfo.GroupSpecialRatio)
 		other.SetPublic("usage_semantic", "anthropic")
 	} else {
-		other = GenerateTextOtherInfo(ctx, relayInfo, summary.ModelRatio, summary.GroupRatio, summary.CompletionRatio, summary.CacheTokens, summary.CacheRatio, summary.ModelPrice, relayInfo.PriceData.GroupRatioInfo.GroupSpecialRatio)
+		other = GenerateTextOtherInfo(ctx, relayInfo, summary.GroupRatio, summary.CacheTokens, summary.ModelPrice, relayInfo.PriceData.GroupRatioInfo.GroupSpecialRatio)
 	}
 	appendUsageBillingPathForLog(other, common.GetContextKeyBool(ctx, constant.ContextKeyLocalCountTokens), originUsage)
 	if adminRejectReason != "" {
@@ -310,25 +190,19 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 	}
 	if summary.ImageTokens != 0 {
 		other.SetPublic("image", true)
-		other.SetPublic("image_ratio", summary.ImageRatio)
 		other.SetPublic("image_output", summary.ImageTokens)
 	}
-	if summary.AudioInputPrice > 0 && summary.AudioTokens > 0 {
-		other.SetPublic("audio_input_seperate_price", true)
+	if summary.AudioTokens != 0 {
 		other.SetPublic("audio_input_token_count", summary.AudioTokens)
-		other.SetPublic("audio_input_price", summary.AudioInputPrice)
 	}
 	if summary.CacheCreationTokens > 0 {
 		other.SetPublic("cache_creation_tokens", summary.CacheCreationTokens)
-		other.SetPublic("cache_creation_ratio", summary.CacheCreationRatio)
 	}
 	if summary.CacheCreationTokens5m > 0 {
 		other.SetPublic("cache_creation_tokens_5m", summary.CacheCreationTokens5m)
-		other.SetPublic("cache_creation_ratio_5m", summary.CacheCreationRatio5m)
 	}
 	if summary.CacheCreationTokens1h > 0 {
 		other.SetPublic("cache_creation_tokens_1h", summary.CacheCreationTokens1h)
-		other.SetPublic("cache_creation_ratio_1h", summary.CacheCreationRatio1h)
 	}
 	cacheWriteTokens := cacheWriteTokensTotal(summary)
 	if cacheWriteTokens > 0 {

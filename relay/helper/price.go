@@ -73,123 +73,44 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 	}
 	billingModelName := info.GetBillingModelName()
 	modelPrice, usePrice := ratio_setting.GetModelPrice(billingModelName, false)
+	if !usePrice {
+		return hosttypes.PriceData{}, modelPriceNotConfiguredError(billingModelName, info.UserId)
+	}
 
 	groupRatioInfo := HandleGroupRatio(c, info)
 
-	var preConsumedQuota int
-	var modelRatio float64
-	var completionRatio float64
-	var cacheRatio float64
-	var imageRatio float64
-	var cacheCreationRatio float64
-	var cacheCreationRatio5m float64
-	var cacheCreationRatio1h float64
-	var audioRatio float64
-	var audioCompletionRatio float64
-	var freeModel bool
-	if !usePrice {
-		preConsumeMultiplier, err := operation_setting.InputPreConsumeMultiplier()
-		if err != nil {
-			return hosttypes.PriceData{}, err
-		}
-		preConsumedTokens := float64(promptTokens) * preConsumeMultiplier
-		var success bool
-		var matchName string
-		modelRatio, success, matchName = ratio_setting.GetModelRatio(billingModelName)
-		if !success {
-			return hosttypes.PriceData{}, modelPriceNotConfiguredError(matchName, info.UserId)
-		}
-		completionRatio = ratio_setting.GetCompletionRatio(billingModelName)
-		cacheRatio, _ = ratio_setting.GetCacheRatio(billingModelName)
-		cacheCreationRatio, _ = ratio_setting.GetCreateCacheRatio(billingModelName)
-		cacheCreationRatio5m = cacheCreationRatio
-		// 固定1h和5min缓存写入价格的比例
-		cacheCreationRatio1h = cacheCreationRatio * claudeCacheCreation1hMultiplier
-		imageRatio, _ = ratio_setting.GetImageRatio(billingModelName)
-		audioRatio = ratio_setting.GetAudioRatio(billingModelName)
-		audioCompletionRatio = ratio_setting.GetAudioCompletionRatio(billingModelName)
-		ratio := modelRatio * groupRatioInfo.GroupRatio
-		quota, err := common.QuotaFromFloatStrict(preConsumedTokens * ratio)
-		if err != nil {
-			return hosttypes.PriceData{}, err
-		}
-		preConsumedQuota = quota
-		if _, image := info.Request.(*dto.ImageRequest); image {
-			info.ImageQuotaBeforeGroup = preConsumedTokens * modelRatio
-		}
-	} else {
-		if meta.ImagePriceRatio != 0 {
-			modelPrice = modelPrice * meta.ImagePriceRatio
-		}
-		if _, image := info.Request.(*dto.ImageRequest); image {
-			info.ImageQuotaBeforeGroup = modelPrice * common.QuotaPerUnit
-		}
-	}
-
-	// check if free model pre-consume is disabled
-	if !operation_setting.GetQuotaSetting().EnableFreeModelPreConsume {
-		// if model price or ratio is 0, do not pre-consume quota
-		if groupRatioInfo.GroupRatio == 0 {
-			preConsumedQuota = 0
-			freeModel = true
-		} else if usePrice {
-			if modelPrice == 0 {
-				preConsumedQuota = 0
-				freeModel = true
-			}
-		} else {
-			if modelRatio == 0 {
-				preConsumedQuota = 0
-				freeModel = true
-			}
-		}
+	if meta.ImagePriceRatio != 0 {
+		modelPrice = modelPrice * meta.ImagePriceRatio
 	}
 
 	priceData := hosttypes.PriceData{
-		FreeModel:            freeModel,
-		ModelPrice:           modelPrice,
-		ModelRatio:           modelRatio,
-		CompletionRatio:      completionRatio,
-		GroupRatioInfo:       groupRatioInfo,
-		UsePrice:             usePrice,
-		CacheRatio:           cacheRatio,
-		ImageRatio:           imageRatio,
-		AudioRatio:           audioRatio,
-		AudioCompletionRatio: audioCompletionRatio,
-		CacheCreationRatio:   cacheCreationRatio,
-		CacheCreation5mRatio: cacheCreationRatio5m,
-		CacheCreation1hRatio: cacheCreationRatio1h,
-		QuotaToPreConsume:    preConsumedQuota,
+		ModelPrice:     modelPrice,
+		GroupRatioInfo: groupRatioInfo,
 	}
-	if usePrice {
-		for name, ratio := range meta.BillingRatios {
-			priceData.AddOtherRatio(name, ratio)
-		}
+	for name, ratio := range meta.BillingRatios {
+		priceData.AddOtherRatio(name, ratio)
 	}
 	if request, image := info.Request.(*dto.ImageRequest); image {
 		count, err := request.ImageCount(false)
 		if err != nil {
 			return hosttypes.PriceData{}, err
 		}
-		if usePrice {
-			priceData.AddOtherRatio("n", float64(count))
-		}
-		if !usePrice {
-			quota, err := common.QuotaFromFloatStrict(priceData.ApplyOtherRatiosToFloat(info.ImageQuotaBeforeGroup * groupRatioInfo.GroupRatio))
-			if err != nil {
-				return hosttypes.PriceData{}, err
-			}
-			priceData.QuotaToPreConsume = quota
+		priceData.AddOtherRatio("n", float64(count))
+	}
+
+	// 按次计费下，单次价为 0 或分组倍率为 0 即视为免费模型，跳过预扣。
+	if !operation_setting.GetQuotaSetting().EnableFreeModelPreConsume {
+		if groupRatioInfo.GroupRatio == 0 || modelPrice == 0 {
+			priceData.FreeModel = true
 		}
 	}
-	if usePrice {
-		quotaToPreConsume := priceData.ApplyOtherRatiosToFloat(modelPrice * common.QuotaPerUnit * groupRatioInfo.GroupRatio)
-		quota, err := common.QuotaFromFloatStrict(quotaToPreConsume)
-		if err != nil {
-			return hosttypes.PriceData{}, err
-		}
-		priceData.QuotaToPreConsume = quota
+
+	quotaToPreConsume := priceData.ApplyOtherRatiosToFloat(modelPrice * common.QuotaPerUnit * groupRatioInfo.GroupRatio)
+	quota, err := common.QuotaFromFloatStrict(quotaToPreConsume)
+	if err != nil {
+		return hosttypes.PriceData{}, err
 	}
+	priceData.QuotaToPreConsume = quota
 
 	if common.DebugEnabled {
 		logger.LogDebug(c, "model_price_helper result: %s", priceData.ToSetting())
@@ -199,22 +120,16 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 }
 
 func HasModelBillingConfig(modelName string) bool {
-	if _, ok := ratio_setting.GetModelPrice(modelName, false); ok {
-		return true
-	}
-	_, ok, _ := ratio_setting.GetModelRatio(modelName)
+	_, ok := ratio_setting.GetModelPrice(modelName, false)
 	return ok
 }
 
-// HasPriceOrRatioEntry reports whether name has a configured price or ratio
-// entry after a single wildcard normalization. Self-use fallback does not count
-// as a configured ratio.
-func HasPriceOrRatioEntry(name string) bool {
+// HasPriceEntry reports whether name has a configured per-call price entry
+// after a single wildcard normalization.
+func HasPriceEntry(name string) bool {
 	formatted := ratio_setting.FormatMatchingModelName(name)
-	if _, ok := ratio_setting.GetModelPrice(formatted, false); ok {
-		return true
-	}
-	return ratio_setting.HasConfiguredModelRatio(formatted)
+	_, ok := ratio_setting.GetModelPrice(formatted, false)
+	return ok
 }
 
 func resolveBillingModelName(origin string) string {
@@ -236,7 +151,7 @@ func resolveBillingModelName(origin string) string {
 			continue
 		}
 		seen[name] = struct{}{}
-		if HasPriceOrRatioEntry(name) {
+		if HasPriceEntry(name) {
 			matched = name
 			break
 		}
