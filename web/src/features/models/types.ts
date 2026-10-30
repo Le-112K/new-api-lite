@@ -35,22 +35,6 @@ export interface BoundChannel {
  */
 export type ModelSquareState = 'visible' | 'unavailable' | 'hidden' | 'partial'
 
-export type StandardMatch = {
-  /** 渠道拉取到的原始模型名。 */
-  name: string
-  /** 归属的标准模型名；无归属时等于 name。 */
-  standard: string
-  /** 命中的元数据匹配规则；无归属时为空。 */
-  rule?: string
-  mapped: boolean
-}
-
-export interface StandardMatchResponse {
-  success: boolean
-  message?: string
-  data?: StandardMatch[]
-}
-
 export interface Model {
   square_state?: ModelSquareState
   /** 是否配了模型倍率或按次价；false 的模型不会出现在公开广场上。 */

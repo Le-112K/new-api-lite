@@ -19,7 +19,6 @@ For commercial licensing, please contact support@quantumnous.com
 import { api } from '@/lib/api'
 
 import type {
-  StandardMatchResponse,
   GetModelsParams,
   GetModelsResponse,
   GetModelResponse,
@@ -274,17 +273,6 @@ export async function deletePrefillGroup(
 export interface ModelDeleteResult {
   deleted_count: number
   updated_channels: number
-}
-
-/**
- * Match candidate channel model names to standard model names via the
- * metadata name rules. Read-only; the channel form consumes the result.
- */
-export async function matchStandardModels(
-  names: string[]
-): Promise<StandardMatchResponse> {
-  const res = await api.post('/api/models/consolidation_match', { names })
-  return res.data
 }
 
 /**

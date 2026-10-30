@@ -253,19 +253,6 @@ func BatchDeleteModelMeta(c *gin.Context) {
 	common.ApiSuccess(c, result)
 }
 
-// MatchStandardModels 把渠道拉取到的候选模型名按元数据名称规则匹配到
-// 标准模型。只读匹配，不改渠道；渠道表单据结果生成 models/model_mapping。
-func MatchStandardModels(c *gin.Context) {
-	var request struct {
-		Names []string `json:"names"`
-	}
-	if err := common.DecodeJson(c.Request.Body, &request); err != nil {
-		common.ApiError(c, err)
-		return
-	}
-	common.ApiSuccess(c, model.MatchStandardModels(request.Names))
-}
-
 // enrichModels keeps configured endpoints intact and derives connections from
 // enabled routes, including hidden or unpriced models absent from the catalog.
 func enrichModels(models []*model.Model) error {
