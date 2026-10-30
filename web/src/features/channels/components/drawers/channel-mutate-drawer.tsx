@@ -18,6 +18,8 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+
+import { getModels } from '@/features/models/api'
 import {
   ArrowRight,
   ArrowLeft,
@@ -104,7 +106,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { SecureVerificationDialog } from '@/features/auth/secure-verification'
-import { getSystemOptions } from '@/features/system-settings/api'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { useHiddenClickUnlock } from '@/hooks/use-hidden-click-unlock'
 import {
@@ -117,10 +118,6 @@ import {
   type ChannelConnectionInfo,
 } from '@/lib/channel-connection-info'
 import { handleServerError } from '@/lib/handle-server-error'
-import {
-  MODEL_ALIAS_MAP_OPTION_KEY,
-  parseModelAliasMap,
-} from '@/lib/model-alias-map'
 import { ROLE } from '@/lib/roles'
 import {
   requireServerSuccess,
@@ -529,6 +526,23 @@ export function ChannelMutateDrawer({
     enabled: open && !showProviderPicker,
   })
 
+  // 模型页（统一模型名清单）：映射的「请求模型名称」下拉直接从这里选，
+  // 统一名不再有独立配置页。不带 include_channel_models 时只返回运营
+  // 在模型页建立的模型记录。
+  const { data: modelPageData } = useQuery({
+    queryKey: ['models', 'mapping-names'],
+    queryFn: async () =>
+      requireServerSuccess(await getModels({ page_size: 1000 })),
+    enabled: open && !showProviderPicker,
+  })
+  const modelPageNames = useMemo(
+    () =>
+      (modelPageData?.data?.items ?? [])
+        .map((model) => model.model_name)
+        .filter(Boolean),
+    [modelPageData]
+  )
+
   // Fetch prefill model groups
   const { data: prefillGroupsData } = useQuery({
     queryKey: ['prefill_groups', 'model'],
@@ -893,21 +907,6 @@ export function ChannelMutateDrawer({
     }
   }, [currentSettings])
 
-  // 统一名称表（上游名 → 统一请求名）：渠道映射的填表模板。
-  // options 体积不大且全站共用，React Query 缓存 5 分钟，避免每次开抽屉重拉。
-  const { data: systemOptionsData } = useQuery({
-    queryKey: ['system-options'],
-    queryFn: () => getSystemOptions(),
-    enabled: open,
-    staleTime: 5 * 60_000,
-  })
-  const modelAliasMap = useMemo(() => {
-    const raw = systemOptionsData?.data?.find(
-      (option) => option.key === MODEL_ALIAS_MAP_OPTION_KEY
-    )?.value
-    return parseModelAliasMap(typeof raw === 'string' ? raw : '')
-  }, [systemOptionsData])
-
   const upstreamDetectedModelsPreview = upstreamUpdateMeta.detectedModels.slice(
     0,
     UPSTREAM_DETECTED_MODEL_PREVIEW_LIMIT
@@ -1116,6 +1115,12 @@ export function ChannelMutateDrawer({
     discovery.status === 'success' ? discovery.models : NO_UPSTREAM_MODELS
   // 映射下拉的候选只来自「这个渠道自己的模型」：本次拉取的上游清单、
   // 渠道历史检测缓存与渠道 models。绝不再混入全站模型（getAllModels）。
+  // 「请求模型名称」候选 = 模型页的模型记录（统一名）∪ 渠道 models（兜底）。
+  const mappingSourceCandidates = useMemo(
+    () => [...new Set([...modelPageNames, ...currentModelsArray])].sort(),
+    [modelPageNames, currentModelsArray]
+  )
+
   const upstreamCandidates = useMemo(
     () =>
       [
@@ -2289,9 +2294,8 @@ export function ChannelMutateDrawer({
                 value={field.value || ''}
                 onChange={field.onChange}
                 disabled={isSubmitting}
-                sourceModelOptions={currentModelsArray}
+                sourceModelOptions={mappingSourceCandidates}
                 targetModelOptions={upstreamCandidates}
-                aliasMap={modelAliasMap}
                 onBatchAdd={
                   canBatchMap
                     ? () =>
@@ -4611,9 +4615,8 @@ export function ChannelMutateDrawer({
               }
               syncModels={redirectSyncModels}
               onSyncModelsChange={setRedirectSyncModels}
-              sourceModelOptions={currentModelsArray}
+              sourceModelOptions={mappingSourceCandidates}
               targetModelOptions={upstreamCandidates}
-              aliasMap={modelAliasMap}
               draftRequest={mappingDraftRequest}
               onDraftRequestHandled={() => setMappingDraftRequest(null)}
               disabled={isSubmitting}

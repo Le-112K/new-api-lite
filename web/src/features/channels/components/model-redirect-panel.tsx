@@ -46,7 +46,6 @@ type ModelRedirectPanelProps = {
   onSyncModelsChange: (value: boolean) => void
   sourceModelOptions: string[]
   targetModelOptions: string[]
-  aliasMap?: Record<string, string>
   draftRequest: ModelMappingDraftRequest | null
   onDraftRequestHandled: () => void
   disabled?: boolean
@@ -97,7 +96,6 @@ export function ModelRedirectPanel(props: ModelRedirectPanelProps) {
       }
     >
       <ModelMappingEditor
-        aliasMap={props.aliasMap}
         value={props.mappingValue}
         onChange={props.onMappingChange}
         onCommit={props.onMappingCommit}
