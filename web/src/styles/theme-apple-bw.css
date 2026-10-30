@@ -165,6 +165,14 @@ input:focus-visible, textarea:focus-visible, select:focus-visible{
   box-shadow: 0 0 0 4px rgba(255,255,255,0.10) !important;
 }
 
+/* 6b) chips 里的输入位不是独立输入框，只是承接键盘输入的一段透明文字区。
+   上面的全局聚焦外发光会在它外面画出一个多余的小方框，这里按 slot 精确豁免，
+   外层 chips 容器的聚焦描边不受影响。 */
+input[data-slot="combobox-chip-input"]:focus-visible{
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
 /* 7) 表格头：极浅灰，分割线更细 */
 thead tr{ background: var(--table-header) !important; }
 thead th{ border-bottom-color: var(--border) !important; letter-spacing: 0.08em !important; }
