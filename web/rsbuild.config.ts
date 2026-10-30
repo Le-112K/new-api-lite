@@ -16,6 +16,18 @@ export default defineConfig(({ envMode }) => {
     'http://localhost:3000'
 
   const isProd = envMode === 'production'
+
+  // 代理目标只在启动时解析一次。默认值指向 dev server 自己，代理会打回自己
+  // 变成 502；改完 .env 必须重启 dev server，所以把实际目标打出来。
+  if (!isProd) {
+    console.log(
+      `[dev] /api 代理目标 = ${serverUrl}${
+        serverUrl.includes('3000') && serverUrl.includes('localhost')
+          ? '  ← 注意：这是默认值，代理会打回 dev server 自身（502）'
+          : ''
+      }`
+    )
+  }
   const devProxy = Object.fromEntries(
     (['/api', '/v1', '/mj', '/pg'] as const).map((key) => [
       key,
