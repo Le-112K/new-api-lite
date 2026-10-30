@@ -49,7 +49,7 @@ export function filterByGroup(
  * Get model price for sorting
  */
 function getModelPrice(model: PricingModel): number {
-  return model.quota_type === 0 ? model.model_ratio : model.model_price || 0
+  return model.model_price || 0
 }
 
 /**

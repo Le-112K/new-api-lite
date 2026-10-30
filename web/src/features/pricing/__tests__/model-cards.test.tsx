@@ -35,9 +35,7 @@ function pricingModel(overrides: Partial<PricingModel> = {}): PricingModel {
   return {
     id: 1,
     model_name: 'example-model',
-    quota_type: 0,
-    model_ratio: 1,
-    completion_ratio: 3,
+    model_price: 0.01,
     enable_groups: ['default', 'premium'],
     group_ratio: { default: 1, premium: 3 },
     ...overrides,
@@ -83,9 +81,6 @@ describe('model cards', () => {
     render(
       <ModelCard
         model={pricingModel({
-          model_ratio: 37.5,
-          completion_ratio: 3,
-          cache_ratio: 0.1,
           model_price: 0.01,
           context_length: 200000,
         })}

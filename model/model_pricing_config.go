@@ -44,10 +44,8 @@ var ErrModelPricingConflict = errors.New("model pricing changed; reload before s
 
 // Lock order is stable across instances. Creating missing option rows inside
 // the transaction also serializes the first write to an unconfigured database.
-var modelPricingOptionKeys = []string{
-	"AudioCompletionRatio", "AudioRatio", "CacheRatio", "CompletionRatio",
-	"CreateCacheRatio", "ImageRatio", "ModelPrice", "ModelRatio",
-}
+// 站点只按调用次数计费，定价配置只剩"单次价格"一个键。
+var modelPricingOptionKeys = []string{"ModelPrice"}
 
 var modelPricingMutationMu sync.Mutex
 
@@ -126,30 +124,9 @@ func effectiveModelPricing(values map[string]map[string]any, name string) Pricin
 	result := modelPricingValues(values, name)
 	// Legacy wildcard aliases are resolved by the same normalization as relay.
 	alias := ratio_setting.FormatMatchingModelName(name)
-	for _, key := range []string{"ModelPrice", "ModelRatio", "CompletionRatio", "AudioRatio", "AudioCompletionRatio"} {
-		delete(result, key)
-		if value, exists := values[key][alias]; exists {
-			result[key] = value
-		}
-	}
-	if _, exists := result["ModelPrice"]; exists {
-		return result
-	}
-	// Completion ratios include engine-enforced model defaults. Expose their
-	// effective value without persisting them into the editable configuration.
-	var configuredCompletion *float64
-	if ratio, exists := result["CompletionRatio"].(float64); exists {
-		configuredCompletion = &ratio
-	}
-	result["CompletionRatio"] = ratio_setting.ResolveCompletionRatio(name, configuredCompletion).Ratio
-	for key, fallback := range map[string]float64{
-		"CacheRatio":       ratio_setting.DefaultCacheRatio,
-		"CreateCacheRatio": ratio_setting.DefaultCreateCacheRatio,
-		"ImageRatio":       ratio_setting.DefaultImageRatio,
-	} {
-		if _, exists := result[key]; !exists {
-			result[key] = fallback
-		}
+	delete(result, "ModelPrice")
+	if value, exists := values["ModelPrice"][alias]; exists {
+		result["ModelPrice"] = value
 	}
 	return result
 }

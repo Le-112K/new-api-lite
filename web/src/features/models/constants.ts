@@ -103,15 +103,6 @@ export function getSyncStatusOptions(t: TFunction) {
 // Quota Type
 // ============================================================================
 
-export function getQuotaTypeConfig(
-  t: TFunction
-): Record<number, { label: string; color: string }> {
-  return {
-    0: { label: t('Usage-based'), color: 'violet' },
-    1: { label: t('Per-call'), color: 'teal' },
-  }
-}
-
 // ============================================================================
 // Endpoint Templates
 // ============================================================================

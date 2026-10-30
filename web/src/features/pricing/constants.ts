@@ -18,7 +18,6 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { type TFunction } from 'i18next'
 
-import type { TokenUnit } from './types'
 
 // ----------------------------------------------------------------------------
 // Pricing Constants
@@ -33,26 +32,6 @@ export const SORT_OPTIONS = {
 
 /** Filter values */
 export const FILTER_ALL = 'all'
-
-/** Quota type options */
-export const QUOTA_TYPES = {
-  ALL: 'all',
-  TOKEN: 'token',
-  REQUEST: 'request',
-} as const
-
-export type QuotaTypeOption = (typeof QUOTA_TYPES)[keyof typeof QUOTA_TYPES]
-
-/** Quota type labels */
-export function getQuotaTypeLabels(
-  t: TFunction
-): Record<QuotaTypeOption, string> {
-  return {
-    [QUOTA_TYPES.ALL]: t('All Models'),
-    [QUOTA_TYPES.TOKEN]: t('Token-based'),
-    [QUOTA_TYPES.REQUEST]: t('Per Request'),
-  }
-}
 
 /** Endpoint type options */
 export const ENDPOINT_TYPES = {
@@ -103,21 +82,6 @@ export const SIDEBAR_WIDTH = 'w-64'
 
 /** Excluded groups */
 export const EXCLUDED_GROUPS = ['', 'auto']
-
-/** Quota type values */
-export const QUOTA_TYPE_VALUES = {
-  TOKEN: 0,
-  REQUEST: 1,
-} as const
-
-/** Token unit divisors */
-export const TOKEN_UNIT_DIVISORS = {
-  M: 1,
-  K: 1000,
-} as const
-
-/** Default token unit for pricing display */
-export const DEFAULT_TOKEN_UNIT: TokenUnit = 'M'
 
 /** Default page size for the model card grid */
 export const DEFAULT_PRICING_PAGE_SIZE = 20

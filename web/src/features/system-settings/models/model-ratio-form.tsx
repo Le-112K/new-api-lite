@@ -83,45 +83,7 @@ const modelJsonFields: Array<{
     name: 'ModelPrice',
     labelKey: 'Model fixed pricing',
     descriptionKey:
-      'JSON map of model → USD cost per request. Takes precedence over ratio based billing.',
-  },
-  {
-    name: 'ModelRatio',
-    labelKey: 'Model ratio',
-    descriptionKey: 'JSON map of model → multiplier applied to quota billing.',
-  },
-  {
-    name: 'CacheRatio',
-    labelKey: 'Prompt cache ratio',
-    descriptionKey: 'Optional ratio used when upstream cache hits occur.',
-  },
-  {
-    name: 'CreateCacheRatio',
-    labelKey: 'Create cache ratio',
-    descriptionKey:
-      'Ratio applied when creating cache entries for supported models.',
-  },
-  {
-    name: 'CompletionRatio',
-    labelKey: 'Completion ratio',
-    descriptionKey:
-      'Applies to custom completion endpoints. JSON map of model → ratio.',
-  },
-  {
-    name: 'ImageRatio',
-    labelKey: 'Image ratio',
-    descriptionKey: 'Configure per-model ratio for image inputs or outputs.',
-  },
-  {
-    name: 'AudioRatio',
-    labelKey: 'Audio ratio',
-    descriptionKey:
-      'Ratio applied to audio inputs where supported by the upstream model.',
-  },
-  {
-    name: 'AudioCompletionRatio',
-    labelKey: 'Audio completion ratio',
-    descriptionKey: 'Ratio applied to audio completions for streaming models.',
+      'JSON map of model → USD cost per request. Every model is billed per call.',
   },
 ]
 

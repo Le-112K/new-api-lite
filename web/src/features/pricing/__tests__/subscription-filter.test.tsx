@@ -30,9 +30,7 @@ function makeModel(id: number, groups: string[]): PricingModel {
   return {
     id,
     model_name: `model-${id}`,
-    quota_type: 0,
-    model_ratio: 1,
-    completion_ratio: 1,
+    model_price: 0.01,
     enable_groups: groups,
   }
 }

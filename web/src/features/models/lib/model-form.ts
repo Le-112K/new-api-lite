@@ -42,7 +42,6 @@ export const modelFormSchema = z.object({
   status: z.boolean().default(true),
   sync_official: z.boolean().default(true),
   enable_groups: z.array(z.string()).default([]),
-  quota_types: z.array(z.number()).default([]),
   // 订阅制能力指标。0 = 未知（卡片上显示破折号，不编造数字）。
   context_length: z.number().min(0).default(0),
   max_output_tokens: z.number().min(0).default(0),
@@ -94,7 +93,6 @@ export function transformModelToFormDefaults(model: Model): ModelFormValues {
     status: model.status === 1,
     sync_official: model.sync_official === 1,
     enable_groups: model.enable_groups || [],
-    quota_types: model.quota_types || [],
     context_length: model.context_length || 0,
     max_output_tokens: model.max_output_tokens || 0,
     thinking_strength: (model.thinking_strength || '') as
@@ -126,7 +124,6 @@ export function transformFormDataToModelPayload(
     status: formData.status ? 1 : 0,
     sync_official: formData.sync_official ? 1 : 0,
     enable_groups: formData.enable_groups,
-    quota_types: formData.quota_types,
     context_length: formData.context_length || 0,
     max_output_tokens: formData.max_output_tokens || 0,
     thinking_strength: formData.thinking_strength || '',

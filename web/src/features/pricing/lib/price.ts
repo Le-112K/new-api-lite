@@ -18,8 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { formatBillingCurrencyFromUSD } from '@/lib/currency'
 
-import { QUOTA_TYPE_VALUES, TOKEN_UNIT_DIVISORS } from '../constants'
-import type { PricingModel, TokenUnit, PriceType } from '../types'
+import type { PricingModel } from '../types'
 import { getConfiguredGroupRatio, getDisplayGroupRatio } from './model-helpers'
 
 // ----------------------------------------------------------------------------
@@ -60,48 +59,6 @@ export function stripTrailingZeros(formatted: string): string {
  * Returns NaN when the required ratio field is missing/null so callers can
  * skip rendering that price type.
  */
-function calculateTokenPrice(
-  model: PricingModel,
-  type: PriceType,
-  ratio: number
-): number {
-  const base = model.model_ratio * 2 * ratio
-
-  switch (type) {
-    case 'input':
-      return base
-    case 'output':
-      return base * model.completion_ratio
-    case 'cache':
-      return hasRatio(model.cache_ratio)
-        ? base * Number(model.cache_ratio)
-        : Number.NaN
-    case 'create_cache':
-      return hasRatio(model.create_cache_ratio)
-        ? base * Number(model.create_cache_ratio)
-        : Number.NaN
-    case 'image':
-      return hasRatio(model.image_ratio)
-        ? base * Number(model.image_ratio)
-        : Number.NaN
-    case 'audio_input':
-      return hasRatio(model.audio_ratio)
-        ? base * Number(model.audio_ratio)
-        : Number.NaN
-    case 'audio_output':
-      return hasRatio(model.audio_ratio) &&
-        hasRatio(model.audio_completion_ratio)
-        ? base *
-            Number(model.audio_ratio) *
-            Number(model.audio_completion_ratio)
-        : Number.NaN
-  }
-}
-
-function hasRatio(value: number | null | undefined): boolean {
-  return value !== undefined && value !== null && Number.isFinite(Number(value))
-}
-
 /**
  * Apply recharge rate to price
  *
@@ -139,77 +96,6 @@ function applyRechargeRate(
 }
 
 /**
- * Format token-based price for display
- */
-export function formatPrice(
-  model: PricingModel,
-  type: PriceType,
-  tokenUnit: TokenUnit,
-  showWithRecharge = false,
-  priceRate = 1,
-  usdExchangeRate = 1,
-  selectedGroup?: string,
-  showCurrencySymbol = true
-): string {
-  if (model.quota_type === QUOTA_TYPE_VALUES.REQUEST) {
-    return '-'
-  }
-
-  const displayGroupRatio = getDisplayGroupRatio(model, selectedGroup)
-
-  let priceInUSD = calculateTokenPrice(model, type, displayGroupRatio)
-  priceInUSD = applyRechargeRate(
-    priceInUSD,
-    showWithRecharge,
-    priceRate,
-    usdExchangeRate
-  )
-
-  const price = priceInUSD / TOKEN_UNIT_DIVISORS[tokenUnit]
-  return formatBillingCurrencyFromUSD(price, {
-    showSymbol: showCurrencySymbol,
-    digitsLarge: 4,
-    digitsSmall: 6,
-    abbreviate: false,
-  })
-}
-
-/**
- * Format price for a specific group (token-based)
- */
-export function formatGroupPrice(
-  model: PricingModel,
-  group: string,
-  type: PriceType,
-  tokenUnit: TokenUnit,
-  showWithRecharge = false,
-  priceRate = 1,
-  usdExchangeRate = 1,
-  groupRatio: Record<string, number>
-): string {
-  if (model.quota_type === QUOTA_TYPE_VALUES.REQUEST) {
-    return '-'
-  }
-
-  const ratio = getConfiguredGroupRatio(groupRatio, group)
-  let priceInUSD = calculateTokenPrice(model, type, ratio)
-
-  priceInUSD = applyRechargeRate(
-    priceInUSD,
-    showWithRecharge,
-    priceRate,
-    usdExchangeRate
-  )
-
-  const price = priceInUSD / TOKEN_UNIT_DIVISORS[tokenUnit]
-  return formatBillingCurrencyFromUSD(price, {
-    digitsLarge: 4,
-    digitsSmall: 6,
-    abbreviate: false,
-  })
-}
-
-/**
  * Format fixed price for pay-per-request models (with specific group)
  */
 export function formatFixedPrice(
@@ -220,10 +106,6 @@ export function formatFixedPrice(
   usdExchangeRate = 1,
   groupRatio: Record<string, number>
 ): string {
-  if (model.quota_type !== QUOTA_TYPE_VALUES.REQUEST) {
-    return '-'
-  }
-
   const ratio = getConfiguredGroupRatio(groupRatio, group)
   let priceInUSD = (model.model_price || 0) * ratio
 
@@ -252,10 +134,6 @@ export function formatRequestPrice(
   selectedGroup?: string,
   showCurrencySymbol = true
 ): string {
-  if (model.quota_type !== QUOTA_TYPE_VALUES.REQUEST) {
-    return '-'
-  }
-
   const displayGroupRatio = getDisplayGroupRatio(model, selectedGroup)
 
   let priceInUSD = (model.model_price || 0) * displayGroupRatio

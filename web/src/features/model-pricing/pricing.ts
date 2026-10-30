@@ -60,34 +60,8 @@ export function modelPricingDisplay(
     id: 0,
     model_name: entry.model_name,
     enable_groups: [],
-    quota_type: values.ModelPrice !== undefined ? 1 : 0,
-    model_ratio: Number(values.ModelRatio ?? Number.NaN),
-    completion_ratio: Number(values.CompletionRatio ?? Number.NaN),
     model_price:
       values.ModelPrice === undefined ? undefined : Number(values.ModelPrice),
-    cache_ratio:
-      values.CacheRatio === undefined || Number(values.CacheRatio) === 1
-        ? undefined
-        : Number(values.CacheRatio),
-    create_cache_ratio:
-      values.CreateCacheRatio === undefined ||
-      !(
-        entry.cache_write_mode === 'standard' ||
-        entry.cache_write_mode === 'claude_ttl' ||
-        entry.configured?.CreateCacheRatio !== undefined
-      )
-        ? undefined
-        : Number(values.CreateCacheRatio),
-    image_ratio:
-      values.ImageRatio === undefined || Number(values.ImageRatio) === 1
-        ? undefined
-        : Number(values.ImageRatio),
-    audio_ratio:
-      values.AudioRatio === undefined ? undefined : Number(values.AudioRatio),
-    audio_completion_ratio:
-      values.AudioCompletionRatio === undefined
-        ? undefined
-        : Number(values.AudioCompletionRatio),
   }
 }
 

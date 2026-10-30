@@ -66,7 +66,6 @@ export interface Model {
   // Runtime fields
   bound_channels?: BoundChannel[]
   enable_groups?: string[]
-  quota_types?: number[]
   matched_models?: string[]
   matched_count?: number
 }
@@ -336,11 +335,6 @@ export type NameRule = 0 | 1 | 2 | 3 // exact, prefix, contains, suffix
  * Model status type
  */
 export type ModelStatus = 0 | 1 // disabled, enabled
-
-/**
- * Quota type
- */
-export type QuotaType = 0 | 1 // usage-based, per-call
 
 /**
  * Sync locale

@@ -19,15 +19,11 @@ For commercial licensing, please contact support@quantumnous.com
 import { useTranslation } from 'react-i18next'
 
 import { getCurrencyLabel } from '@/lib/currency'
-import { useSystemConfigStore } from '@/stores/system-config-store'
 
-import { DEFAULT_TOKEN_UNIT } from '../constants'
-import { isTokenBasedModel } from '../lib/model-helpers'
-import { formatPrice, formatRequestPrice } from '../lib/price'
-import type { PricingModel, TokenUnit } from '../types'
+import { formatRequestPrice } from '../lib/price'
+import type { PricingModel } from '../types'
 
 export type ModelPriceCellOptions = {
-  tokenUnit?: TokenUnit
   priceRate?: number
   usdExchangeRate?: number
   showRechargePrice?: boolean
@@ -39,98 +35,42 @@ export function ModelPriceCell(props: {
   options?: ModelPriceCellOptions
 }) {
   const { t } = useTranslation()
-  const currency = useSystemConfigStore((state) => state.config.currency)
-  const currencyLabel =
-    currency.quotaDisplayType === 'TOKENS' ? 'USD' : getCurrencyLabel()
+  const currencyLabel = getCurrencyLabel()
   const options = props.options ?? {}
-  const tokenUnit = options.tokenUnit ?? DEFAULT_TOKEN_UNIT
-  const tokenUnitLabel = tokenUnit === 'K' ? '1K' : '1M'
-  let metrics: Array<{ label: string; value: string }>
-  let caption = t('{{currency}} / {{unit}} tokens', {
-    currency: currencyLabel,
-    unit: tokenUnitLabel,
-  })
 
-  const tokenBased = isTokenBasedModel(props.model)
-  if (
-    !Number.isFinite(
-      tokenBased ? props.model.model_ratio : props.model.model_price
-    )
-  ) {
+  if (!Number.isFinite(props.model.model_price)) {
     return (
       <span className='text-muted-foreground text-sm'>{t('Unset price')}</span>
     )
   }
-  if (tokenBased) {
-    metrics = [
-      {
-        label: t('Input'),
-        value: formatPrice(
-          props.model,
-          'input',
-          tokenUnit,
-          options.showRechargePrice,
-          options.priceRate,
-          options.usdExchangeRate,
-          options.selectedGroup,
-          false
-        ),
-      },
-      {
-        label: t('Output'),
-        value: formatPrice(
-          props.model,
-          'output',
-          tokenUnit,
-          options.showRechargePrice,
-          options.priceRate,
-          options.usdExchangeRate,
-          options.selectedGroup,
-          false
-        ),
-      },
-    ]
-  } else {
-    metrics = [
-      {
-        label: t('Per-request'),
-        value: formatRequestPrice(
-          props.model,
-          options.showRechargePrice,
-          options.priceRate,
-          options.usdExchangeRate,
-          options.selectedGroup,
-          false
-        ),
-      },
-    ]
-    caption = `${currencyLabel} / ${t('request')}`
-  }
+
+  const value = formatRequestPrice(
+    props.model,
+    options.showRechargePrice,
+    options.priceRate,
+    options.usdExchangeRate,
+    options.selectedGroup,
+    false
+  )
+  const caption = `${currencyLabel} / ${t('request')}`
 
   return (
     <span className='block w-full max-w-full min-w-0 space-y-1.5'>
-      <span
-        className={metrics.length > 1 ? 'grid grid-cols-2 gap-x-4' : 'grid'}
-      >
-        {metrics.map((metric) => (
+      <span className='grid'>
+        <span className='flex min-w-0 flex-col items-start gap-y-0.5 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-1.5'>
           <span
-            key={metric.label}
-            className='flex min-w-0 flex-col items-start gap-y-0.5 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-1.5'
+            className='text-muted-foreground min-w-0 truncate text-xs font-normal'
+            title={t('Per-request')}
           >
-            <span
-              className='text-muted-foreground min-w-0 truncate text-xs font-normal'
-              title={metric.label}
-            >
-              {metric.label}
-            </span>
-            <span
-              className='min-w-0 font-mono text-sm break-words whitespace-normal tabular-nums'
-              title={metric.value}
-            >
-              {metric.value}
-            </span>
+            {t('Per-request')}
           </span>
-        ))}
+          <span
+            className='min-w-0 font-mono text-sm break-words whitespace-normal tabular-nums'
+            title={value}
+          >
+            {value}
+          </span>
+        </span>
       </span>
       <span
         className='text-muted-foreground block text-xs font-normal break-words whitespace-normal sm:truncate'

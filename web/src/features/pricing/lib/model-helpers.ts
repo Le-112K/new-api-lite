@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { EXCLUDED_GROUPS, FILTER_ALL, QUOTA_TYPE_VALUES } from '../constants'
+import { EXCLUDED_GROUPS, FILTER_ALL } from '../constants'
 import type { PricingModel } from '../types'
 
 // ----------------------------------------------------------------------------
@@ -101,9 +101,3 @@ export function replaceModelInPath(path: string, modelName: string): string {
   return path.replaceAll('{model}', modelName)
 }
 
-/**
- * Check if model is token-based pricing
- */
-export function isTokenBasedModel(model: PricingModel): boolean {
-  return model.quota_type === QUOTA_TYPE_VALUES.TOKEN
-}

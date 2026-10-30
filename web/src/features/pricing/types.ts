@@ -42,15 +42,7 @@ export type PricingModel = {
   vendor_name?: string
   vendor_icon?: string
   vendor_description?: string
-  quota_type: number
-  model_ratio: number
-  completion_ratio: number
   model_price?: number
-  cache_ratio?: number | null
-  create_cache_ratio?: number | null
-  image_ratio?: number | null
-  audio_ratio?: number | null
-  audio_completion_ratio?: number | null
   enable_groups: string[]
   tags?: string
   supported_endpoint_types?: string[]

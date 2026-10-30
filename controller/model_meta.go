@@ -293,7 +293,6 @@ func enrichModels(models []*model.Model) error {
 		groups := make(map[string]bool)
 		names := make(map[string]bool)
 		endpoints := make(map[string]bool)
-		quotas := make(map[int]bool)
 		for _, connection := range connections {
 			name := connection.Model
 			if !metadata.MatchesName(name) {
@@ -305,14 +304,10 @@ func enrichModels(models []*model.Model) error {
 			for _, endpoint := range model.GetModelSupportEndpointTypes(name) {
 				endpoints[string(endpoint)] = true
 			}
-			for _, quota := range model.GetModelQuotaTypes(name) {
-				quotas[quota] = true
-			}
 		}
 		metadata.BoundChannels = nil
 		metadata.EnableGroups = nil
 		metadata.SupportedEndpoints = nil
-		metadata.QuotaTypes = nil
 		metadata.MatchedModels = nil
 		for _, channel := range channels {
 			metadata.BoundChannels = append(metadata.BoundChannels, channel)
@@ -330,12 +325,8 @@ func enrichModels(models []*model.Model) error {
 		for endpoint := range endpoints {
 			metadata.SupportedEndpoints = append(metadata.SupportedEndpoints, endpoint)
 		}
-		for quota := range quotas {
-			metadata.QuotaTypes = append(metadata.QuotaTypes, quota)
-		}
 		sort.Strings(metadata.EnableGroups)
 		sort.Strings(metadata.SupportedEndpoints)
-		sort.Ints(metadata.QuotaTypes)
 		if metadata.NameRule != model.NameRuleExact {
 			for name := range names {
 				metadata.MatchedModels = append(metadata.MatchedModels, name)
@@ -352,10 +343,6 @@ func enrichModels(models []*model.Model) error {
 		billingConfigured := false
 		for _, name := range billingNames {
 			if _, ok := ratio_setting.GetModelPrice(name, false); ok {
-				billingConfigured = true
-				break
-			}
-			if _, ok, _ := ratio_setting.GetModelRatio(name); ok {
 				billingConfigured = true
 				break
 			}

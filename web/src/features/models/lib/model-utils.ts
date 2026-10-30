@@ -20,7 +20,7 @@ import type { TFunction } from 'i18next'
 
 import { formatTimestampToDate } from '@/lib/format'
 
-import { getNameRuleConfig, getQuotaTypeConfig } from '../constants'
+import { getNameRuleConfig } from '../constants'
 import type { NameRule, Model } from '../types'
 
 // ============================================================================
@@ -144,14 +144,6 @@ export function getNameRuleConfigByRule(rule: NameRule, t: TFunction) {
 /**
  * Format quota types array
  */
-export function formatQuotaTypes(
-  quotaTypes: number[] | undefined,
-  t: TFunction
-): string {
-  if (!quotaTypes || quotaTypes.length === 0) return '-'
-  const config = getQuotaTypeConfig(t)
-  return quotaTypes.map((qt) => config[qt]?.label || String(qt)).join(', ')
-}
 
 // ============================================================================
 // Model Validation
