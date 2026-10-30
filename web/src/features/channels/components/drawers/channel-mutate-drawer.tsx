@@ -18,8 +18,6 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-
-import { getModels } from '@/features/models/api'
 import {
   ArrowRight,
   ArrowLeft,
@@ -106,6 +104,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { SecureVerificationDialog } from '@/features/auth/secure-verification'
+import { getModels } from '@/features/models/api'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { useHiddenClickUnlock } from '@/hooks/use-hidden-click-unlock'
 import {
@@ -2957,6 +2956,7 @@ export function ChannelMutateDrawer({
                       createLabel='Add custom model "{{value}}"'
                       maxVisibleChips={8}
                       copyChipOnClick
+                      variant='plain'
                     />
                   </FormControl>
                   <div className='text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-xs'>

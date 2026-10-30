@@ -60,6 +60,11 @@ interface MultiSelectProps {
   onChange: (values: string[]) => void
   placeholder?: string
   className?: string
+  /**
+   * boxed（默认）：与 Input 一致的框式容器；plain：去掉边框与内边距，
+   * chips 直接平铺在页面上（用于不希望出现输入框外观的字段）。
+   */
+  variant?: 'boxed' | 'plain'
   allowCreate?: boolean
   /**
    * Label shown for the "create" item in the dropdown.
@@ -305,7 +310,12 @@ export function MultiSelect(props: MultiSelectProps) {
     >
       <ComboboxChips
         ref={chipsAnchorRef}
-        className={cn('w-full', props.className)}
+        className={cn(
+          'w-full',
+          props.variant === 'plain' &&
+            'rounded-none border-transparent px-0 py-0 focus-within:border-transparent focus-within:ring-0 has-aria-invalid:border-transparent has-aria-invalid:ring-0 dark:bg-transparent',
+          props.className
+        )}
       >
         <ComboboxValue>
           {(values: string[]) => {
