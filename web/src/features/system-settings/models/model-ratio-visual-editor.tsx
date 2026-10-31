@@ -24,7 +24,7 @@ import type {
   VisibilityState,
   SortingState,
 } from '@tanstack/react-table'
-import { Copy, Plus } from 'lucide-react'
+import { Copy } from 'lucide-react'
 import {
   useState,
   useMemo,
@@ -73,7 +73,6 @@ type ModelRatioVisualEditorProps = {
   modelPrice: string
   candidateModelNames?: string[]
   candidateModelsLoading?: boolean
-  filterMode?: 'all' | 'unset'
   onChange: (field: string, value: string) => void
   onSave: () => void | Promise<void>
   isSaving: boolean
@@ -94,7 +93,6 @@ const ModelRatioVisualEditorComponent = forwardRef<
     modelPrice,
     candidateModelNames,
     candidateModelsLoading,
-    filterMode = 'all',
     onChange,
     onSave,
     isSaving,
@@ -149,10 +147,9 @@ const ModelRatioVisualEditorComponent = forwardRef<
 
     const savedByName = new Map(savedRows.map((row) => [row.name, row]))
     const draftByName = new Map(draftRows.map((row) => [row.name, row]))
-    const modelNames =
-      filterMode === 'unset'
-        ? new Set(candidateModelNames ?? [])
-        : new Set([...savedByName.keys(), ...draftByName.keys()])
+    const modelNames = new Set(
+      Array.isArray(candidateModelNames) ? candidateModelNames : []
+    )
 
     return [...modelNames]
       .map((name) => {
@@ -172,9 +169,9 @@ const ModelRatioVisualEditorComponent = forwardRef<
         }
       })
       .filter((row) => !row.isDraftDeleted)
-      .filter((row) => filterMode !== 'unset' || isBasePricingUnset(row.saved))
+      .filter((row) => isBasePricingUnset(row.saved))
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [candidateModelNames, filterMode, savedModelPrice, modelPrice])
+  }, [candidateModelNames, savedModelPrice, modelPrice])
 
   const handleEdit = useCallback(
     (model: ModelRow) => {
@@ -188,12 +185,6 @@ const ModelRatioVisualEditorComponent = forwardRef<
     },
     [isMobile]
   )
-
-  const handleAdd = useCallback(() => {
-    setEditData(null)
-    setEditorOpen(true)
-    if (isMobile) setSheetOpen(true)
-  }, [isMobile])
 
   const handleGlobalFilterChange = useCallback<OnChangeFn<string>>(
     (updater) => {
@@ -234,10 +225,10 @@ const ModelRatioVisualEditorComponent = forwardRef<
       buildModelRatioColumns({
         onDelete: handleDelete,
         onEdit: handleEdit,
-        deleteDisabled: filterMode === 'unset',
+        deleteDisabled: true,
         t,
       }),
-    [handleEdit, handleDelete, filterMode, t]
+    [handleEdit, handleDelete, t]
   )
 
   const ensurePageInRange = useCallback((pageCount: number) => {
@@ -336,13 +327,11 @@ const ModelRatioVisualEditorComponent = forwardRef<
 
   const hasRows = table.getRowModel().rows.length > 0
 
-  let emptyStateText = t('No models configured. Use Add model to get started.')
+  let emptyStateText = t('No models with unset prices')
   if (table.getState().globalFilter) {
     emptyStateText = t('No models match your search')
-  } else if (filterMode === 'unset') {
-    emptyStateText = candidateModelsLoading
-      ? t('Loading...')
-      : t('No models with unset prices')
+  } else if (candidateModelsLoading) {
+    emptyStateText = t('Loading...')
   }
 
   return (
@@ -357,14 +346,6 @@ const ModelRatioVisualEditorComponent = forwardRef<
             table={table}
             searchPlaceholder={t('Search models...')}
             searchDebounceMs={250}
-            preActions={
-              filterMode === 'unset' ? undefined : (
-                <Button onClick={handleAdd}>
-                  <Plus data-icon='inline-start' />
-                  {t('Add model')}
-                </Button>
-              )
-            }
           />
 
           {!hasRows ? (
@@ -442,12 +423,6 @@ const ModelRatioVisualEditorComponent = forwardRef<
                   'Use the full-width table to scan prices, then select a row to edit it here.'
                 )}
               </p>
-              {filterMode !== 'unset' && (
-                <Button variant='outline' onClick={handleAdd}>
-                  <Plus data-icon='inline-start' />
-                  {t('Add model')}
-                </Button>
-              )}
             </div>
           )}
         </div>
@@ -485,7 +460,6 @@ export const ModelRatioVisualEditor = memo(
       prevProps.modelPrice === nextProps.modelPrice &&
       prevProps.candidateModelNames === nextProps.candidateModelNames &&
       prevProps.candidateModelsLoading === nextProps.candidateModelsLoading &&
-      prevProps.filterMode === nextProps.filterMode &&
       prevProps.onChange === nextProps.onChange &&
       prevProps.onSave === nextProps.onSave &&
       prevProps.isSaving === nextProps.isSaving

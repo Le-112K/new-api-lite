@@ -58,15 +58,12 @@ func ModelPricingVersion(values PricingValues) string {
 	return fmt.Sprintf("%x", sha256.Sum256(encoded))
 }
 
+// defaultPricingMaps 返回空的定价映射：站点不预置任何模型价格，
+// 每个模型的单次价格都必须由管理员在「未设置价格的模型」列表里显式配置。
 func defaultPricingMaps() map[string]map[string]any {
 	result := make(map[string]map[string]any, len(modelPricingOptionKeys))
 	for _, key := range modelPricingOptionKeys {
 		result[key] = make(map[string]any)
-	}
-	for key, values := range ratio_setting.GetDefaultPricingMaps() {
-		for name, value := range values {
-			result[key][name] = value
-		}
 	}
 	return result
 }

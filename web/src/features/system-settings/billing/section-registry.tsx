@@ -50,14 +50,14 @@ const getGroupDefaults = (settings: BillingSettings) => ({
 const BILLING_SECTIONS = [
   {
     id: 'model-pricing',
-    titleKey: 'Model Pricing',
+    titleKey: 'Unset price models',
     layout: { width: 'wide' },
     build: (settings: BillingSettings) => (
       <RatioSettingsCard
-        titleKey='Model Pricing'
+        titleKey='Unset price models'
         modelDefaults={getModelDefaults(settings)}
         groupDefaults={getGroupDefaults(settings)}
-        visibleTabs={['models', 'unset-models']}
+        visibleTabs={['unset-models']}
       />
     ),
   },

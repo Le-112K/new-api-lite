@@ -48,6 +48,9 @@ beforeEach(() => {
     if (url === '/api/pricing') {
       return { data: { success: true, data: [], vendors: [] } }
     }
+    if (url === '/api/channel/models_enabled') {
+      return { data: { success: true, data: [] } }
+    }
     return { data: { success: true, data: {} } }
   })
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -164,8 +167,9 @@ describe('验收 3 · 表格没有模式列', () => {
     render(
       withClient(
         <ModelRatioVisualEditor
-          savedModelPrice={MODEL_PRICE_JSON}
+          savedModelPrice='{}'
           modelPrice={MODEL_PRICE_JSON}
+          candidateModelNames={['deepseek-v4-pro-ga-260813']}
           onChange={vi.fn()}
           onSave={vi.fn()}
           isSaving={false}
@@ -181,6 +185,65 @@ describe('验收 3 · 表格没有模式列', () => {
     expect(within(row).getByText('$0.0128 / request')).toBeVisible()
     expect(within(row).getByText('Fixed request price')).toBeVisible()
   })
+
+  it('列表只出现渠道里未定价的模型，已定价的模型不再列出', async () => {
+    render(
+      withClient(
+        <ModelRatioVisualEditor
+          // 已保存的价格里 deepseek-v4-1-flash-260910 已有定价
+          savedModelPrice={JSON.stringify({
+            'deepseek-v4-1-flash-260910': 0.0045,
+          })}
+          modelPrice={JSON.stringify({
+            'deepseek-v4-1-flash-260910': 0.0045,
+          })}
+          candidateModelNames={[
+            'deepseek-v4-1-flash-260910',
+            'deepseek-v4-pro-ga-260813',
+            'glm-5-3-flash-260828',
+          ]}
+          onChange={vi.fn()}
+          onSave={vi.fn()}
+          isSaving={false}
+        />
+      )
+    )
+    // 未定价的两个模型在列表里
+    await screen.findByRole('row', { name: /deepseek-v4-pro-ga/ })
+    expect(
+      screen.getByRole('row', { name: /glm-5-3-flash-260828/ })
+    ).toBeVisible()
+    // 已经定价的模型不在列表里
+    expect(
+      screen.queryByRole('row', { name: /deepseek-v4-1-flash-260910/ })
+    ).toBeNull()
+  })
+
+  it('列表里不出现任何内置预置模型', async () => {
+    render(
+      withClient(
+        <ModelRatioVisualEditor
+          savedModelPrice='{}'
+          modelPrice='{}'
+          candidateModelNames={['deepseek-v4-pro-ga-260813']}
+          onChange={vi.fn()}
+          onSave={vi.fn()}
+          isSaving={false}
+        />
+      )
+    )
+    await screen.findByRole('row', { name: /deepseek-v4-pro-ga/ })
+    for (const preset of [
+      'dall-e-3',
+      'sora-2',
+      'suno_music',
+      'gpt-4o-mini-tts',
+      'veo-3.0-generate-001',
+      'black-forest-labs/flux-1.1-pro',
+    ]) {
+      expect(screen.queryByText(preset)).toBeNull()
+    }
+  })
 })
 
 // ── 清单 4：JSON 模式只剩一个文本框 ───────────────────────────────────────
@@ -195,15 +258,15 @@ describe('验收 4 · JSON 模式只有一个字段', () => {
           form={form}
           savedValues={{ ModelPrice: MODEL_PRICE_JSON }}
           onSave={vi.fn()}
-          onReset={vi.fn()}
           isSaving={false}
-          isResetting={false}
         />
       )
     }
     const user = userEvent.setup()
     render(withClient(<Harness />))
-    await user.click(screen.getByRole('button', { name: 'Switch to JSON' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Batch edit prices (JSON)' })
+    )
     expect(screen.getByText('Model fixed pricing')).toBeVisible()
     const textboxes = screen.getAllByRole('textbox')
     expect(textboxes).toHaveLength(1)
@@ -234,8 +297,9 @@ describe('验收 5 · 工具栏没有模式筛选器', () => {
     render(
       withClient(
         <ModelRatioVisualEditor
-          savedModelPrice={MODEL_PRICE_JSON}
+          savedModelPrice='{}'
           modelPrice={MODEL_PRICE_JSON}
+          candidateModelNames={['deepseek-v4-pro-ga-260813']}
           onChange={vi.fn()}
           onSave={vi.fn()}
           isSaving={false}

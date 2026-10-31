@@ -17,14 +17,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import * as z from 'zod'
 
-import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ErrorState } from '@/components/error-state'
 import { LoadingState } from '@/components/loading-state'
 import { Button } from '@/components/ui/button'
@@ -136,7 +134,7 @@ const createGroupSchema = (t: Translate) =>
 
 type ModelFormValues = z.infer<ReturnType<typeof createModelSchema>>
 type GroupFormValues = z.infer<ReturnType<typeof createGroupSchema>>
-type RatioTabId = 'models' | 'unset-models' | 'groups'
+type RatioTabId = 'unset-models' | 'groups'
 
 type RatioSettingsCardProps = {
   modelDefaults: ModelFormValues
@@ -149,11 +147,10 @@ export function RatioSettingsCard({
   modelDefaults: initialModelDefaults,
   groupDefaults,
   titleKey = 'Pricing Ratios',
-  visibleTabs = ['models', 'groups'],
+  visibleTabs = ['unset-models', 'groups'],
 }: RatioSettingsCardProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
-  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const pricingQuery = useModelPricing()
   const savePricing = useSaveModelPricing()
@@ -171,27 +168,6 @@ export function RatioSettingsCard({
         : initialModelDefaults,
     [initialModelDefaults, pricingBaseline]
   )
-  const resetMutation = useMutation({
-    mutationFn: async () => {
-      if (!pricingBaseline) return
-      await savePricing.mutateAsync(
-        pricingBaseline.entries.map((entry) => ({
-          model_name: entry.model_name,
-          expected_version: entry.version,
-          pricing: {},
-          reset: true,
-        }))
-      )
-      const refreshed = await pricingQuery.refetch()
-      setPricingBaseline(refreshed.data ?? null)
-    },
-    onSuccess: () => {
-      toast.success(t('Model prices reset successfully'))
-      setConfirmOpen(false)
-    },
-    onError: (error) => handleServerError(error),
-  })
-
   const modelNormalizedDefaults = useRef({
     ModelPrice: normalizeJsonString(modelDefaults.ModelPrice),
   })
@@ -345,17 +321,7 @@ export function RatioSettingsCard({
     [updateOption]
   )
 
-  const handleResetRatios = useCallback(() => {
-    setConfirmOpen(true)
-  }, [])
-
-  const { mutate: resetMutate } = resetMutation
-  const handleConfirmReset = useCallback(() => {
-    resetMutate()
-  }, [resetMutate])
-
   const tabLabels: Record<RatioTabId, string> = {
-    models: 'Model prices',
     'unset-models': 'Unset price models',
     groups: 'Group ratios',
   }
@@ -367,10 +333,10 @@ export function RatioSettingsCard({
       4: 'grid-cols-4',
       5: 'grid-cols-5',
     }[visibleTabs.length] ?? 'grid-cols-4'
-  const defaultTab = visibleTabs[0] ?? 'models'
+  const defaultTab = visibleTabs[0] ?? 'unset-models'
 
   const renderTabContent = (tab: RatioTabId) => {
-    if (tab === 'models' || tab === 'unset-models') {
+    if (tab === 'unset-models') {
       if (pricingQuery.isError) {
         return (
           <ErrorState
@@ -399,10 +365,7 @@ export function RatioSettingsCard({
             form={modelForm}
             savedValues={savedModelValues}
             onSave={saveModelRatios}
-            onReset={handleResetRatios}
             isSaving={updateOption.isPending || savePricing.isPending}
-            isResetting={resetMutation.isPending}
-            variant={tab === 'unset-models' ? 'unset' : 'default'}
           />
         </>
       )
@@ -435,9 +398,7 @@ export function RatioSettingsCard({
         <SettingsSection
           title={t(titleKey)}
           className={
-            defaultTab === 'models' || defaultTab === 'unset-models'
-              ? 'min-h-0 flex-1'
-              : undefined
+            defaultTab === 'unset-models' ? 'min-h-0 flex-1' : undefined
           }
         >
           {renderTabContent(defaultTab)}
@@ -454,7 +415,7 @@ export function RatioSettingsCard({
                 key={tab}
                 value={tab}
                 className={
-                  tab === 'models' || tab === 'unset-models'
+                  tab === 'unset-models'
                     ? 'flex min-h-0 flex-col data-hidden:hidden'
                     : 'min-h-0'
                 }
@@ -465,19 +426,6 @@ export function RatioSettingsCard({
           </SettingsSection>
         </Tabs>
       )}
-
-      <ConfirmDialog
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
-        title={t('Reset all model prices?')}
-        desc={t(
-          'This will clear custom pricing ratios and revert to upstream defaults.'
-        )}
-        destructive
-        isLoading={resetMutation.isPending}
-        handleConfirm={handleConfirmReset}
-        confirmText={t('Reset')}
-      />
     </>
   )
 }

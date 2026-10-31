@@ -27,7 +27,6 @@ import (
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/service/authz"
 	_ "github.com/QuantumNous/new-api/setting/performance_setting"
-	"github.com/QuantumNous/new-api/setting/ratio_setting"
 
 	"github.com/bytedance/gopkg/util/gopool"
 	"github.com/gin-gonic/gin"
@@ -267,9 +266,6 @@ func InitResources() error {
 	common.InitEnv()
 
 	logger.SetupLogger()
-
-	// Initialize model settings
-	ratio_setting.InitRatioSettings()
 
 	service.InitHttpClient()
 

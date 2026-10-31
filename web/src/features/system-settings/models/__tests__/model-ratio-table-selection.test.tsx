@@ -46,10 +46,8 @@ async function renderEditor() {
     }
     return { data: { success: true, data: {} } }
   })
-  const modelPrice = JSON.stringify({
-    'gpt-4.1-mini': 0.2,
-    'claude-sonnet': 1.5,
-  })
+  // 列表只呈现渠道里还没定价的模型，因此这里不预置任何已保存价格
+  const modelPrice = '{}'
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -59,6 +57,7 @@ async function renderEditor() {
       <ModelRatioVisualEditor
         savedModelPrice={modelPrice}
         modelPrice={modelPrice}
+        candidateModelNames={['gpt-4.1-mini', 'claude-sonnet']}
         onChange={vi.fn()}
         onSave={vi.fn()}
         isSaving={false}

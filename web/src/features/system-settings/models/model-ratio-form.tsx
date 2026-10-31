@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { useQuery } from '@tanstack/react-query'
-import { Code2, Eye, RotateCcw, Save } from 'lucide-react'
+import { Code2, Eye, Save } from 'lucide-react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -51,10 +51,7 @@ type ModelRatioFormProps = {
   form: UseFormReturn<ModelFormValues>
   savedValues: ModelFormValues
   onSave: (values: ModelFormValues) => Promise<void>
-  onReset: () => void
   isSaving: boolean
-  isResetting: boolean
-  variant?: 'default' | 'unset'
 }
 
 type ModelJsonFieldName = 'ModelPrice'
@@ -108,27 +105,20 @@ export const ModelRatioForm = memo(function ModelRatioForm({
   form,
   savedValues,
   onSave,
-  onReset,
   isSaving,
-  isResetting,
-  variant = 'default',
 }: ModelRatioFormProps) {
   const { t } = useTranslation()
-  const isUnsetVariant = variant === 'unset'
   const [editMode, setEditMode] = useState<'visual' | 'json'>('visual')
   const visualEditorRef = useRef<ModelRatioVisualEditorHandle>(null)
 
   const enabledModelsQuery = useQuery({
     queryKey: ['enabled-models'],
     queryFn: async () => requireServerSuccess(await getEnabledModels()),
-    enabled: isUnsetVariant,
   })
 
-  const enabledModelsError = isUnsetVariant
-    ? enabledModelsQuery.isError ||
-      (enabledModelsQuery.data !== undefined &&
-        !enabledModelsQuery.data.success)
-    : false
+  const enabledModelsError =
+    enabledModelsQuery.isError ||
+    (enabledModelsQuery.data !== undefined && !enabledModelsQuery.data.success)
   const enabledModelsErrorMessage = enabledModelsQuery.data?.message
 
   useEffect(() => {
@@ -171,18 +161,8 @@ export const ModelRatioForm = memo(function ModelRatioForm({
   return (
     <Form {...form}>
       <div className='flex min-h-0 flex-1 flex-col gap-6'>
-        {!isUnsetVariant && (
+        {
           <div className='flex shrink-0 flex-wrap items-center justify-end gap-2'>
-            <Button
-              type='button'
-              variant='destructive'
-              size='sm'
-              onClick={onReset}
-              disabled={isResetting}
-            >
-              <RotateCcw data-icon='inline-start' />
-              {t('Reset prices')}
-            </Button>
             {editMode === 'json' && (
               <Button
                 type='button'
@@ -198,17 +178,17 @@ export const ModelRatioForm = memo(function ModelRatioForm({
               {editMode === 'visual' ? (
                 <>
                   <Code2 className='mr-2 h-4 w-4' />
-                  {t('Switch to JSON')}
+                  {t('Batch edit prices (JSON)')}
                 </>
               ) : (
                 <>
                   <Eye className='mr-2 h-4 w-4' />
-                  {t('Switch to Visual')}
+                  {t('Back to model list')}
                 </>
               )}
             </Button>
           </div>
-        )}
+        }
 
         {editMode === 'visual' ? (
           <div className='flex min-h-0 flex-1 flex-col gap-6'>
@@ -216,13 +196,8 @@ export const ModelRatioForm = memo(function ModelRatioForm({
               ref={visualEditorRef}
               savedModelPrice={savedValues.ModelPrice}
               modelPrice={form.watch('ModelPrice')}
-              candidateModelNames={
-                isUnsetVariant ? enabledModelsQuery.data?.data : undefined
-              }
-              candidateModelsLoading={
-                isUnsetVariant && enabledModelsQuery.isLoading
-              }
-              filterMode={isUnsetVariant ? 'unset' : 'all'}
+              candidateModelNames={enabledModelsQuery.data?.data}
+              candidateModelsLoading={enabledModelsQuery.isLoading}
               onSave={handleSave}
               isSaving={isSaving}
               onChange={(field, value) => {

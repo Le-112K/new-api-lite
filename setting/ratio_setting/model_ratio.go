@@ -10,29 +10,12 @@ import (
 
 // 站点只按调用次数计费：这一层只保留"模型 → 单次价格（美元）"。
 // 按量计费所需的输入/输出/缓存/图像/音频倍率已随 token 计费一并移除。
-
-var defaultModelPrice = map[string]float64{
-	"suno_music":                     0.1,
-	"suno_lyrics":                    0.01,
-	"dall-e-3":                       0.04,
-	"imagen-3.0-generate-002":        0.03,
-	"black-forest-labs/flux-1.1-pro": 0.04,
-	"gpt-4-gizmo-*":                  0.1,
-	"sora-2":                         0.3,
-	"sora-2-pro":                     0.5,
-	"gpt-4o-mini-tts":                0.3,
-	"veo-3.0-generate-001":           0.4,
-	"veo-3.0-fast-generate-001":      0.15,
-	"veo-3.1-generate-preview":       0.4,
-	"veo-3.1-fast-generate-preview":  0.15,
-}
+//
+// 这里不预置任何模型价格：接入上游渠道后的模型几乎都处于未定价状态，
+// 预置价既不会生效，也会让"未定价模型"列表凭空多出一批无关条目。
+// 未定价的模型一律 fail-closed（见 GetModelPrice），由管理员显式配置。
 
 var modelPriceMap = types.NewRWMap[string, float64]()
-
-// InitRatioSettings initializes the per-call price map.
-func InitRatioSettings() {
-	modelPriceMap.AddAll(defaultModelPrice)
-}
 
 func GetModelPriceMap() map[string]float64 {
 	return modelPriceMap.ReadAll()
@@ -58,20 +41,6 @@ func GetModelPrice(name string, printErr bool) (float64, bool) {
 		common.SysError("model price not found: " + name)
 	}
 	return -1, false
-}
-
-func GetDefaultModelPriceMap() map[string]float64 {
-	return defaultModelPrice
-}
-
-// GetDefaultPricingMaps returns an independent copy of the built-in default
-// price table, used by the pricing reset/first-write paths.
-func GetDefaultPricingMaps() map[string]map[string]float64 {
-	prices := make(map[string]float64, len(defaultModelPrice))
-	for name, value := range defaultModelPrice {
-		prices[name] = value
-	}
-	return map[string]map[string]float64{"ModelPrice": prices}
 }
 
 // 处理带有思考预算的模型名称，方便统一定价
