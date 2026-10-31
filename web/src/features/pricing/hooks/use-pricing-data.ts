@@ -67,7 +67,6 @@ export function usePricingData(enabled = true) {
     groupRatio: data?.group_ratio ?? {},
     usableGroup: data?.usable_group ?? {},
     endpointMap: data?.supported_endpoint ?? {},
-    autoGroups: data?.auto_groups ?? [],
     subscriptionPlans: data?.subscription_plans ?? [],
     isLoading,
     error,

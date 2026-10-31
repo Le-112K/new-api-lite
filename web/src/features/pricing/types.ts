@@ -104,6 +104,5 @@ export type PricingData = {
   group_ratio: Record<string, number>
   usable_group: Record<string, { desc: string; ratio: number }>
   supported_endpoint: Record<string, string>
-  auto_groups: string[]
   subscription_plans?: PricingSubscriptionPlan[]
 }

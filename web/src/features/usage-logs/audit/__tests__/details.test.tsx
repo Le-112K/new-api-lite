@@ -139,10 +139,7 @@ it.each([
 
 it.each([
   [[], 'No changes'],
-  [
-    ['remain_quota', 'auto_groups', 'cross_group_retry'],
-    'Remaining quota, Auto Group Chain, Cross-group retry',
-  ],
+  [['remain_quota', 'allow_ips'], 'Remaining quota, IP Whitelist (supports CIDR)'],
 ])(
   'describes token configuration changes %j',
   async (changedFields, expected) => {

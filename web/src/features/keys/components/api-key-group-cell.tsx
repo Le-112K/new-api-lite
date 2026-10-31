@@ -32,7 +32,6 @@ import { cn } from '@/lib/utils'
 import { GroupRatioBadge, type GroupRatio } from './auto-group-visuals'
 
 type ApiKeyGroupCellProps = {
-  crossGroupRetry: boolean
   group: string
   ratio?: GroupRatio
   shouldReduceMotion: boolean

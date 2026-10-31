@@ -103,7 +103,9 @@ export function useApiKeysColumns(now: number): ColumnDef<ApiKey>[] {
               aria-label={t('Select row')}
               className='translate-y-[1px]'
             />
-            <span className='truncate font-semibold'>{row.getValue('name')}</span>
+            <span className='truncate font-semibold'>
+              {row.getValue('name')}
+            </span>
           </div>
         ),
         enableSorting: false,
@@ -139,13 +141,11 @@ export function useApiKeysColumns(now: number): ColumnDef<ApiKey>[] {
         accessorKey: 'group',
         header: () => t('Group'),
         cell: ({ row }) => {
-          const apiKey = row.original
           const group = row.getValue('group') as string
           return (
             <ApiKeyGroupCell
               group={group}
               ratio={groupRatios[group]}
-              crossGroupRetry={apiKey.cross_group_retry}
               shouldReduceMotion={shouldReduceMotion}
             />
           )

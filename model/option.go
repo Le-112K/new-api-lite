@@ -76,9 +76,6 @@ func InitOptionMap() {
 	common.OptionMap["USDExchangeRate"] = strconv.FormatFloat(operation_setting.USDExchangeRate, 'f', -1, 64)
 	common.OptionMap["MinTopUp"] = strconv.Itoa(operation_setting.MinTopUp)
 	common.OptionMap["TopupGroupRatio"] = common.TopupGroupRatio2JSONString()
-	common.OptionMap["AutoGroups"] = setting.AutoGroups2JsonString()
-	common.OptionMap["DefaultUseAutoGroup"] = strconv.FormatBool(setting.DefaultUseAutoGroup)
-	common.OptionMap["MaxTokenAutoGroups"] = strconv.Itoa(setting.GetMaxTokenAutoGroups())
 	common.OptionMap["PayMethods"] = operation_setting.PayMethods2JsonString()
 	common.OptionMap["TurnstileSiteKey"] = ""
 	common.OptionMap["TurnstileSecretKey"] = ""
@@ -149,9 +146,6 @@ func validateOptionValue(key string, value string) error {
 	}
 	if key == operation_setting.ChannelTestConcurrencyOptionKey {
 		return operation_setting.ValidateChannelTestConcurrency(value)
-	}
-	if key == "MaxTokenAutoGroups" {
-		return setting.ValidateMaxTokenAutoGroups(value)
 	}
 	return nil
 }
@@ -266,7 +260,7 @@ func updateOptionMap(key string, value string) (err error) {
 			common.ImageDownloadPermission = intValue
 		}
 	}
-	if strings.HasSuffix(key, "Enabled") || key == "DefaultCollapseSidebar" || key == "DefaultUseAutoGroup" || key == "SMTPForceAuthLogin" || key == "SMTPInsecureSkipVerify" {
+	if strings.HasSuffix(key, "Enabled") || key == "DefaultCollapseSidebar" || key == "SMTPForceAuthLogin" || key == "SMTPInsecureSkipVerify" {
 		boolValue := value == "true"
 		switch key {
 		case "PasswordRegisterEnabled":
@@ -321,8 +315,6 @@ func updateOptionMap(key string, value string) (err error) {
 			common.SMTPInsecureSkipVerify = boolValue
 		case "SMTPForceAuthLogin":
 			common.SMTPForceAuthLogin = boolValue
-		case "DefaultUseAutoGroup":
-			setting.DefaultUseAutoGroup = boolValue
 		}
 	}
 	switch key {
@@ -345,10 +337,6 @@ func updateOptionMap(key string, value string) (err error) {
 		system_setting.TaskPublicAddress = value
 	case "PayAddress":
 		operation_setting.PayAddress = value
-	case "AutoGroups":
-		err = setting.UpdateAutoGroupsByJsonString(value)
-	case "MaxTokenAutoGroups":
-		err = setting.UpdateMaxTokenAutoGroups(value)
 	case "CustomCallbackAddress":
 		operation_setting.CustomCallbackAddress = value
 	case "EpayId":

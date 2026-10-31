@@ -18,10 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useQuery } from '@tanstack/react-query'
 import { getRouteApi } from '@tanstack/react-router'
-import {
-  flexRender,
-  type Table as TanstackTable,
-} from '@tanstack/react-table'
+import { flexRender, type Table as TanstackTable } from '@tanstack/react-table'
 import { Plus, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -64,7 +61,6 @@ import {
   ERROR_MESSAGES,
 } from '../constants'
 import type { ApiKey } from '../types'
-import { ApiKeysConsole } from './api-keys-console'
 import { ApiKeyGroupCell } from './api-key-group-cell'
 import { ApiKeyQuotaCell } from './api-key-quota-cell'
 import { ApiKeyActivityCell } from './api-key-timestamp-cell'
@@ -74,6 +70,7 @@ import {
   ModelLimitsCell,
 } from './api-keys-cells'
 import { useApiKeysColumns, useGroupRatios } from './api-keys-columns'
+import { ApiKeysConsole } from './api-keys-console'
 import { useApiKeys } from './api-keys-provider'
 import { DataTableBulkActions } from './data-table-bulk-actions'
 import { DataTableRowActions } from './data-table-row-actions'
@@ -222,7 +219,6 @@ function ApiKeysMobileList({
                 <ApiKeyGroupCell
                   group={apiKey.group ?? ''}
                   ratio={groupRatios[apiKey.group ?? '']}
-                  crossGroupRetry={apiKey.cross_group_retry}
                   shouldReduceMotion={shouldReduceMotion}
                 />
               </div>

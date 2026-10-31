@@ -53,7 +53,6 @@ function CellHarness(props: {
         <ApiKeyGroupCell
           group={props.group}
           ratio={props.ratio}
-          crossGroupRetry={props.crossGroupRetry ?? false}
           shouldReduceMotion={props.shouldReduceMotion ?? false}
         />
       </TooltipProvider>

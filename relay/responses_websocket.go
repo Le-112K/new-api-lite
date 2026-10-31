@@ -566,13 +566,6 @@ func (s *responsesWSSession) restoreConnectionContext(c *gin.Context, model stri
 		}
 	} else {
 		group := common.GetContextKeyString(c, appconstant.ContextKeyUsingGroup)
-		if group == "auto" {
-			if !slices.Contains(service.GetRequestAutoGroups(c, common.GetContextKeyString(c, appconstant.ContextKeyUserGroup)), s.lockedGroup) {
-				return types.NewErrorWithStatusCode(errors.New("the connection group is no longer allowed"), types.ErrorCodeAccessDenied, http.StatusForbidden, types.ErrOptionWithSkipRetry())
-			}
-			group = s.lockedGroup
-			common.SetContextKey(c, appconstant.ContextKeyAutoGroup, group)
-		}
 		if !appmodel.IsChannelEnabledForGroupModel(group, model, s.lockedChannelID) {
 			return types.NewErrorWithStatusCode(errors.New("the connection channel is no longer allowed for this group and model"), types.ErrorCodeAccessDenied, http.StatusForbidden, types.ErrOptionWithSkipRetry())
 		}
