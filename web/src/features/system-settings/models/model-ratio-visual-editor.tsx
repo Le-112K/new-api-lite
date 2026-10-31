@@ -24,7 +24,7 @@ import type {
   VisibilityState,
   SortingState,
 } from '@tanstack/react-table'
-import { Copy } from 'lucide-react'
+import { Copy, Plus } from 'lucide-react'
 import {
   useState,
   useMemo,
@@ -73,6 +73,8 @@ type ModelRatioVisualEditorProps = {
   modelPrice: string
   candidateModelNames?: string[]
   candidateModelsLoading?: boolean
+  /** unset = 只列渠道里还没定价的模型；priced = 只列已经配置过价格的模型。 */
+  filterMode?: 'unset' | 'priced'
   onChange: (field: string, value: string) => void
   onSave: () => void | Promise<void>
   isSaving: boolean
@@ -93,6 +95,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
     modelPrice,
     candidateModelNames,
     candidateModelsLoading,
+    filterMode = 'unset',
     onChange,
     onSave,
     isSaving,
@@ -147,9 +150,10 @@ const ModelRatioVisualEditorComponent = forwardRef<
 
     const savedByName = new Map(savedRows.map((row) => [row.name, row]))
     const draftByName = new Map(draftRows.map((row) => [row.name, row]))
-    const modelNames = new Set(
-      Array.isArray(candidateModelNames) ? candidateModelNames : []
-    )
+    const modelNames =
+      filterMode === 'priced'
+        ? new Set([...savedByName.keys(), ...draftByName.keys()])
+        : new Set(Array.isArray(candidateModelNames) ? candidateModelNames : [])
 
     return [...modelNames]
       .map((name) => {
@@ -169,9 +173,15 @@ const ModelRatioVisualEditorComponent = forwardRef<
         }
       })
       .filter((row) => !row.isDraftDeleted)
-      .filter((row) => isBasePricingUnset(row.saved))
+      .filter((row) => filterMode === 'priced' || isBasePricingUnset(row.saved))
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [candidateModelNames, savedModelPrice, modelPrice])
+  }, [candidateModelNames, filterMode, savedModelPrice, modelPrice])
+
+  const handleAdd = useCallback(() => {
+    setEditData(null)
+    setEditorOpen(true)
+    if (isMobile) setSheetOpen(true)
+  }, [isMobile])
 
   const handleEdit = useCallback(
     (model: ModelRow) => {
@@ -225,10 +235,10 @@ const ModelRatioVisualEditorComponent = forwardRef<
       buildModelRatioColumns({
         onDelete: handleDelete,
         onEdit: handleEdit,
-        deleteDisabled: true,
+        deleteDisabled: filterMode === 'unset',
         t,
       }),
-    [handleEdit, handleDelete, t]
+    [handleEdit, handleDelete, filterMode, t]
   )
 
   const ensurePageInRange = useCallback((pageCount: number) => {
@@ -327,7 +337,10 @@ const ModelRatioVisualEditorComponent = forwardRef<
 
   const hasRows = table.getRowModel().rows.length > 0
 
-  let emptyStateText = t('No models with unset prices')
+  let emptyStateText =
+    filterMode === 'priced'
+      ? t('No models with prices yet')
+      : t('No models with unset prices')
   if (table.getState().globalFilter) {
     emptyStateText = t('No models match your search')
   } else if (candidateModelsLoading) {
@@ -346,6 +359,14 @@ const ModelRatioVisualEditorComponent = forwardRef<
             table={table}
             searchPlaceholder={t('Search models...')}
             searchDebounceMs={250}
+            preActions={
+              filterMode === 'priced' ? (
+                <Button onClick={handleAdd}>
+                  <Plus data-icon='inline-start' />
+                  {t('Add model')}
+                </Button>
+              ) : undefined
+            }
           />
 
           {!hasRows ? (
@@ -460,6 +481,7 @@ export const ModelRatioVisualEditor = memo(
       prevProps.modelPrice === nextProps.modelPrice &&
       prevProps.candidateModelNames === nextProps.candidateModelNames &&
       prevProps.candidateModelsLoading === nextProps.candidateModelsLoading &&
+      prevProps.filterMode === nextProps.filterMode &&
       prevProps.onChange === nextProps.onChange &&
       prevProps.onSave === nextProps.onSave &&
       prevProps.isSaving === nextProps.isSaving

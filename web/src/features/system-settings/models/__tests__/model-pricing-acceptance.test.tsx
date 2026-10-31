@@ -291,6 +291,47 @@ describe('验收 4 · JSON 模式只有一个字段', () => {
   })
 })
 
+// ── 验收 6：已设置价格的模型可列出、可查看、可修改 ──────────────────────────
+describe('验收 6 · 已设置价格的模型列表', () => {
+  it('列出数据库里已配置价格的模型并显示单次价', async () => {
+    render(
+      withClient(
+        <ModelRatioVisualEditor
+          savedModelPrice={MODEL_PRICE_JSON}
+          modelPrice={MODEL_PRICE_JSON}
+          filterMode='priced'
+          onChange={vi.fn()}
+          onSave={vi.fn()}
+          isSaving={false}
+        />
+      )
+    )
+    const row = await screen.findByRole('row', { name: /deepseek-v4-pro-ga/ })
+    expect(within(row).getByText('$0.0128 / request')).toBeVisible()
+    expect(within(row).getByText('Fixed request price')).toBeVisible()
+  })
+
+  it('未定价的模型不出现在已设置价格列表里', async () => {
+    render(
+      withClient(
+        <ModelRatioVisualEditor
+          savedModelPrice={MODEL_PRICE_JSON}
+          modelPrice={MODEL_PRICE_JSON}
+          filterMode='priced'
+          candidateModelNames={['glm-5-3-flash-260828']}
+          onChange={vi.fn()}
+          onSave={vi.fn()}
+          isSaving={false}
+        />
+      )
+    )
+    await screen.findByRole('row', { name: /deepseek-v4-pro-ga/ })
+    expect(
+      screen.queryByRole('row', { name: /glm-5-3-flash-260828/ })
+    ).toBeNull()
+  })
+})
+
 // ── 清单 5：工具栏没有「模式」筛选器 ───────────────────────────────────────
 describe('验收 5 · 工具栏没有模式筛选器', () => {
   it('筛选区不再出现 per-token / per-request 选项', async () => {

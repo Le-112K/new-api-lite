@@ -52,6 +52,7 @@ type ModelRatioFormProps = {
   savedValues: ModelFormValues
   onSave: (values: ModelFormValues) => Promise<void>
   isSaving: boolean
+  filterMode?: 'unset' | 'priced'
 }
 
 type ModelJsonFieldName = 'ModelPrice'
@@ -106,19 +107,24 @@ export const ModelRatioForm = memo(function ModelRatioForm({
   savedValues,
   onSave,
   isSaving,
+  filterMode = 'unset',
 }: ModelRatioFormProps) {
   const { t } = useTranslation()
+  const isUnsetMode = filterMode === 'unset'
   const [editMode, setEditMode] = useState<'visual' | 'json'>('visual')
   const visualEditorRef = useRef<ModelRatioVisualEditorHandle>(null)
 
   const enabledModelsQuery = useQuery({
     queryKey: ['enabled-models'],
     queryFn: async () => requireServerSuccess(await getEnabledModels()),
+    enabled: isUnsetMode,
   })
 
-  const enabledModelsError =
-    enabledModelsQuery.isError ||
-    (enabledModelsQuery.data !== undefined && !enabledModelsQuery.data.success)
+  const enabledModelsError = isUnsetMode
+    ? enabledModelsQuery.isError ||
+      (enabledModelsQuery.data !== undefined &&
+        !enabledModelsQuery.data.success)
+    : false
   const enabledModelsErrorMessage = enabledModelsQuery.data?.message
 
   useEffect(() => {
@@ -196,8 +202,13 @@ export const ModelRatioForm = memo(function ModelRatioForm({
               ref={visualEditorRef}
               savedModelPrice={savedValues.ModelPrice}
               modelPrice={form.watch('ModelPrice')}
-              candidateModelNames={enabledModelsQuery.data?.data}
-              candidateModelsLoading={enabledModelsQuery.isLoading}
+              candidateModelNames={
+                isUnsetMode ? enabledModelsQuery.data?.data : undefined
+              }
+              candidateModelsLoading={
+                isUnsetMode && enabledModelsQuery.isLoading
+              }
+              filterMode={filterMode}
               onSave={handleSave}
               isSaving={isSaving}
               onChange={(field, value) => {

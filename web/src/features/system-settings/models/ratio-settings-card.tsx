@@ -134,7 +134,7 @@ const createGroupSchema = (t: Translate) =>
 
 type ModelFormValues = z.infer<ReturnType<typeof createModelSchema>>
 type GroupFormValues = z.infer<ReturnType<typeof createGroupSchema>>
-type RatioTabId = 'unset-models' | 'groups'
+type RatioTabId = 'unset-models' | 'priced-models' | 'groups'
 
 type RatioSettingsCardProps = {
   modelDefaults: ModelFormValues
@@ -147,7 +147,7 @@ export function RatioSettingsCard({
   modelDefaults: initialModelDefaults,
   groupDefaults,
   titleKey = 'Pricing Ratios',
-  visibleTabs = ['unset-models', 'groups'],
+  visibleTabs = ['unset-models', 'priced-models', 'groups'],
 }: RatioSettingsCardProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
@@ -323,6 +323,7 @@ export function RatioSettingsCard({
 
   const tabLabels: Record<RatioTabId, string> = {
     'unset-models': 'Unset price models',
+    'priced-models': 'Priced models',
     groups: 'Group ratios',
   }
   const tabsGridClass =
@@ -336,7 +337,7 @@ export function RatioSettingsCard({
   const defaultTab = visibleTabs[0] ?? 'unset-models'
 
   const renderTabContent = (tab: RatioTabId) => {
-    if (tab === 'unset-models') {
+    if (tab === 'unset-models' || tab === 'priced-models') {
       if (pricingQuery.isError) {
         return (
           <ErrorState
@@ -366,6 +367,7 @@ export function RatioSettingsCard({
             savedValues={savedModelValues}
             onSave={saveModelRatios}
             isSaving={updateOption.isPending || savePricing.isPending}
+            filterMode={tab === 'priced-models' ? 'priced' : 'unset'}
           />
         </>
       )
@@ -398,7 +400,9 @@ export function RatioSettingsCard({
         <SettingsSection
           title={t(titleKey)}
           className={
-            defaultTab === 'unset-models' ? 'min-h-0 flex-1' : undefined
+            defaultTab === 'unset-models' || defaultTab === 'priced-models'
+              ? 'min-h-0 flex-1'
+              : undefined
           }
         >
           {renderTabContent(defaultTab)}
@@ -415,7 +419,7 @@ export function RatioSettingsCard({
                 key={tab}
                 value={tab}
                 className={
-                  tab === 'unset-models'
+                  tab === 'unset-models' || tab === 'priced-models'
                     ? 'flex min-h-0 flex-col data-hidden:hidden'
                     : 'min-h-0'
                 }
