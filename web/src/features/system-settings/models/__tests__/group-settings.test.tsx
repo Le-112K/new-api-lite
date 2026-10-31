@@ -17,21 +17,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { zodResolver } from '@hookform/resolvers/zod'
-import {
-  fireEvent,
-  render,
-  screen,
-  within,
-  waitFor,
-} from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
 import { SettingsPageProvider } from '../../components/settings-page-context'
-import { positiveIntegerSchema } from '../../utils/numeric-field'
 import { GroupRatioForm } from '../group-ratio-form'
 
 const defaults = {
@@ -39,9 +32,6 @@ const defaults = {
   TopupGroupRatio: '{"vip":1.2}',
   UserUsableGroups: '{"default":"Standard access","vip":"Premium access"}',
   GroupGroupRatio: '{}',
-  AutoGroups: '["default","vip"]',
-  MaxTokenAutoGroups: 5,
-  DefaultUseAutoGroup: false,
   GroupSpecialUsableGroup: '{}',
 }
 
@@ -50,9 +40,6 @@ const schema = z.object({
   TopupGroupRatio: z.string(),
   UserUsableGroups: z.string(),
   GroupGroupRatio: z.string(),
-  AutoGroups: z.string(),
-  MaxTokenAutoGroups: positiveIntegerSchema('Enter a positive integer'),
-  DefaultUseAutoGroup: z.boolean(),
   GroupSpecialUsableGroup: z.string(),
 })
 
@@ -143,125 +130,6 @@ describe('group settings workspace', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'true')
   })
 
-  it('reorders and removes auto groups with named controls and saves across sections', async () => {
-    const user = userEvent.setup()
-    const onSave = vi.fn(async (_values: typeof defaults) => {})
-    render(<Fixture onSave={onSave} />)
-    await user.click(screen.getByRole('tab', { name: 'Auto group order' }))
-    const list = screen.getByRole('list', { name: 'Auto group order' })
-    expect(
-      screen.getByRole('button', { name: 'Move default up' })
-    ).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Move vip down' })).toBeDisabled()
-    await user.click(screen.getByRole('button', { name: 'Move vip up' }))
-    expect(within(list).getAllByRole('listitem')[0]).toHaveTextContent('vip')
-    await user.click(
-      screen.getByRole('switch', { name: 'Default to auto groups' })
-    )
-    await user.click(screen.getByRole('button', { name: 'Remove default' }))
-    expect(screen.getByRole('button', { name: 'Move vip up' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Move vip down' })).toBeDisabled()
-    await user.click(screen.getByRole('tab', { name: 'Pricing groups' }))
-    await user.click(screen.getByRole('button', { name: 'Save group settings' }))
-    await waitFor(() => expect(onSave).toHaveBeenCalled())
-    expect(onSave.mock.calls[0]?.[0]).toEqual(
-      expect.objectContaining({
-        AutoGroups: '[\n  "vip"\n]',
-        DefaultUseAutoGroup: true,
-      })
-    )
-  })
-
-  it('reorders from the drag handle with arrow keys, preserves unknown groups and saves the new order', async () => {
-    const user = userEvent.setup()
-    const onSave = vi.fn(async (_values: typeof defaults) => {})
-    render(
-      <Fixture
-        onSave={onSave}
-        initial={{
-          AutoGroups: '["default","vip","retired"]',
-          MaxTokenAutoGroups: 1,
-        }}
-      />
-    )
-    await user.click(screen.getByRole('tab', { name: 'Auto group order' }))
-    const list = screen.getByRole('list', { name: 'Auto group order' })
-    const handle = screen.getByRole('button', {
-      name: 'Drag default to reorder',
-    })
-    handle.focus()
-    await user.keyboard('{ArrowUp}')
-    expect(within(list).getAllByRole('listitem')[0]).toHaveTextContent(
-      'default'
-    )
-    await user.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}')
-    expect(within(list).getAllByRole('listitem')[2]).toHaveTextContent(
-      'default'
-    )
-    expect(handle).toHaveFocus()
-    await user.keyboard('{ArrowUp}')
-    expect(within(list).getAllByRole('listitem')[1]).toHaveTextContent(
-      'default'
-    )
-    expect(screen.getByText('Not in pricing table')).toBeVisible()
-    await user.click(screen.getByRole('tab', { name: 'Pricing groups' }))
-    await user.click(screen.getByRole('button', { name: 'Save group settings' }))
-    await waitFor(() => expect(onSave).toHaveBeenCalled())
-    expect(JSON.parse(onSave.mock.calls[0][0].AutoGroups)).toEqual([
-      'vip',
-      'default',
-      'retired',
-    ])
-  })
-
-  it('keeps a single auto group unchanged when using its drag handle keyboard controls', async () => {
-    const user = userEvent.setup()
-    render(<Fixture initial={{ AutoGroups: '["default"]' }} />)
-    await user.click(screen.getByRole('tab', { name: 'Auto group order' }))
-    const handle = screen.getByRole('button', {
-      name: 'Drag default to reorder',
-    })
-    handle.focus()
-    await user.keyboard('{ArrowUp}{ArrowDown}')
-    const list = screen.getByRole('list', { name: 'Auto group order' })
-    expect(within(list).getAllByRole('listitem')).toHaveLength(1)
-    expect(within(list).getByRole('listitem')).toHaveTextContent('default')
-    expect(handle).toHaveFocus()
-    expect(
-      screen.getByRole('button', { name: 'Move default up' })
-    ).toBeDisabled()
-    expect(
-      screen.getByRole('button', { name: 'Move default down' })
-    ).toBeDisabled()
-  })
-
-  it('opens the auto section and focuses its invalid limit when saving from another section', async () => {
-    const user = userEvent.setup()
-    const onSave = vi.fn(async (_values: typeof defaults) => {})
-    render(<Fixture onSave={onSave} />)
-    await user.click(screen.getByRole('tab', { name: 'Auto group order' }))
-    fireEvent.change(
-      screen.getByRole('spinbutton', {
-        name: 'Maximum custom groups per token',
-      }),
-      { target: { value: '0' } }
-    )
-    await user.click(screen.getByRole('tab', { name: 'Pricing groups' }))
-    await user.click(screen.getByRole('button', { name: 'Save group settings' }))
-    await waitFor(() =>
-      expect(
-        screen.getByRole('tab', { name: 'Auto group order' })
-      ).toHaveAttribute('aria-selected', 'true')
-    )
-    const input = screen.getByRole('spinbutton', {
-      name: 'Maximum custom groups per token',
-    })
-    expect(input).toHaveAttribute('aria-invalid', 'true')
-    await waitFor(() => expect(input).toHaveFocus())
-    expect(screen.getByText('Enter a positive integer')).toBeVisible()
-    expect(onSave).not.toHaveBeenCalled()
-  })
-
   it('shows empty state guidance and disables save during a pending request', async () => {
     const user = userEvent.setup()
     render(
@@ -271,7 +139,6 @@ describe('group settings workspace', () => {
           GroupRatio: '{}',
           TopupGroupRatio: '{}',
           UserUsableGroups: '{}',
-          AutoGroups: '[]',
         }}
       />
     )
@@ -283,8 +150,6 @@ describe('group settings workspace', () => {
     expect(
       screen.getByText('Base group ratios apply until you add an override.')
     ).toBeVisible()
-    await user.click(screen.getByRole('tab', { name: 'Auto group order' }))
-    expect(screen.getByText('No auto groups configured')).toBeVisible()
   })
 
   it('preserves pricing edits when switching between visual and JSON editors', async () => {
