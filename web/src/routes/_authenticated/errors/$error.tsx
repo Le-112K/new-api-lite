@@ -18,8 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { createFileRoute } from '@tanstack/react-router'
 
-import { Header } from '@/components/layout'
-import { ProfileDropdown } from '@/components/profile-dropdown'
+import { Header, SignOutButton } from '@/components/layout'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { ForbiddenError } from '@/features/errors/forbidden'
 import { GeneralError } from '@/features/errors/general-error'
@@ -46,9 +45,10 @@ function RouteComponent() {
   return (
     <>
       <Header>
-        <div className='ms-auto flex items-center md:space-x-4'>
-          <ThemeSwitch />
-          <ProfileDropdown />
+        {/* 与主布局一致：顶部只留主题切换与退出登录，不再有头像下拉 */}
+        <div className='ms-auto flex items-center gap-1 sm:gap-2'>
+          <ThemeSwitch variant='landing' />
+          <SignOutButton />
         </div>
       </Header>
       <div className='flex-1 [&>div]:h-full'>

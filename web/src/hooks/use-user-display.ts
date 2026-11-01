@@ -24,7 +24,7 @@ import type { AuthUser } from '@/stores/auth-store'
 
 /**
  * Custom hook to format user display information
- * Centralizes user display logic used across ProfileDropdown and MobileDrawer
+ * Centralizes user display logic used by the public header profile menu
  */
 export function useUserDisplay(user: AuthUser | null | undefined) {
   const { t } = useTranslation()
