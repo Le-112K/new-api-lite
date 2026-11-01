@@ -420,6 +420,10 @@ func TokenAuth() func(c *gin.Context) {
 		userCache.WriteContext(c)
 
 		userGroup := userCache.Group
+		// 账户真实分组要单独留一份：下面 userGroup 会被令牌指定的分组覆盖，
+		// 而订阅权限只能按账户档位判定 —— 否则用户只要把令牌指向更高档位的
+		// 分组，就能绕过订阅校验。
+		common.SetContextKey(c, constant.ContextKeyUserGroup, userGroup)
 		tokenGroup := token.Group
 		if tokenGroup != "" {
 			// check common.UserUsableGroups[userGroup]

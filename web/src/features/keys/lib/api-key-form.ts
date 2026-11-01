@@ -21,7 +21,6 @@ import { z } from 'zod'
 
 import { parseQuotaFromDollars, quotaUnitsToDollars } from '@/lib/format'
 
-import { DEFAULT_GROUP } from '../constants'
 import type { ApiKey, ApiKeyFormData } from '../types'
 
 // ============================================================================
@@ -37,7 +36,6 @@ export function getApiKeyFormSchema(t: TFunction) {
       unlimited_quota: z.boolean(),
       model_limits: z.array(z.string()),
       allow_ips: z.string().optional(),
-      group: z.string().optional(),
       tokenCount: z.number().min(1).optional(),
     })
     .superRefine((data, ctx) => {
@@ -71,7 +69,6 @@ export const API_KEY_FORM_DEFAULT_VALUES: ApiKeyFormValues = {
   unlimited_quota: true,
   model_limits: [],
   allow_ips: '',
-  group: DEFAULT_GROUP,
   tokenCount: 1,
 }
 
@@ -101,7 +98,6 @@ export function transformFormDataToPayload(
     model_limits_enabled: data.model_limits.length > 0,
     model_limits: data.model_limits.join(','),
     allow_ips: data.allow_ips || '',
-    group: data.group || '',
   }
 }
 
@@ -125,7 +121,6 @@ export function transformApiKeyToFormDefaults(
       ? apiKey.model_limits.split(',').filter(Boolean)
       : [],
     allow_ips: apiKey.allow_ips || '',
-    group: apiKey.group || DEFAULT_GROUP,
     tokenCount: 1,
   }
 }

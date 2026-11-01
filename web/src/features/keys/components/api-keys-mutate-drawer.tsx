@@ -63,7 +63,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { useStatus } from '@/hooks/use-status'
-import { getUserModels, getUserGroups } from '@/lib/api'
+import { getUserModels } from '@/lib/api'
 import { getCurrencyDisplay, getCurrencyLabel } from '@/lib/currency'
 import { handleServerError } from '@/lib/handle-server-error'
 import { requireServerSuccess } from '@/lib/server-error-message'
@@ -80,8 +80,6 @@ import {
 } from '../lib'
 import type { ApiKey } from '../types'
 import {
-  ApiKeyGroupCombobox,
-  type ApiKeyGroupOption,
 } from './api-key-group-combobox'
 import { useApiKeys } from './api-keys-provider'
 
@@ -115,18 +113,6 @@ export function ApiKeysMutateDrawer({
     staleTime: 0,
   })
 
-  // Fetch groups
-  const {
-    data: groupsData,
-    isFetched: groupsFetched,
-    isFetching: groupsFetching,
-  } = useQuery({
-    queryKey: ['user-groups'],
-    queryFn: async () => requireServerSuccess(await getUserGroups()),
-    enabled: open,
-    staleTime: 0,
-  })
-
   const {
     data: apiKeyData,
     isFetched: apiKeyFetched,
@@ -140,16 +126,6 @@ export function ApiKeysMutateDrawer({
   })
 
   const models = modelsData?.data || []
-  const groups = useMemo<ApiKeyGroupOption[]>(
-    () =>
-      Object.entries(groupsData?.data || {}).map(([key, info]) => ({
-        value: key,
-        label: key,
-        desc: info.desc || key,
-        ratio: info.ratio,
-      })),
-    [groupsData]
-  )
   const schema = useMemo(() => getApiKeyFormSchema(t), [t])
 
   const form = useForm<ApiKeyFormValues>({
@@ -161,9 +137,6 @@ export function ApiKeysMutateDrawer({
   useEffect(() => {
     if (!open) {
       setInitializedTarget(null)
-      return
-    }
-    if (!groupsFetched || groupsFetching) {
       return
     }
     if (isUpdate && (!apiKeyFetched || apiKeyFetching)) return
@@ -186,8 +159,6 @@ export function ApiKeysMutateDrawer({
     currentRow,
     form,
     statusLoading,
-    groupsFetched,
-    groupsFetching,
     apiKeyData,
     apiKeyFetched,
     apiKeyFetching,
@@ -197,21 +168,6 @@ export function ApiKeysMutateDrawer({
   const formTarget =
     isUpdate && currentRow ? `update:${currentRow.id}` : 'create'
   const isFormInitialized = initializedTarget === formTarget
-  const selectedGroup = form.watch('group')
-
-  // Correct group after groups load: if the form value is not in available groups, fall back
-  useEffect(() => {
-    if (groups.length === 0) return
-    const currentGroup = selectedGroup
-    if (currentGroup && !groups.some((g) => g.value === currentGroup)) {
-      const fallback =
-        groups.find((g) => g.value === 'default')?.value ??
-        groups[0]?.value ??
-        ''
-      form.setValue('group', fallback)
-    }
-  }, [groups, form, selectedGroup])
-
   const onSubmit = async (data: ApiKeyFormValues) => {
     setIsSubmitting(true)
     try {
@@ -340,25 +296,6 @@ export function ApiKeysMutateDrawer({
                     <FormLabel>{t('Name')}</FormLabel>
                     <FormControl>
                       <Input {...field} placeholder={t('Enter a name')} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name='group'
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('Group')}</FormLabel>
-                    <FormControl>
-                      <ApiKeyGroupCombobox
-                        options={groups}
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        placeholder={t('Select a group')}
-                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

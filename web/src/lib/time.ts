@@ -120,7 +120,7 @@ export function computeTimeRange(
       : defaultEnd
     const start = startDate
       ? toStartOfDay(dateToUnixTimestamp(startDate))
-      : end - days * 24 * 3600
+      : end - (days - 1) * 24 * 3600
 
     return {
       start_timestamp: start,

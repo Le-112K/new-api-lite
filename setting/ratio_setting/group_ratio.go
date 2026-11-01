@@ -105,6 +105,16 @@ func UpdateGroupGroupRatioByJSONString(jsonStr string) error {
 	return types.LoadFromJsonString(groupGroupRatioMap, jsonStr)
 }
 
+// 分组可见性：按用户分组增删「可选分组」，是订阅档位隔离的唯一闸门。
+// 订阅档位隔离靠它实现——低档账户看不到也选不到更高档的分组。
+func GroupSpecialUsableGroup2JSONString() string {
+	return groupRatioSetting.GroupSpecialUsableGroup.MarshalJSONString()
+}
+
+func UpdateGroupSpecialUsableGroupByJSONString(jsonStr string) error {
+	return types.LoadFromJsonString(groupRatioSetting.GroupSpecialUsableGroup, jsonStr)
+}
+
 func CheckGroupRatio(jsonStr string) error {
 	checkGroupRatio := make(map[string]float64)
 	err := json.Unmarshal([]byte(jsonStr), &checkGroupRatio)

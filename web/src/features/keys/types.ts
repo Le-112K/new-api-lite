@@ -82,7 +82,6 @@ export interface ApiKeyFormData {
   model_limits_enabled: boolean
   model_limits: string
   allow_ips: string
-  group: string
 }
 
 // ============================================================================

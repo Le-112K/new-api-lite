@@ -88,6 +88,7 @@ func InitOptionMap() {
 	common.OptionMap["ModelPrice"] = ratio_setting.ModelPrice2JSONString()
 	common.OptionMap["GroupRatio"] = ratio_setting.GroupRatio2JSONString()
 	common.OptionMap["GroupGroupRatio"] = ratio_setting.GroupGroupRatio2JSONString()
+	common.OptionMap["GroupSpecialUsableGroup"] = ratio_setting.GroupSpecialUsableGroup2JSONString()
 	common.OptionMap["UserUsableGroups"] = setting.UserUsableGroups2JSONString()
 	common.OptionMap["TopUpLink"] = common.TopUpLink
 	//common.OptionMap["ChatLink"] = common.ChatLink
@@ -381,6 +382,8 @@ func updateOptionMap(key string, value string) (err error) {
 		common.DataExportDefaultTime = value
 	case "GroupRatio":
 		err = ratio_setting.UpdateGroupRatioByJSONString(value)
+	case "GroupSpecialUsableGroup":
+		err = ratio_setting.UpdateGroupSpecialUsableGroupByJSONString(value)
 	case "GroupGroupRatio":
 		err = ratio_setting.UpdateGroupGroupRatioByJSONString(value)
 	case "UserUsableGroups":
