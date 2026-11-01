@@ -59,7 +59,7 @@ func TestRequiredTierFollowsLowestEnabledGroup(t *testing.T) {
 	}
 }
 
-func TestCanTierAccessModelIsDownwardCompatible(t *testing.T) {
+func TestDeniedTierForCallIsDownwardCompatible(t *testing.T) {
 	setupTierTestDB(t, []model.Ability{
 		{Group: "free", Model: "deepseek", ChannelId: 1, Enabled: true},
 		{Group: "vip", Model: "glm", ChannelId: 1, Enabled: true},
@@ -67,29 +67,38 @@ func TestCanTierAccessModelIsDownwardCompatible(t *testing.T) {
 	})
 
 	cases := []struct {
-		tier  string
-		model string
-		want  bool
+		userGroup    string
+		model        string
+		wantDenied   bool
+		wantRequired string
 	}{
 		// 免费档只能用免费模型
-		{SubscriptionTierFree, "deepseek", true},
-		{SubscriptionTierFree, "glm", false},
-		{SubscriptionTierFree, "gpt", false},
+		{"free", "deepseek", false, ""},
+		{"free", "glm", true, SubscriptionTierVip},
+		{"free", "gpt", true, SubscriptionTierSvip},
 		// VIP 向下兼容免费模型
-		{SubscriptionTierVip, "deepseek", true},
-		{SubscriptionTierVip, "glm", true},
-		{SubscriptionTierVip, "gpt", false},
+		{"vip", "deepseek", false, ""},
+		{"vip", "glm", false, ""},
+		{"vip", "gpt", true, SubscriptionTierSvip},
 		// SVIP 全可用
-		{SubscriptionTierSvip, "deepseek", true},
-		{SubscriptionTierSvip, "glm", true},
-		{SubscriptionTierSvip, "gpt", true},
+		{"svip", "deepseek", false, ""},
+		{"svip", "glm", false, ""},
+		{"svip", "gpt", false, ""},
 		// 未挂任何档位分组的模型不按档位拦截，交给渠道选择报错
-		{SubscriptionTierFree, "not-configured", true},
+		{"free", "not-configured", false, ""},
+		// default 是 free 的历史别名
+		{"default", "glm", true, SubscriptionTierVip},
+		// 非档位分组（管理员自建）不按档位判定：
+		// SubscriptionTierIndex 返回 -1，若参与比较会把任何档位都判成「不足」
+		{"enterprise", "deepseek", false, ""},
+		{"enterprise", "gpt", false, ""},
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.tier+"/"+tc.model, func(t *testing.T) {
-			require.Equal(t, tc.want, CanTierAccessModel(tc.tier, tc.model))
+		t.Run(tc.userGroup+"/"+tc.model, func(t *testing.T) {
+			required, denied := DeniedTierForCall(tc.userGroup, tc.model)
+			require.Equal(t, tc.wantDenied, denied)
+			require.Equal(t, tc.wantRequired, required)
 		})
 	}
 }
@@ -102,7 +111,8 @@ func TestDefaultGroupIsTreatedAsFreeTier(t *testing.T) {
 	require.Equal(t, "", NormalizeSubscriptionTier("some-custom-group"))
 	require.Equal(t, -1, SubscriptionTierIndex("some-custom-group"))
 
-	require.Equal(t, []string{"free"}, SubscriptionTierGroups("default"))
-	require.Equal(t, []string{"free", "vip"}, SubscriptionTierGroups("vip"))
-	require.Equal(t, []string{"free", "vip", "svip"}, SubscriptionTierGroups("svip"))
+	require.Equal(t, []string{"free", "vip", "svip"}, SubscriptionTierList())
+	require.Equal(t, "Free", SubscriptionTierDisplayName("default"))
+	require.Equal(t, "VIP", SubscriptionTierDisplayName("vip"))
+	require.Equal(t, "SVIP", SubscriptionTierDisplayName("svip"))
 }

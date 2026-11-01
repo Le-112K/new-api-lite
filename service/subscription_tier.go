@@ -51,26 +51,18 @@ func SubscriptionTierIndex(group string) int {
 	return slices.Index(subscriptionTiers, tier)
 }
 
-// SubscriptionTierGroups 返回该档位可访问的全部分组（含所有更低档位）。
-// 用于「模型列表按档位取并集」与「模型最低档位」两类判断。
-func SubscriptionTierGroups(group string) []string {
-	index := SubscriptionTierIndex(group)
-	if index < 0 {
-		return nil
-	}
-	return subscriptionTiers[:index+1]
-}
-
 // SubscriptionTierList 返回档位序列副本（低 → 高），供批量标注按下标取值。
 func SubscriptionTierList() []string {
 	return subscriptionTiers
 }
 
-// SubscriptionTierDisplayName 返回档位的中文展示名，用于错误提示。
+// SubscriptionTierDisplayName 返回档位的展示名，用于错误提示。
+// 刻意只用英文/大写：错误文案本身走 i18n，档位名保持中性才不会出现
+// 中文环境之外的混排（"Free" 对中文用户同样可读）。
 func SubscriptionTierDisplayName(group string) string {
 	switch NormalizeSubscriptionTier(group) {
 	case SubscriptionTierFree:
-		return "免费"
+		return "Free"
 	case SubscriptionTierVip:
 		return "VIP"
 	case SubscriptionTierSvip:
@@ -106,18 +98,27 @@ func RequiredTierForModel(modelName string) (string, bool) {
 	return subscriptionTiers[lowest], true
 }
 
-// CanTierAccessModel 判断某档位能否调用某模型。
-// 模型没有挂在任何档位分组时返回 true —— 这种情况交给渠道选择去报
-// 「无可用渠道」，而不是误判成越权。
-func CanTierAccessModel(tier, modelName string) bool {
-	required, ok := RequiredTierForModel(modelName)
-	if !ok {
-		return true
-	}
-	requiredIndex := SubscriptionTierIndex(required)
-	userIndex := SubscriptionTierIndex(tier)
+// DeniedTierForCall 判断一次调用是否因订阅档位不足而应被拒绝。
+// 返回的档位是「调用该模型所需的最低档位」，供错误提示使用。
+//
+// 两种情形不作为档位问题处理，交由渠道选择给出「无可用渠道」：
+//   - 用户所在分组不是订阅档位（如管理员自建的 enterprise 分组）
+//   - 模型没有挂在任何档位分组下（配置缺失）
+//
+// 这里的 userIndex < 0 判断是必须的：SubscriptionTierIndex 对非档位分组
+// 返回 -1，若不排除，任何档位都会「大于 -1」，自定义分组用户会收到
+// 荒谬的档位不足提示。
+func DeniedTierForCall(userGroup, modelName string) (string, bool) {
+	userIndex := SubscriptionTierIndex(userGroup)
 	if userIndex < 0 {
-		return false
+		return "", false
 	}
-	return userIndex >= requiredIndex
+	requiredTier, ok := RequiredTierForModel(modelName)
+	if !ok {
+		return "", false
+	}
+	if SubscriptionTierIndex(requiredTier) <= userIndex {
+		return "", false
+	}
+	return requiredTier, true
 }

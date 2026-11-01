@@ -63,6 +63,10 @@ func GetEnabledModelGroups(modelName string) []string {
 // 直接查实体而不是拼列名：group 是 SQL 保留字，手写 Select 依赖
 // commonGroupCol 的数据库方言引号（且该变量在未初始化的环境为空串），
 // 交给 GORM 的结构体映射才在各数据库下都正确。
+//
+// 性能：每次调用是一张全表扫描（abilities 行数 = 渠道数 × 模型数）。
+// 当前规模（十位数行）可忽略；价格页是公开接口，若 abilities 增长到
+// 万级以上，应改为按渠道变更事件失效的进程内缓存。
 func GetEnabledModelGroupPairs() map[string][]string {
 	var abilities []Ability
 	DB.Where("enabled = ?", true).Find(&abilities)
