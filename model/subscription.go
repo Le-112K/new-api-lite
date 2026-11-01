@@ -302,23 +302,34 @@ type SubscriptionResetResult struct {
 	AffectedUserIds  []int  `json:"-"`
 }
 
-// alignSubscriptionStartToHour 把订阅起点对齐到整点。
+// addCalendarMonths 在「同一时刻」上加若个日历月。
 //
-// 订阅按整小时计时：不足一小时的零头不顺延成新的周期，而是把起点抬到
-// 下一个整点，使 end_time 必然落在整点上，到点即失效。
-// 例如 10:37 购买 1 天，起点取 11:00，到期为次日 11:00。
+// 关键点：不能直接用 time.AddDate。Go 的做法是把溢出日规范化，
+// 1/31 + 1 个月会得到 3/3（2 月没有 31 号，多出来的 3 天顺延到了 3 月），
+// 1 年跨度里的 2/29 也会顺延成次年 3/1。对订阅计时这是错误的多给时长。
 //
-// 按 time.Local（容器 TZ）的整点对齐，而不是按 UTC 整点：
-// 对 UTC+5:30 这类半小时偏移的时区，两者并不相同。
-func alignSubscriptionStartToHour(start time.Time) time.Time {
-	local := start.In(time.Local)
-	if local.Minute() == 0 && local.Second() == 0 && local.Nanosecond() == 0 {
-		return local
-	}
-	// hour+1 到 24 时由 time.Date 自动进位到次日。
-	return time.Date(local.Year(), local.Month(), local.Day(), local.Hour()+1, 0, 0, 0, local.Location())
+// 这里改为「夹到目标月的最后一天」：1/31 + 1 月 = 2/28（闰年 2/29），
+// 3/31 + 1 月 = 4/30，与「下个月同一天，没有就取月末」的业务直觉一致。
+// 时分秒与纳秒原样保留，因此到期时刻与开通时刻完全一致。
+func addCalendarMonths(start time.Time, months int) time.Time {
+	location := start.Location()
+	// 先落到目标月的 1 号，避免 AddDate 的月末顺延。
+	target := time.Date(start.Year(), start.Month()+time.Month(months), 1,
+		start.Hour(), start.Minute(), start.Second(), start.Nanosecond(), location)
+	// day=0 表示上个月的最后一天，即目标月的月末。
+	lastDay := time.Date(target.Year(), target.Month()+1, 0, 0, 0, 0, 0, location).Day()
+	day := min(start.Day(), lastDay)
+	return time.Date(target.Year(), target.Month(), day,
+		start.Hour(), start.Minute(), start.Second(), start.Nanosecond(), location)
 }
 
+// calcPlanEndTime 计算订阅到期时刻。
+//
+// 有效期口径是「与开通时刻同一时点」：12:36 开通 1 个月，就是下个月同日
+// 12:36 到期；不做整点对齐，也不按自然日/零点点算。
+//   - 年 / 月：日历月推进，月末不足时夹到目标月最后一天
+//   - 日：日历天推进，保持同一时分秒
+//   - 小时 / 自定义秒：绝对时长推进
 func calcPlanEndTime(start time.Time, plan *SubscriptionPlan) (int64, error) {
 	if plan == nil {
 		return 0, errors.New("plan is nil")
@@ -326,21 +337,20 @@ func calcPlanEndTime(start time.Time, plan *SubscriptionPlan) (int64, error) {
 	if plan.DurationValue <= 0 && plan.DurationUnit != SubscriptionDurationCustom {
 		return 0, errors.New("duration_value must be > 0")
 	}
-	base := alignSubscriptionStartToHour(start)
 	switch plan.DurationUnit {
 	case SubscriptionDurationYear:
-		return base.AddDate(plan.DurationValue, 0, 0).Unix(), nil
+		return addCalendarMonths(start, plan.DurationValue*12).Unix(), nil
 	case SubscriptionDurationMonth:
-		return base.AddDate(0, plan.DurationValue, 0).Unix(), nil
+		return addCalendarMonths(start, plan.DurationValue).Unix(), nil
 	case SubscriptionDurationDay:
-		return base.Add(time.Duration(plan.DurationValue) * 24 * time.Hour).Unix(), nil
+		return start.AddDate(0, 0, plan.DurationValue).Unix(), nil
 	case SubscriptionDurationHour:
-		return base.Add(time.Duration(plan.DurationValue) * time.Hour).Unix(), nil
+		return start.Add(time.Duration(plan.DurationValue) * time.Hour).Unix(), nil
 	case SubscriptionDurationCustom:
 		if plan.CustomSeconds <= 0 {
 			return 0, errors.New("custom_seconds must be > 0")
 		}
-		return base.Add(time.Duration(plan.CustomSeconds) * time.Second).Unix(), nil
+		return start.Add(time.Duration(plan.CustomSeconds) * time.Second).Unix(), nil
 	default:
 		return 0, fmt.Errorf("invalid duration_unit: %s", plan.DurationUnit)
 	}
