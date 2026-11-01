@@ -263,6 +263,7 @@ const (
 	MsgDistributorGroupAccessDenied            = "distributor.group_access_denied"
 	MsgDistributorGetChannelFailed             = "distributor.get_channel_failed"
 	MsgDistributorNoAvailableChannel           = "distributor.no_available_channel"
+	MsgDistributorSubscriptionTierRequired     = "distributor.subscription_tier_required"
 	MsgDistributorInvalidParseModel            = "distributor.invalid_request_parse_model"
 )
 

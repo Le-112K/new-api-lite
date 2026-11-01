@@ -47,6 +47,33 @@ func GetGroupEnabledModels(group string) []string {
 	return models
 }
 
+// GetEnabledModelGroups 返回模型出现在哪些已启用分组下。
+// 订阅档位判定用它算「该模型的最低可访问档位」。
+//
+// 复用批量查询而不是 Distinct(commonGroupCol)：commonGroupCol 已经带了
+// 数据库自己的标识符引号，再交给 GORM 的 Distinct/Pluck 会被二次转义，
+// SQLite 下直接报 `near "FROM": syntax error`。
+func GetEnabledModelGroups(modelName string) []string {
+	return GetEnabledModelGroupPairs()[modelName]
+}
+
+// GetEnabledModelGroupPairs 一次性取出 模型→已启用分组 的全量映射，
+// 供批量场景（价格页列出全部模型）计算各自的所需档位，避免逐模型查询。
+//
+// 直接查实体而不是拼列名：group 是 SQL 保留字，手写 Select 依赖
+// commonGroupCol 的数据库方言引号（且该变量在未初始化的环境为空串），
+// 交给 GORM 的结构体映射才在各数据库下都正确。
+func GetEnabledModelGroupPairs() map[string][]string {
+	var abilities []Ability
+	DB.Where("enabled = ?", true).Find(&abilities)
+
+	result := make(map[string][]string, len(abilities))
+	for _, ability := range abilities {
+		result[ability.Model] = append(result[ability.Model], ability.Group)
+	}
+	return result
+}
+
 func GetEnabledModels() []string {
 	var models []string
 	// Find distinct models

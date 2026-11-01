@@ -302,6 +302,23 @@ type SubscriptionResetResult struct {
 	AffectedUserIds  []int  `json:"-"`
 }
 
+// alignSubscriptionStartToHour 把订阅起点对齐到整点。
+//
+// 订阅按整小时计时：不足一小时的零头不顺延成新的周期，而是把起点抬到
+// 下一个整点，使 end_time 必然落在整点上，到点即失效。
+// 例如 10:37 购买 1 天，起点取 11:00，到期为次日 11:00。
+//
+// 按 time.Local（容器 TZ）的整点对齐，而不是按 UTC 整点：
+// 对 UTC+5:30 这类半小时偏移的时区，两者并不相同。
+func alignSubscriptionStartToHour(start time.Time) time.Time {
+	local := start.In(time.Local)
+	if local.Minute() == 0 && local.Second() == 0 && local.Nanosecond() == 0 {
+		return local
+	}
+	// hour+1 到 24 时由 time.Date 自动进位到次日。
+	return time.Date(local.Year(), local.Month(), local.Day(), local.Hour()+1, 0, 0, 0, local.Location())
+}
+
 func calcPlanEndTime(start time.Time, plan *SubscriptionPlan) (int64, error) {
 	if plan == nil {
 		return 0, errors.New("plan is nil")
@@ -309,20 +326,21 @@ func calcPlanEndTime(start time.Time, plan *SubscriptionPlan) (int64, error) {
 	if plan.DurationValue <= 0 && plan.DurationUnit != SubscriptionDurationCustom {
 		return 0, errors.New("duration_value must be > 0")
 	}
+	base := alignSubscriptionStartToHour(start)
 	switch plan.DurationUnit {
 	case SubscriptionDurationYear:
-		return start.AddDate(plan.DurationValue, 0, 0).Unix(), nil
+		return base.AddDate(plan.DurationValue, 0, 0).Unix(), nil
 	case SubscriptionDurationMonth:
-		return start.AddDate(0, plan.DurationValue, 0).Unix(), nil
+		return base.AddDate(0, plan.DurationValue, 0).Unix(), nil
 	case SubscriptionDurationDay:
-		return start.Add(time.Duration(plan.DurationValue) * 24 * time.Hour).Unix(), nil
+		return base.Add(time.Duration(plan.DurationValue) * 24 * time.Hour).Unix(), nil
 	case SubscriptionDurationHour:
-		return start.Add(time.Duration(plan.DurationValue) * time.Hour).Unix(), nil
+		return base.Add(time.Duration(plan.DurationValue) * time.Hour).Unix(), nil
 	case SubscriptionDurationCustom:
 		if plan.CustomSeconds <= 0 {
 			return 0, errors.New("custom_seconds must be > 0")
 		}
-		return start.Add(time.Duration(plan.CustomSeconds) * time.Second).Unix(), nil
+		return base.Add(time.Duration(plan.CustomSeconds) * time.Second).Unix(), nil
 	default:
 		return 0, fmt.Errorf("invalid duration_unit: %s", plan.DurationUnit)
 	}

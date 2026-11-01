@@ -3,7 +3,6 @@ package controller
 import (
 	"maps"
 
-	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
@@ -12,28 +11,26 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func filterPricingByUsableGroups(pricing []model.Pricing, usableGroup map[string]string) []model.Pricing {
+// attachRequiredTiers 给每个模型标注调用它所需的最低订阅档位。
+// 前端据此展示锁定状态；真正的拦截发生在请求分发阶段。
+func attachRequiredTiers(pricing []model.Pricing) []model.Pricing {
 	if len(pricing) == 0 {
 		return pricing
 	}
-	if len(usableGroup) == 0 {
-		return []model.Pricing{}
-	}
-
-	filtered := make([]model.Pricing, 0, len(pricing))
-	for _, item := range pricing {
-		if common.StringsContains(item.EnableGroup, "all") {
-			filtered = append(filtered, item)
-			continue
-		}
-		for _, group := range item.EnableGroup {
-			if _, ok := usableGroup[group]; ok {
-				filtered = append(filtered, item)
-				break
+	groupsByModel := model.GetEnabledModelGroupPairs()
+	for i := range pricing {
+		lowest := -1
+		for _, group := range groupsByModel[pricing[i].ModelName] {
+			index := service.SubscriptionTierIndex(group)
+			if index >= 0 && (lowest < 0 || index < lowest) {
+				lowest = index
 			}
 		}
+		if lowest >= 0 {
+			pricing[i].RequiredTier = service.SubscriptionTierList()[lowest]
+		}
 	}
-	return filtered
+	return pricing
 }
 
 // filterPricingByConfiguredPrice 剔除未配置计费规则的模型。
@@ -114,7 +111,9 @@ func GetPricing(c *gin.Context) {
 
 	usableGroup = service.GetUserUsableGroups(group)
 	pricing = filterPricingByConfiguredPrice(pricing)
-	pricing = filterPricingByUsableGroups(pricing, usableGroup)
+	// 模型广场与客户端模型列表一律返回全部模型：订阅等级只在真正调用时校验，
+	// 不在这里按档位裁剪，否则用户看不到自己可以升级获得的模型。
+	pricing = attachRequiredTiers(pricing)
 	// check groupRatio contains usableGroup
 	for group := range ratio_setting.GetGroupRatioCopy() {
 		if _, ok := usableGroup[group]; !ok {

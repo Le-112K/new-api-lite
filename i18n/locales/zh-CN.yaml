@@ -222,6 +222,7 @@ distributor.token_model_forbidden: "该令牌无权访问模型 {{.Model}}"
 distributor.model_name_required: "未指定模型名称，模型名称不能为空"
 distributor.group_access_denied: "无权访问该分组"
 distributor.get_channel_failed: "获取分组 {{.Group}} 下模型 {{.Model}} 的可用渠道失败（distributor）：{{.Error}}"
+distributor.subscription_tier_required: "模型 {{.Model}} 属于 {{.Tier}} 订阅权益，当前账户等级无权调用。请升级订阅后重试"
 distributor.no_available_channel: "分组 {{.Group}} 下模型 {{.Model}} 无可用渠道（distributor）"
 distributor.invalid_request_parse_model: "无效的请求，无法解析模型"
 

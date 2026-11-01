@@ -89,6 +89,20 @@ func Distribute() func(c *gin.Context) {
 			if selectErr != nil {
 				message := selectErr.Message
 				if selectErr.NoAvailableChannel {
+					// 同一个「没有可用渠道」可能有两种原因：当前订阅档位不够，
+					// 或者该分组下确实没有可用渠道。档位不足必须给出明确提示，
+					// 否则用户会以为是自己或上游出了故障。
+					if requiredTier, ok := service.RequiredTierForModel(modelRequest.Model); ok {
+						if service.SubscriptionTierIndex(requiredTier) > service.SubscriptionTierIndex(usingGroup) {
+							abortWithOpenAiMessage(c, http.StatusForbidden,
+								i18n.T(c, i18n.MsgDistributorSubscriptionTierRequired, map[string]any{
+									"Model": modelRequest.Model,
+									"Tier":  service.SubscriptionTierDisplayName(requiredTier),
+								}),
+								types.ErrorCodeAccessDenied)
+							return
+						}
+					}
 					message = noAvailableChannelMessage(c, usingGroup, modelRequest.Model)
 				} else if selectErr.MessageID != "" {
 					message = i18n.T(c, selectErr.MessageID, selectErr.Params)

@@ -37,6 +37,11 @@ type Pricing struct {
 	// 未配置的模型无法通过计费校验，调用必然失败，因此
 	// 不应出现在公开价格页上。该字段只用于内部过滤，不参与序列化。
 	PriceConfigured bool `json:"-"`
+
+	// RequiredTier 是调用该模型所需的最低订阅档位（free / vip / svip）。
+	// 模型列表不按档位过滤，前端据此展示锁定状态；真正的拦截在请求分发阶段。
+	// 为空表示该模型没有挂在任何档位分组下。
+	RequiredTier string `json:"required_tier,omitempty"`
 }
 
 type PricingVendor struct {
