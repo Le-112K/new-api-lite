@@ -255,7 +255,10 @@ func AddToken(c *gin.Context) {
 		ModelLimitsEnabled: token.ModelLimitsEnabled,
 		ModelLimits:        token.ModelLimits,
 		AllowIps:           token.AllowIps,
-		Group:              token.Group,
+		// 分组不落令牌：留空即「跟随账户」，由 users.group 在请求时实时解析。
+		// 这样 VIP/Free 的差异只由账户订阅决定，升级或到期都无需重建令牌，
+		// 也杜绝了客户端伪造 group 越权（request 里的 group 一律忽略）。
+		Group: "",
 	}
 	err = cleanToken.Insert()
 	if err != nil {
@@ -349,7 +352,8 @@ func UpdateToken(c *gin.Context) {
 		cleanToken.ModelLimitsEnabled = token.ModelLimitsEnabled
 		cleanToken.ModelLimits = token.ModelLimits
 		cleanToken.AllowIps = token.AllowIps
-		cleanToken.Group = token.Group
+		// 分组恒空：既不允许客户端改，也不保留历史值，避免令牌锁死旧档位。
+		cleanToken.Group = ""
 	}
 	err = cleanToken.Update()
 	if err != nil {
@@ -373,7 +377,6 @@ func UpdateToken(c *gin.Context) {
 			{"model_limits", previous.ModelLimits != cleanToken.ModelLimits},
 			{"allow_ips", (previous.AllowIps == nil) != (cleanToken.AllowIps == nil) ||
 				(previous.AllowIps != nil && cleanToken.AllowIps != nil && *previous.AllowIps != *cleanToken.AllowIps)},
-			{"group", previous.Group != cleanToken.Group},
 		} {
 			if field.changed {
 				changedFields = append(changedFields, field.name)
