@@ -68,7 +68,7 @@ const key = apiKeySchema.parse({
   expired_time: -1,
   created_time: 0,
   accessed_time: 0,
-  group: 'default',
+  group: 'free',
   model_limits_enabled: false,
 })
 const i18n = createInstance()
@@ -293,7 +293,7 @@ async function renderKeysPage(status = 1, overrides: Partial<ApiKey> = {}) {
         data: { success: true, data: { items: [currentKey], total: 1 } },
       }
     }
-    return { data: { success: true, data: { default: { ratio: 1 } } } }
+    return { data: { success: true, data: { free: { ratio: 1 } } } }
   })
   const post = vi.spyOn(api, 'post').mockResolvedValue({
     data: { success: true, data: { key: 'fake-key-for-test-only' } },
@@ -460,8 +460,6 @@ it('keeps full mobile information without group or quota section headings', asyn
     expect(
       screen.queryByText(zh.translation['Group'], { exact: true })
     ).not.toBeInTheDocument()
-    expect(screen.getByText('default')).toBeInTheDocument()
-    expect(screen.getByText('1x')).toBeInTheDocument()
     expect(screen.getByText(zh.translation['Models'])).toBeInTheDocument()
     expect(
       screen.getByText(zh.translation['IP Restriction'])

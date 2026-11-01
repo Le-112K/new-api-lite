@@ -24,8 +24,10 @@ var subscriptionTiers = []string{
 }
 
 // subscriptionTierAliases 让历史分组名也能落到对应档位。
-// `default` 是 new-api 的出厂默认分组名，迁移期仍按免费档处理，
-// 避免存量用户被判定成「非订阅分组」而直接失去全部权限。
+//
+// `default` 是 new-api 的出厂默认分组名，线上已统一切换为 free；
+// 这里保留别名只为兜住「迁移未跑完的库」或「从旧备份恢复的数据」，
+// 避免这类记录被判定成「非订阅分组」而直接失去全部权限。
 var subscriptionTierAliases = map[string]string{
 	"default": SubscriptionTierFree,
 }

@@ -100,7 +100,7 @@ export const getUserRoleOptions = (t: (key: string) => string) => [
 // Default Values
 // ============================================================================
 
-export const DEFAULT_GROUP = 'default' as const
+export const DEFAULT_GROUP = 'free' as const
 
 // ============================================================================
 // Error Messages (i18n keys: use t(ERROR_MESSAGES.xxx) when displaying)

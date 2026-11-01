@@ -1,10 +1,7 @@
 -- 创建一个用于订阅档位测试的普通用户。
 -- 幂等：已存在则跳过，不会覆盖既有账号。
 --
--- 分组用 default 而不是 free：当前生产只有 default 一个定价分组，
--- 而全局分组名是分组与渠道挂载的主键。新代码已把 default 作为 free 档的
--- 历史别名（service/subscription_tier.go），因此该用户的档位判定等价于免费用户。
--- 等正式建立 free 分组并把渠道迁过去后，再把这里改成 free。
+-- 分组固定为 free：新账号即免费档，与注册流程一致。
 INSERT INTO users (username, password, display_name, role, status, email, quota, "group")
 SELECT
     'testuser',
@@ -14,7 +11,7 @@ SELECT
     1,
     '',
     500000,
-    'default'
+    'free'
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'testuser');
 
 -- 回读确认：密码哈希与分组

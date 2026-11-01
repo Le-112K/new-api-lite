@@ -88,7 +88,7 @@ type User struct {
 	Quota                int                        `json:"quota" gorm:"type:int;default:0"`
 	UsedQuota            int                        `json:"used_quota" gorm:"type:int;default:0;column:used_quota"` // used quota
 	RequestCount         int                        `json:"request_count" gorm:"type:int;default:0;"`               // request number
-	Group                string                     `json:"group" gorm:"type:varchar(64);default:'default'"`
+	Group                string                     `json:"group" gorm:"type:varchar(64);default:'free'"`
 	DeletedAt            gorm.DeletedAt             `gorm:"index"`
 	Setting              string                     `json:"setting" gorm:"type:text;column:setting"`
 	Remark               string                     `json:"remark,omitempty" gorm:"type:varchar(255)" validate:"max=255"`
@@ -541,6 +541,11 @@ func (user *User) prepareForInsert(tx *gorm.DB) error {
 	user.Email = NormalizeEmail(user.Email)
 	if err := ensureEmailAvailableWithTx(tx, user.Email, 0); err != nil {
 		return err
+	}
+	// 新账号一律落在免费档。这里显式赋值而不只依赖列默认值：
+	// 列默认值只在 CREATE 时生效，且迁移期容易与实际代码期望不一致。
+	if user.Group == "" {
+		user.Group = "free"
 	}
 	if user.Password == "" {
 		return nil

@@ -61,7 +61,6 @@ import {
   ERROR_MESSAGES,
 } from '../constants'
 import type { ApiKey } from '../types'
-import { ApiKeyGroupCell } from './api-key-group-cell'
 import { ApiKeyQuotaCell } from './api-key-quota-cell'
 import { ApiKeyActivityCell } from './api-key-timestamp-cell'
 import {
@@ -69,7 +68,7 @@ import {
   IpRestrictionsCell,
   ModelLimitsCell,
 } from './api-keys-cells'
-import { useApiKeysColumns, useGroupRatios } from './api-keys-columns'
+import { useApiKeysColumns } from './api-keys-columns'
 import { ApiKeysConsole } from './api-keys-console'
 import { useApiKeys } from './api-keys-provider'
 import { DataTableBulkActions } from './data-table-bulk-actions'
@@ -148,8 +147,6 @@ function ApiKeysMobileList({
   now: number
 }) {
   const { t } = useTranslation()
-  const groupRatios = useGroupRatios()
-  const shouldReduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
   const rows = table.getRowModel().rows
 
   if (isLoading) return <ApiKeysMobileSkeleton />
@@ -215,13 +212,6 @@ function ApiKeysMobileList({
             </div>
 
             <div className='min-w-0 space-y-3 py-1'>
-              <div className='min-w-0'>
-                <ApiKeyGroupCell
-                  group={apiKey.group ?? ''}
-                  ratio={groupRatios[apiKey.group ?? '']}
-                  shouldReduceMotion={shouldReduceMotion}
-                />
-              </div>
               <ApiKeyQuotaCell apiKey={apiKey} now={now} variant='card' />
             </div>
 

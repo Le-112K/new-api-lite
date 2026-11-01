@@ -233,7 +233,7 @@ export function parseModelsList(models: string): string[] {
 
 /**
  * Parse comma-separated groups list.
- * Sorts with 'default' group first, then locale-sorted alphabetically.
+ * Sorts with 'free' group first, then locale-sorted alphabetically.
  */
 export function parseGroupsList(groups: string): string[] {
   if (!groups) {
@@ -243,11 +243,12 @@ export function parseGroupsList(groups: string): string[] {
     .split(',')
     .map((g) => g.trim())
     .filter((g) => g.length > 0)
+  // free 是基础分组，排在最前，其余按字典序
   return list.sort((a, b) => {
-    if (a === 'default') {
+    if (a === 'free') {
       return -1
     }
-    if (b === 'default') {
+    if (b === 'free') {
       return 1
     }
     return a.localeCompare(b)

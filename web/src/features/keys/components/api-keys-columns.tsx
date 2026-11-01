@@ -16,21 +16,17 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useQuery } from '@tanstack/react-query'
 import type { ColumnDef } from '@tanstack/react-table'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Checkbox } from '@/components/ui/checkbox'
 import { useMediaQuery } from '@/hooks'
-import { getUserGroups } from '@/lib/api'
 import dayjs from '@/lib/dayjs'
 import { formatTimestampToDate } from '@/lib/format'
-import { requireServerSuccess } from '@/lib/server-error-message'
 import { cn } from '@/lib/utils'
 
 import type { ApiKey } from '../types'
-import { ApiKeyGroupCell } from './api-key-group-cell'
 import { ApiKeyQuotaCell } from './api-key-quota-cell'
 import { ApiKeyStatusPill } from './api-key-status-pill'
 import { ApiKeyActivityCell } from './api-key-timestamp-cell'
@@ -41,40 +37,18 @@ import {
 } from './api-keys-cells'
 import { DataTableRowActions } from './data-table-row-actions'
 
-const EMPTY_GROUP_RATIOS: Record<string, number | string> = {}
-
-export function useGroupRatios(): Record<string, number | string> {
-  const { data } = useQuery({
-    queryKey: ['user-groups'],
-    queryFn: async () => requireServerSuccess(await getUserGroups()),
-    staleTime: 0,
-    select: (res) => {
-      if (!res.success || !res.data) return {}
-      const ratios: Record<string, number | string> = {}
-      for (const [group, info] of Object.entries(res.data)) {
-        if (typeof info.ratio === 'number' || typeof info.ratio === 'string') {
-          ratios[group] = info.ratio
-        }
-      }
-      return ratios
-    },
-  })
-
-  return data ?? EMPTY_GROUP_RATIOS
-}
-
 /**
  * Columns for the keys table, ordered the way the console design reads them:
  * identity → credential → budget → scope → dates → state → actions.
  *
- * `group`, `allow_ips` and `activity_time` are kept but default to hidden: the
- * approved design's card shows seven columns, yet the previous page surfaced
- * group, IP restrictions and created/last-used. Nothing was cut — the three are
- * one click away in the column chooser (see `api-keys-table.tsx`).
+ * `allow_ips` and `activity_time` are kept but default to hidden: the approved
+ * design's card shows seven columns, yet the previous page surfaced IP
+ * restrictions and created/last-used. They are one click away in the column
+ * chooser (see `api-keys-table.tsx`). Group was removed entirely — API keys no
+ * longer carry a group, their scope follows the account subscription.
  */
 export function useApiKeysColumns(now: number): ColumnDef<ApiKey>[] {
   const { t } = useTranslation()
-  const groupRatios = useGroupRatios()
   const shouldReduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
   return useMemo<ColumnDef<ApiKey>[]>(
     () => [
@@ -136,22 +110,6 @@ export function useApiKeysColumns(now: number): ColumnDef<ApiKey>[] {
         cell: ({ row }) => <ModelLimitsCell apiKey={row.original} />,
         enableSorting: false,
         size: 190,
-      },
-      {
-        accessorKey: 'group',
-        header: () => t('Group'),
-        cell: ({ row }) => {
-          const group = row.getValue('group') as string
-          return (
-            <ApiKeyGroupCell
-              group={group}
-              ratio={groupRatios[group]}
-              shouldReduceMotion={shouldReduceMotion}
-            />
-          )
-        },
-        size: 180,
-        meta: { mobileHidden: true },
       },
       {
         id: 'allow_ips',
@@ -222,6 +180,6 @@ export function useApiKeysColumns(now: number): ColumnDef<ApiKey>[] {
         meta: { pinned: 'right' as const },
       },
     ],
-    [t, now, groupRatios, shouldReduceMotion]
+    [t, now, shouldReduceMotion]
   )
 }
