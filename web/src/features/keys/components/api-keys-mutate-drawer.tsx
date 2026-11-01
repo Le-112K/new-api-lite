@@ -79,8 +79,6 @@ import {
   transformApiKeyToFormDefaults,
 } from '../lib'
 import type { ApiKey } from '../types'
-import {
-} from './api-key-group-combobox'
 import { useApiKeys } from './api-keys-provider'
 
 type ApiKeyMutateDrawerProps = {

@@ -49,7 +49,7 @@ export const channelSchema = z.object({
   base_url: z.string().nullish(),
   other: z.string().default(''),
   models: z.string().default(''),
-  group: z.string().default('default'),
+  group: z.string().default('free'),
   used_quota: z.number().default(0),
   model_mapping: z.string().nullish(),
   status_code_mapping: z.string().nullish(),
