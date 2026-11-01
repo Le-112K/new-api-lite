@@ -3566,7 +3566,6 @@
     "Type": "Type",
     "Type (common)": "Type (common)",
     "Type <username/> to confirm": "Type <username/> to confirm",
-    "Type a command or search...": "Type a command or search...",
     "Type the confirmation text here": "Type the confirmation text here",
     "Type:": "Type:",
     "UI granularity only &mdash; data is still aggregated hourly": "UI granularity only — data is still aggregated hourly",
@@ -4120,5 +4119,6 @@
     "、": ", ",
     "，": ", ",
     "，and ": ", and "
-  }
+  },
+  "Site": "Site"
 }

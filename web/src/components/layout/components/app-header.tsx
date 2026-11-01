@@ -18,16 +18,12 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { NotificationPopover } from '@/components/notification-popover'
-import { ProfileDropdown } from '@/components/profile-dropdown'
-import { Search } from '@/components/search'
+import { ThemeSwitch } from '@/components/theme-switch'
 import { useNotifications } from '@/hooks/use-notifications'
-import { useTopNavLinks } from '@/hooks/use-top-nav-links'
 
-import { defaultTopNavLinks } from '../config/top-nav.config'
-import type { TopNavLink } from '../types'
 import { Header } from './header'
+import { SignOutButton } from './sign-out-button'
 import { SystemBrand } from './system-brand'
-import { TopNav } from './top-nav'
 
 /**
  * General application Header component
@@ -38,14 +34,6 @@ import { TopNav } from './top-nav'
  * <AppHeader />
  *
  * @example
- * // Custom navigation links
- * <AppHeader navLinks={customLinks} />
- *
- * @example
- * // Hide navigation bar and search box
- * <AppHeader showTopNav={false} showSearch={false} />
- *
- * @example
  * // Fully customize left and right content
  * <AppHeader
  *   leftContent={<CustomLeft />}
@@ -54,53 +42,25 @@ import { TopNav } from './top-nav'
  */
 type AppHeaderProps = {
   /**
-   * Custom navigation links, uses default global navigation or dynamically generated from backend if not provided
-   */
-  navLinks?: TopNavLink[]
-  /**
-   * Whether to show top navigation bar
-   * @default true
-   */
-  showTopNav?: boolean
-  /**
-   * Left content, overrides TopNav if provided
+   * 左侧内容，提供时替换默认的品牌区
    */
   leftContent?: React.ReactNode
   /**
-   * Whether to show search box
-   * @default true
-   */
-  showSearch?: boolean
-  /**
-   * Custom right content, overrides default right content if provided
+   * 右侧内容，提供时替换默认的工具区
    */
   rightContent?: React.ReactNode
   /**
-   * Whether to show notification button
+   * 是否显示通知按钮
    * @default true
    */
   showNotifications?: boolean
-  /**
-   * Whether to show profile dropdown
-   * @default true
-   */
-  showProfileDropdown?: boolean
 }
 
 export function AppHeader({
-  navLinks = defaultTopNavLinks,
-  showTopNav = true,
   leftContent,
-  showSearch = true,
   rightContent,
   showNotifications = true,
-  showProfileDropdown = true,
 }: AppHeaderProps) {
-  // Prioritize dynamically generated links from backend
-  const dynamicLinks = useTopNavLinks()
-  const links = dynamicLinks.length > 0 ? dynamicLinks : navLinks
-
-  // Notifications hook
   const notifications = useNotifications()
 
   return (
@@ -115,14 +75,8 @@ export function AppHeader({
 
       {rightContent ?? (
         <div className='ms-auto flex shrink-0 items-center gap-1 sm:gap-2'>
-          {showTopNav && (
-            <div className='me-1 hidden lg:block'>
-              <TopNav links={links} />
-            </div>
-          )}
-          {showSearch && (
-            <Search className='w-8 flex-none [&>span]:hidden sm:[&>span]:inline' />
-          )}
+          {/* 明暗切换：variant='landing' 与前台顶部导航完全一致 */}
+          <ThemeSwitch variant='landing' />
           {showNotifications && (
             <NotificationPopover
               open={notifications.popoverOpen}
@@ -136,7 +90,7 @@ export function AppHeader({
             />
           )}
           <LanguageSwitcher />
-          {showProfileDropdown && <ProfileDropdown />}
+          <SignOutButton />
         </div>
       )}
     </Header>

@@ -3566,7 +3566,6 @@
     "Type": "类型",
     "Type (common)": "类型（常用）",
     "Type <username/> to confirm": "输入 <username/> 以确认",
-    "Type a command or search...": "输入命令或搜索...",
     "Type the confirmation text here": "在此输入确认文本",
     "Type:": "类型：",
     "UI granularity only &mdash; data is still aggregated hourly": "仅 UI 粒度 — 数据仍按小时汇总",
@@ -4120,5 +4119,6 @@
     "、": "、",
     "，": "，",
     "，and ": "，并"
-  }
+  },
+  "Site": "站点"
 }

@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -31,13 +31,27 @@ import { beginSignOutWindow, endSignOutWindow } from '@/lib/sign-out-window'
 interface SignOutDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /**
+   * 「正在退出」状态的回调，可选。顶部退出按钮用它来置灰自己，
+   * 避免在请求发出后还能再点一次。
+   */
+  onPendingChange?: (pending: boolean) => void
 }
 
-export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
+export function SignOutDialog({
+  open,
+  onOpenChange,
+  onPendingChange,
+}: SignOutDialogProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [isSigningOut, setIsSigningOut] = useState(false)
+
+  // 状态变化同步给外部触发器；用 setState 包一层避免渲染期直接回调。
+  useEffect(() => {
+    onPendingChange?.(isSigningOut)
+  }, [isSigningOut, onPendingChange])
   // Signing out of a protected page means the content itself has to leave;
   // signing out from a public page is a light action that stays put.
   const onProtectedRoute = useRouterState({

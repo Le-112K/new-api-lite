@@ -26,6 +26,11 @@ type BaseNavItem = {
   title: string
   badge?: string
   icon?: React.ElementType
+  /**
+   * 外链（如帮助文档站点）。侧边栏默认用 <Link> 渲染，外链必须走 <a>，
+   * 否则路由会把它当成站内路径去匹配。
+   */
+  external?: boolean
   activeUrls?: (LinkProps['to'] | (string & {}))[]
   configUrls?: (LinkProps['to'] | (string & {}))[]
   /**
