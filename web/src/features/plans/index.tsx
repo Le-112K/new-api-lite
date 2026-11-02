@@ -193,7 +193,7 @@ export function Plans() {
           {loading ? (
             <div className={gridClass(3)}>
               {['first', 'second', 'third'].map((key) => (
-                <Skeleton key={key} className='h-[380px] w-full rounded-xl' />
+                <Skeleton key={key} className='h-[460px] w-full rounded-xl' />
               ))}
             </div>
           ) : orderedPlans.length === 0 ? (
@@ -300,7 +300,7 @@ function PlanCard({
       data-card-hover='false'
       className={cn(
         // min-h 保证只有三行权益时卡片也不塌陷；h-full 让同一行的卡片等高。
-        'flex h-full min-h-[380px] flex-col',
+        'flex h-full min-h-[460px] flex-col py-0',
         isCurrent
           ? 'ring-primary/70 ring-2'
           : isRecommended && 'border-primary/50'
@@ -308,7 +308,7 @@ function PlanCard({
     >
       <CardContent className='flex h-full flex-col p-6'>
         {/* 标题区：固定最小高度，避免不同标题长度把下面的价格推歪 */}
-        <div className='flex min-h-[60px] items-start justify-between gap-3'>
+        <div className='flex min-h-[68px] items-start justify-between gap-3'>
           <div className='min-w-0'>
             <h3 className='truncate text-base font-semibold'>
               {plan.title || t('Subscription Plans')}
@@ -332,7 +332,7 @@ function PlanCard({
         </div>
 
         {/* 价格区：固定高度，保证三张卡的数字在同一基线 */}
-        <div className='flex min-h-[88px] items-end gap-2 py-4'>
+        <div className='flex min-h-[104px] items-end gap-2 py-4'>
           <span className='text-primary text-4xl leading-none font-bold'>
             ${price}
           </span>
@@ -344,7 +344,7 @@ function PlanCard({
         <Separator className='mb-4' />
 
         {/* 权益区：吃掉剩余高度，把按钮顶到底部 */}
-        <ul className='flex-1 space-y-3 pb-5'>
+        <ul className='flex-1 space-y-3.5 pb-6'>
           {benefits.map((label) => (
             <li
               key={label}
