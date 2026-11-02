@@ -248,11 +248,14 @@ export function Plans() {
  * 免得一张卡被拉成一整行的横幅。
  */
 function gridClass(count: number): string {
-  // 只有一档时必须居中：光给 max-w 而不给 mx-auto，卡片会贴在左边。
-  if (count <= 1) return 'mx-auto grid w-full max-w-sm grid-cols-1 gap-4'
-  // 多档交给 auto-fit 决定列数：每列最小 280px，容器够宽就三列并排，
-  // 不够宽自动降到两列/一列，不会把卡片压扁，间距也始终一致。
-  return 'grid grid-cols-1 gap-4 md:[grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]'
+  // 轨道宽度限制在 280~360px 且容器居中：
+  //   用 1fr 会让轨道吃掉全部剩余空间，auto-fit 折叠空轨后再二次分配，
+  //   结果是「2 张卡比 3 张卡更宽」，同一组件的比例随数据量漂移。
+  //   给出上限后每张卡宽度恒定，数量只影响排布位置，不影响尺寸。
+  if (count <= 1) {
+    return 'mx-auto grid w-full max-w-[360px] grid-cols-1 gap-4'
+  }
+  return 'grid grid-cols-1 justify-center gap-4 md:[grid-template-columns:repeat(auto-fit,minmax(280px,360px))]'
 }
 
 type PlanCardProps = {
