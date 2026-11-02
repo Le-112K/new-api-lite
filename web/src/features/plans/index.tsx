@@ -193,7 +193,7 @@ export function Plans() {
           {loading ? (
             <div className={gridClass(3)}>
               {['first', 'second', 'third'].map((key) => (
-                <Skeleton key={key} className='h-[460px] w-full rounded-xl' />
+                <Skeleton key={key} className='h-[560px] w-full rounded-xl' />
               ))}
             </div>
           ) : orderedPlans.length === 0 ? (
@@ -211,6 +211,7 @@ export function Plans() {
                   plan={record.plan}
                   isCurrent={activePlanIds.has(record.plan.id)}
                   isRecommended={record.plan.id === recommendedPlanId}
+                  tall={orderedPlans.length === 1}
                   purchaseCount={purchaseCountByPlan.get(record.plan.id) ?? 0}
                   onSubscribe={() => {
                     setSelectedPlan(record)
@@ -258,6 +259,8 @@ type PlanCardProps = {
   plan: SubscriptionPlan
   isCurrent: boolean
   isRecommended: boolean
+  /** 单档时把卡身再拉长，多档并排则收到 480 免得三列过于瘦长。 */
+  tall: boolean
   purchaseCount: number
   onSubscribe: () => void
 }
@@ -272,6 +275,7 @@ function PlanCard({
   plan,
   isCurrent,
   isRecommended,
+  tall,
   purchaseCount,
   onSubscribe,
 }: PlanCardProps) {
@@ -300,7 +304,8 @@ function PlanCard({
       data-card-hover='false'
       className={cn(
         // min-h 保证只有三行权益时卡片也不塌陷；h-full 让同一行的卡片等高。
-        'flex h-full min-h-[460px] flex-col py-0',
+        'flex h-full flex-col py-0',
+        tall ? 'min-h-[560px]' : 'min-h-[480px]',
         isCurrent
           ? 'ring-primary/70 ring-2'
           : isRecommended && 'border-primary/50'
@@ -344,7 +349,7 @@ function PlanCard({
         <Separator className='mb-4' />
 
         {/* 权益区：吃掉剩余高度，把按钮顶到底部 */}
-        <ul className='flex-1 space-y-3.5 pb-6'>
+        <ul className='flex flex-1 flex-col justify-center gap-3.5 pb-6'>
           {benefits.map((label) => (
             <li
               key={label}
