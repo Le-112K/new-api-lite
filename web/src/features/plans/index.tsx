@@ -193,7 +193,7 @@ export function Plans() {
           {loading ? (
             <div className={gridClass(3)}>
               {['first', 'second', 'third'].map((key) => (
-                <Skeleton key={key} className='h-[320px] w-full rounded-xl' />
+                <Skeleton key={key} className='h-[380px] w-full rounded-xl' />
               ))}
             </div>
           ) : orderedPlans.length === 0 ? (
@@ -247,9 +247,11 @@ export function Plans() {
  * 免得一张卡被拉成一整行的横幅。
  */
 function gridClass(count: number): string {
-  if (count <= 1) return 'grid grid-cols-1 gap-4 md:max-w-md'
-  if (count === 2) return 'grid grid-cols-1 gap-4 md:grid-cols-2'
-  return 'grid grid-cols-1 gap-4 md:grid-cols-3'
+  // 只有一档时必须居中：光给 max-w 而不给 mx-auto，卡片会贴在左边。
+  if (count <= 1) return 'mx-auto grid w-full max-w-sm grid-cols-1 gap-4'
+  // 多档交给 auto-fit 决定列数：每列最小 280px，容器够宽就三列并排，
+  // 不够宽自动降到两列/一列，不会把卡片压扁，间距也始终一致。
+  return 'grid grid-cols-1 gap-4 md:[grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]'
 }
 
 type PlanCardProps = {
@@ -297,15 +299,16 @@ function PlanCard({
     <Card
       data-card-hover='false'
       className={cn(
-        'flex h-full flex-col',
+        // min-h 保证只有三行权益时卡片也不塌陷；h-full 让同一行的卡片等高。
+        'flex h-full min-h-[380px] flex-col',
         isCurrent
           ? 'ring-primary/70 ring-2'
           : isRecommended && 'border-primary/50'
       )}
     >
-      <CardContent className='flex h-full flex-col p-5'>
+      <CardContent className='flex h-full flex-col p-6'>
         {/* 标题区：固定最小高度，避免不同标题长度把下面的价格推歪 */}
-        <div className='flex min-h-[52px] items-start justify-between gap-3'>
+        <div className='flex min-h-[60px] items-start justify-between gap-3'>
           <div className='min-w-0'>
             <h3 className='truncate text-base font-semibold'>
               {plan.title || t('Subscription Plans')}
@@ -329,8 +332,8 @@ function PlanCard({
         </div>
 
         {/* 价格区：固定高度，保证三张卡的数字在同一基线 */}
-        <div className='flex min-h-[64px] items-end gap-1.5 py-3'>
-          <span className='text-primary text-3xl leading-none font-bold'>
+        <div className='flex min-h-[88px] items-end gap-2 py-4'>
+          <span className='text-primary text-4xl leading-none font-bold'>
             ${price}
           </span>
           <span className='text-muted-foreground pb-0.5 text-xs'>
@@ -341,7 +344,7 @@ function PlanCard({
         <Separator className='mb-4' />
 
         {/* 权益区：吃掉剩余高度，把按钮顶到底部 */}
-        <ul className='flex-1 space-y-2.5 pb-4'>
+        <ul className='flex-1 space-y-3 pb-5'>
           {benefits.map((label) => (
             <li
               key={label}
@@ -356,7 +359,7 @@ function PlanCard({
         {limitReached ? (
           <Tooltip>
             <TooltipTrigger render={<div />}>
-              <Button variant='outline' className='w-full' disabled>
+              <Button variant='outline' className='h-10 w-full' disabled>
                 {t('Limit Reached')}
               </Button>
             </TooltipTrigger>
@@ -367,7 +370,7 @@ function PlanCard({
         ) : (
           <Button
             variant={isCurrent || !isRecommended ? 'outline' : 'default'}
-            className='w-full'
+            className='h-10 w-full'
             onClick={onSubscribe}
           >
             {isCurrent ? t('Renew') : t('Subscribe Now')}
