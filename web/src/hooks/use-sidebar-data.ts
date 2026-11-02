@@ -31,6 +31,7 @@ import {
   User,
   Users,
   Wallet,
+  Crown,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -87,6 +88,11 @@ export function useSidebarData(): SidebarData {
             title: t('Wallet'),
             url: '/wallet',
             icon: Wallet,
+          },
+          {
+            title: t('Subscription Plans'),
+            url: '/plans',
+            icon: Crown,
           },
           {
             title: t('Profile'),

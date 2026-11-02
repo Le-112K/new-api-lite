@@ -100,6 +100,11 @@ export function SidebarModulesCard() {
           description: t('Balance and top-up management'),
         },
         {
+          key: 'plans',
+          title: t('Subscription Plans'),
+          description: t('Browse and subscribe to a plan'),
+        },
+        {
           key: 'personal',
           title: t('Personal Settings'),
           description: t('Personal info settings'),

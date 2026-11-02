@@ -47,6 +47,7 @@ const DEFAULT_SIDEBAR_MODULES: SidebarModulesAdminConfig = {
   personal: {
     enabled: true,
     topup: true,
+    plans: true,
     personal: true,
     security: true,
   },
@@ -107,6 +108,7 @@ const URL_TO_CONFIG_MAP: Record<string, { section: string; module: string }> = {
   '/usage-logs/common': { section: 'console', module: 'log' },
   '/usage-logs/audit': { section: 'console', module: 'audit' },
   '/wallet': { section: 'personal', module: 'topup' },
+  '/plans': { section: 'personal', module: 'plans' },
   '/profile': { section: 'personal', module: 'personal' },
   '/security': { section: 'personal', module: 'security' },
   '/channels': { section: 'admin', module: 'channel' },
