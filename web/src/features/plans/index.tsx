@@ -117,6 +117,36 @@ export function Plans() {
 
   const hasActive = activeSubscriptions.length > 0
 
+  // 推荐档取排序后的中间一档：三档时正好是主力档，只有一档/两档时不标推荐，
+  // 免得"唯一选择"上挂着推荐徽标显得滑稽。
+  const recommendedPlanId = useMemo(() => {
+    if (orderedPlans.length < 3) return null
+    return orderedPlans[Math.floor(orderedPlans.length / 2)]?.plan.id ?? null
+  }, [orderedPlans])
+
+  // 生效中的订阅取最近到期的那条，用于概览条展示"用的哪档、还剩几天"。
+  const primarySubscription = useMemo(() => {
+    if (activeSubscriptions.length === 0) return null
+    return [...activeSubscriptions].sort(
+      (a, b) =>
+        (b?.subscription?.end_time ?? 0) - (a?.subscription?.end_time ?? 0)
+    )[0]
+  }, [activeSubscriptions])
+
+  const remainingDays = useMemo(() => {
+    const endTime = primarySubscription?.subscription?.end_time ?? 0
+    if (!endTime) return 0
+    return Math.max(0, Math.ceil((endTime - Date.now() / 1000) / 86400))
+  }, [primarySubscription])
+
+  const currentPlanTitle = useMemo(() => {
+    const planId = primarySubscription?.subscription?.plan_id
+    if (!planId) return ''
+    return (
+      plans.find((record) => record.plan?.id === planId)?.plan?.title ?? ''
+    )
+  }, [primarySubscription, plans])
+
   return (
     <SectionPageLayout>
       <SectionPageLayout.Title>{t('Subscription Plans')}</SectionPageLayout.Title>
@@ -140,7 +170,10 @@ export function Plans() {
                   />
                   {hasActive ? (
                     <span className={textColorMap.success}>
-                      {activeSubscriptions.length} {t('active')}
+                      {currentPlanTitle || t('Active')}
+                      {remainingDays > 0
+                        ? ` · ${remainingDays} ${t('days left')}`
+                        : ''}
                     </span>
                   ) : (
                     <span className='text-muted-foreground'>
@@ -177,6 +210,7 @@ export function Plans() {
                   key={record.plan.id}
                   plan={record.plan}
                   isCurrent={activePlanIds.has(record.plan.id)}
+                  isRecommended={record.plan.id === recommendedPlanId}
                   purchaseCount={purchaseCountByPlan.get(record.plan.id) ?? 0}
                   onSubscribe={() => {
                     setSelectedPlan(record)
@@ -221,6 +255,7 @@ function gridClass(count: number): string {
 type PlanCardProps = {
   plan: SubscriptionPlan
   isCurrent: boolean
+  isRecommended: boolean
   purchaseCount: number
   onSubscribe: () => void
 }
@@ -234,6 +269,7 @@ type PlanCardProps = {
 function PlanCard({
   plan,
   isCurrent,
+  isRecommended,
   purchaseCount,
   onSubscribe,
 }: PlanCardProps) {
@@ -262,7 +298,9 @@ function PlanCard({
       data-card-hover='false'
       className={cn(
         'flex h-full flex-col',
-        isCurrent && 'ring-primary/70 ring-2'
+        isCurrent
+          ? 'ring-primary/70 ring-2'
+          : isRecommended && 'border-primary/50'
       )}
     >
       <CardContent className='flex h-full flex-col p-5'>
@@ -282,12 +320,12 @@ function PlanCard({
             <StatusBadge variant='success' copyable={false} className='shrink-0'>
               {t('Current Plan')}
             </StatusBadge>
-          ) : (
+          ) : isRecommended ? (
             <StatusBadge variant='info' copyable={false} className='shrink-0'>
               <Sparkles className='size-3' />
-              {t('Available')}
+              {t('Recommended')}
             </StatusBadge>
-          )}
+          ) : null}
         </div>
 
         {/* 价格区：固定高度，保证三张卡的数字在同一基线 */}
@@ -303,11 +341,11 @@ function PlanCard({
         <Separator className='mb-4' />
 
         {/* 权益区：吃掉剩余高度，把按钮顶到底部 */}
-        <ul className='flex-1 space-y-2 pb-4'>
+        <ul className='flex-1 space-y-2.5 pb-4'>
           {benefits.map((label) => (
             <li
               key={label}
-              className='text-muted-foreground flex items-start gap-2 text-xs leading-relaxed'
+              className='text-muted-foreground flex items-start gap-2.5 text-xs leading-relaxed'
             >
               <Check className='text-primary mt-0.5 size-3.5 shrink-0' />
               <span className='min-w-0'>{label}</span>
@@ -328,7 +366,7 @@ function PlanCard({
           </Tooltip>
         ) : (
           <Button
-            variant={isCurrent ? 'outline' : 'default'}
+            variant={isCurrent || !isRecommended ? 'outline' : 'default'}
             className='w-full'
             onClick={onSubscribe}
           >
