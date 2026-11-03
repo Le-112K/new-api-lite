@@ -50,6 +50,85 @@ func GetSubscriptionPlans(c *gin.Context) {
 	common.ApiSuccess(c, result)
 }
 
+// PublicSubscriptionPlan 是套餐的只读展示视图。
+//
+// 未登录用户也需要看到价格与权益，所以不能直接把 model.SubscriptionPlan 吐出去
+// —— 那张表里还有 sort_order、allow_wallet_overflow 这类纯运营配置，公开没有
+// 任何好处。这里只挑卡片真正会渲染的字段。
+type PublicSubscriptionPlan struct {
+	Id                 int     `json:"id"`
+	Title              string  `json:"title"`
+	Subtitle           string  `json:"subtitle"`
+	PriceAmount        float64 `json:"price_amount"`
+	Currency           string  `json:"currency"`
+	DurationUnit       string  `json:"duration_unit"`
+	DurationValue      int     `json:"duration_value"`
+	CustomSeconds      int64   `json:"custom_seconds"`
+	TotalAmount        int64   `json:"total_amount"`
+	QuotaResetPeriod   string  `json:"quota_reset_period"`
+	// 卡片要把 "custom" 渲染成「N 天/小时」，缺了它只能显示空值。
+	QuotaResetCustomSeconds int64  `json:"quota_reset_custom_seconds"`
+	UpgradeGroup       string  `json:"upgrade_group,omitempty"`
+	MaxPurchasePerUser int     `json:"max_purchase_per_user"`
+	AllowBalancePay    bool    `json:"allow_balance_pay"`
+}
+
+// PublicSubscriptionPlanDTO 保持与登录版一致的 {plan: {...}} 包装，
+// 前端因此可以复用同一套类型与卡片组件。
+type PublicSubscriptionPlanDTO struct {
+	Plan PublicSubscriptionPlan `json:"plan"`
+}
+
+func toPublicSubscriptionPlan(p model.SubscriptionPlan) PublicSubscriptionPlan {
+	// nil 表示沿用默认值「允许余额支付」，与 NormalizeDefaults 的语义保持一致。
+	allowBalancePay := true
+	if p.AllowBalancePay != nil {
+		allowBalancePay = *p.AllowBalancePay
+	}
+	return PublicSubscriptionPlan{
+		Id:                 p.Id,
+		Title:              p.Title,
+		Subtitle:           p.Subtitle,
+		PriceAmount:        p.PriceAmount,
+		Currency:           p.Currency,
+		DurationUnit:       p.DurationUnit,
+		DurationValue:      p.DurationValue,
+		CustomSeconds:      p.CustomSeconds,
+		TotalAmount:        p.TotalAmount,
+		QuotaResetPeriod:   p.QuotaResetPeriod,
+		QuotaResetCustomSeconds: p.QuotaResetCustomSeconds,
+		UpgradeGroup:       p.UpgradeGroup,
+		MaxPurchasePerUser: p.MaxPurchasePerUser,
+		AllowBalancePay:    allowBalancePay,
+	}
+}
+
+// GetPublicSubscriptionPlans 允许未登录浏览套餐。
+//
+// 「看价格」与「买套餐」是两件事：前者不该要求账号，否则用户必须先注册才能
+// 判断值不值。这个端点只读、只暴露展示字段；下单仍然走 UserAuth 下的
+// balance/pay 接口，权限没有放松。
+func GetPublicSubscriptionPlans(c *gin.Context) {
+	if !operation_setting.IsPaymentComplianceConfirmed() {
+		common.ApiSuccess(c, []PublicSubscriptionPlanDTO{})
+		return
+	}
+
+	var plans []model.SubscriptionPlan
+	if err := model.DB.Where("enabled = ?", true).Order("sort_order desc, id desc").Find(&plans).Error; err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	result := make([]PublicSubscriptionPlanDTO, 0, len(plans))
+	for _, p := range plans {
+		p.NormalizeDefaults()
+		result = append(result, PublicSubscriptionPlanDTO{
+			Plan: toPublicSubscriptionPlan(p),
+		})
+	}
+	common.ApiSuccess(c, result)
+}
+
 func GetSubscriptionSelf(c *gin.Context) {
 	userId := c.GetInt("id")
 	settingMap, _ := model.GetUserSetting(userId, false)

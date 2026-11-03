@@ -14,7 +14,7 @@ import { PlansContent } from '.'
  * 用 showMainContainer={false} 自己管容器宽度，与 /pricing 保持一致；
  * pt-16 起步是为了避开 fixed 定位的顶部导航。
  */
-export function SubscribePage() {
+export function SubscribePage(props: { autoOpenPlanId?: number } = {}) {
   const { t } = useTranslation()
 
   return (
@@ -34,7 +34,7 @@ export function SubscribePage() {
         </header>
 
         <div className='mt-8 sm:mt-10'>
-          <PlansContent />
+          <PlansContent autoOpenPlanId={props.autoOpenPlanId} />
         </div>
       </div>
     </PublicLayout>

@@ -170,7 +170,9 @@ export async function getSelfSubscriptionFull(): Promise<
 }
 
 export async function getPublicPlans(): Promise<ApiResponse<PlanRecord[]>> {
-  const res = await api.get('/api/subscription/plans')
+  // 走公开端点：未登录也能看价格。返回的 plan 只含展示字段（无 sort_order
+  // 之类运营配置），但购买需要的 id 在里面，前端可以一份数据用到底。
+  const res = await api.get('/api/subscription/public-plans')
   return res.data
 }
 

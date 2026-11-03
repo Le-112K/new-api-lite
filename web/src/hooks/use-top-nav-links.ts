@@ -76,15 +76,16 @@ export function useTopNavLinks(): TopNavLink[] {
   }
 
   // 订阅：紧跟在模型之后、文档之前 —— 与「看产品」的两个入口相邻，
-  // 文档作为辅助说明留在最后。未登录时由 header 的 requiresAuth 分支
-  // 先弹登录提示，登录成功后回跳到该页（路由守卫会带 redirect）。
+  // 文档作为辅助说明留在最后。
   //
   // 指向 /subscribe 而不是控制台的 /plans：后者套着控制台外壳，
   // 从前台点进去会突然出现侧边栏，不像产品页。
+  //
+  // 不再设 requiresAuth：价格是公开信息，未登录也应能直接看；登录只在
+  // 真正点「立即订阅」时发生，由该页自己带 redirect 跳登录。
   links.push({
     title: t('Subscription'),
     href: '/subscribe',
-    requiresAuth: !isAuthed,
   })
 
   // Docs (supports external links)

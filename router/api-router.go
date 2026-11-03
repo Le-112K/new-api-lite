@@ -95,6 +95,10 @@ func SetApiRouter(router *gin.Engine) {
 		}
 
 		// Subscription billing (plans, purchase, admin management)
+		//
+		// 套餐列表拆成公私两条：public-plans 供未登录用户浏览价格（只读展示字段），
+		// plans 留在 UserAuth 下给控制台用。购买接口仍然全部需要登录。
+		apiRouter.GET("/subscription/public-plans", middleware.DisableCache(), controller.GetPublicSubscriptionPlans)
 		subscriptionRoute := apiRouter.Group("/subscription")
 		subscriptionRoute.Use(middleware.UserAuth())
 		{

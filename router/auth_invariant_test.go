@@ -30,6 +30,9 @@ var anonymousAllowedRoutes = []string{
 	"GET /api/user/groups",
 	// 模型价格页对游客公开（仅受 HeaderNavModule 开关控制）。
 	"GET /api/pricing",
+	// 订阅套餐的只读展示视图：未登录也要能比价。购买一律走 UserAuth 下的
+	// /subscription/balance|epay/pay，所以这里放行的只有"看得到价格"。
+	"GET /api/subscription/public-plans",
 
 	// 匿名账号入口（同一个 /auth/entry 既登录也发起注册）。
 	"GET /api/verification",

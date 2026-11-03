@@ -1,5 +1,6 @@
+import { useNavigate } from '@tanstack/react-router'
 import { Check, Crown, Info, Sparkles } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { SectionPageLayout } from '@/components/layout'
@@ -41,13 +42,16 @@ import { useAuthStore } from '@/stores/auth-store'
  * 此前套餐是以「小部件」的形式塞在钱包页右栏，只能逐个切换查看，也挤不出位置
  * 说明权益。抽成独立页之后可以按列并排、等高对齐，一眼比完三档差异。
  *
- * 数据来源与购买流程完全复用原有实现（/api/subscription/plans、/api/subscription/self、
- * SubscriptionPurchaseDialog），这里只负责呈现。
+ * 数据来源与购买流程完全复用原有实现（/api/subscription/public-plans、
+ * /api/subscription/self、SubscriptionPurchaseDialog），这里只负责呈现。
+ * 前者对游客开放，所以本组件在没有登录态时也能渲染完整套餐；后者与所有
+ * 支付接口仍然需要登录，只是不再拦在"看价格"这一步之前。
  */
-export function PlansContent() {
+export function PlansContent(props: { autoOpenPlanId?: number } = {}) {
   const { t } = useTranslation()
   const user = useAuthStore((state) => state.auth.user)
-  const { topupInfo } = useTopupInfo()
+  // 余额只有登录后才有意义；匿名请求会 401，白白在控制台刷一条错误。
+  const { topupInfo } = useTopupInfo({ enabled: Boolean(user) })
 
   const [plans, setPlans] = useState<PlanRecord[]>([])
   const [activeSubscriptions, setActiveSubscriptions] = useState<
@@ -59,6 +63,8 @@ export function PlansContent() {
   const [loading, setLoading] = useState(true)
   const [selectedPlan, setSelectedPlan] = useState<PlanRecord | null>(null)
   const [purchaseOpen, setPurchaseOpen] = useState(false)
+  const navigate = useNavigate()
+  const autoOpenedRef = useRef(false)
 
   const loadPlans = useCallback(async () => {
     try {
@@ -85,11 +91,45 @@ export function PlansContent() {
   useEffect(() => {
     const init = async () => {
       setLoading(true)
-      await Promise.all([loadPlans(), loadSubscription()])
+      if (user) {
+        await Promise.all([loadPlans(), loadSubscription()])
+      } else {
+        // 匿名只需要套餐本身。「我的订阅」和余额都是个人数据，未登录去取
+        // 必然 401，还会让页面在控制台刷一片红。
+        setActiveSubscriptions([])
+        setAllSubscriptions([])
+        await loadPlans()
+      }
       setLoading(false)
     }
     init()
-  }, [loadPlans, loadSubscription])
+  }, [loadPlans, loadSubscription, user])
+
+  // 未登录时点「立即订阅」：先去登录，登录后回到本页并自动打开这档的购买框。
+  // 计划 id 放进 redirect，用户不用回来再找一遍刚点的是哪张卡。
+  const handleSubscribe = useCallback(
+    (record: PlanRecord) => {
+      const planId = record?.plan?.id
+      if (!user) {
+        const target = planId ? `/subscribe?plan=${planId}` : '/subscribe'
+        void navigate({ to: '/sign-in', search: { redirect: target } })
+        return
+      }
+      setSelectedPlan(record)
+      setPurchaseOpen(true)
+    },
+    [navigate, user]
+  )
+
+  // 登录回跳后把用户点过的那档直接打开；只认一次，关掉不要再弹。
+  useEffect(() => {
+    if (autoOpenedRef.current || !user || !props.autoOpenPlanId) return
+    const record = plans.find((item) => item?.plan?.id === props.autoOpenPlanId)
+    if (!record) return
+    autoOpenedRef.current = true
+    setSelectedPlan(record)
+    setPurchaseOpen(true)
+  }, [plans, props.autoOpenPlanId, user])
 
   // 同一套餐可能有多条记录（续费/叠加），按 plan_id 聚合成「当前生效」与「累计购买」两个视图。
   const activePlanIds = useMemo(
@@ -215,10 +255,7 @@ export function PlansContent() {
                 isRecommended={record.plan.id === recommendedPlanId}
                 tall={orderedPlans.length === 1}
                 purchaseCount={purchaseCountByPlan.get(record.plan.id) ?? 0}
-                onSubscribe={() => {
-                  setSelectedPlan(record)
-                  setPurchaseOpen(true)
-                }}
+                onSubscribe={() => handleSubscribe(record)}
               />
             ))}
           </div>
@@ -229,7 +266,8 @@ export function PlansContent() {
         open={purchaseOpen}
         onOpenChange={(open) => {
           setPurchaseOpen(open)
-          if (!open) loadSubscription()
+          // 关闭时刷新「我的订阅」；匿名没有订阅可刷，别白发一次 401。
+          if (!open && user) loadSubscription()
         }}
         plan={selectedPlan}
         enableOnlineTopUp={topupInfo?.enable_online_topup}

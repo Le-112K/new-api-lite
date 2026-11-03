@@ -114,10 +114,15 @@ function parseDiscountMap(data: unknown): Record<number, number> {
   )
 }
 
-export function useTopupInfo() {
+/**
+ * @param options.enabled 传 false 时不发请求。余额属于个人数据，匿名页面
+ *   （如公开的订阅页）不该为它触发一次必然 401 的调用。
+ */
+export function useTopupInfo(options: { enabled?: boolean } = {}) {
+  const enabled = options.enabled ?? true
   const [topupInfo, setTopupInfo] = useState<TopupInfo | null>(null)
   const [presetAmounts, setPresetAmounts] = useState<PresetAmount[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(enabled)
 
   const fetchTopupInfo = useCallback(async () => {
     try {
@@ -158,6 +163,11 @@ export function useTopupInfo() {
   }, [])
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false)
+      return
+    }
+
     let cancelled = false
 
     queueMicrotask(() => {
@@ -167,7 +177,7 @@ export function useTopupInfo() {
     return () => {
       cancelled = true
     }
-  }, [fetchTopupInfo])
+  }, [enabled, fetchTopupInfo])
 
   return {
     topupInfo,

@@ -1,32 +1,28 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
+import { z } from 'zod'
 
 import { SubscribePage } from '@/features/plans/subscribe-page'
-import { resolveAuthentication } from '@/lib/auth-session'
-import { useAuthStore } from '@/stores/auth-store'
 
 /**
  * 前台独立订阅页。
  *
- * 它不在 `_authenticated` 布局下 —— 那套布局会渲染控制台侧边栏，
- * 与"独立页"的要求相悖。所以登录守卫在这里单独做：
- * 先等会话解析完成（带 10s 兜底，避免网络卡住时路由一直挂着），
- * 仍未登录就带回跳地址丢回首页的登录弹窗。
+ * 它不是「登录后才能看」的页面：价格与权益本来就是公开信息（模型广场的
+ * 档位胶囊用的也是同一份套餐数据），把浏览锁在登录之后只会让用户先交账号
+ * 才知道值不值。这里不再做会话解析与重定向 —— 未登录直接渲染，点「立即
+ * 订阅」时才去登录，登录后带 `?plan=<id>` 回来自动打开对应购买框。
+ *
+ * 需要鉴权的是交易与个人数据：`/api/subscription/self`、余额支付、ePay 都
+ * 仍在 UserAuth 之下，进入控制台的 /plans 也仍然要登录。
  */
+const subscribeSearchSchema = z.object({
+  /** 登录回跳时带上用户点过的套餐，回来直接开购买框。 */
+  plan: z.coerce.number().int().positive().optional().catch(undefined),
+})
+
 export const Route = createFileRoute('/subscribe')({
-  beforeLoad: async ({ location, preload }) => {
-    if (preload) return
-
-    await Promise.race([
-      resolveAuthentication(),
-      new Promise<void>((resolve) => setTimeout(resolve, 10_000)),
-    ])
-
-    const { auth } = useAuthStore.getState()
-    if (!auth.user || !auth.accessToken) {
-      const params = new URLSearchParams({ auth: 'signin' })
-      params.set('redirect', location.href)
-      throw redirect({ href: `/?${params.toString()}`, replace: true })
-    }
+  validateSearch: subscribeSearchSchema,
+  component: function SubscribeRoute() {
+    const { plan } = Route.useSearch()
+    return <SubscribePage autoOpenPlanId={plan} />
   },
-  component: SubscribePage,
 })
