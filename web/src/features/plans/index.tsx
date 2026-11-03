@@ -158,43 +158,39 @@ export function PlansContent() {
   return (
     <>
       <div className='mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5'>
-        {/* 当前订阅概览：没有生效订阅时给一句引导，而不是留一块空白 */}
-        <Card data-card-hover='false' className='gap-0 overflow-hidden py-0'>
-          <CardContent className='flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5'>
-            <div className='flex min-w-0 items-center gap-2.5'>
-              <Crown className='text-muted-foreground size-4 shrink-0' />
-              <span className='text-sm font-medium'>
-                {t('My Subscriptions')}
-              </span>
-              <span className='flex items-center gap-1.5 text-xs font-medium'>
-                <span
-                  className={cn(
-                    'size-1.5 shrink-0 rounded-full',
-                    hasActive ? dotColorMap.success : dotColorMap.neutral
-                  )}
-                  aria-hidden='true'
-                />
-                {hasActive ? (
+        {/* 当前订阅概览：只在有生效订阅时出现。
+            没有订阅时这块只是重复一句「你没订阅」，占掉第一屏的黄金位置，
+            不如直接让用户看到套餐本身。 */}
+        {hasActive && (
+          <Card data-card-hover='false' className='gap-0 overflow-hidden py-0'>
+            <CardContent className='flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5'>
+              <div className='flex min-w-0 items-center gap-2.5'>
+                <Crown className='text-muted-foreground size-4 shrink-0' />
+                <span className='text-sm font-medium'>
+                  {t('My Subscriptions')}
+                </span>
+                <span className='flex items-center gap-1.5 text-xs font-medium'>
+                  <span
+                    className={cn(
+                      'size-1.5 shrink-0 rounded-full',
+                      dotColorMap.success
+                    )}
+                    aria-hidden='true'
+                  />
                   <span className={textColorMap.success}>
                     {currentPlanTitle || t('Active')}
                     {remainingDays > 0
                       ? ` · ${remainingDays} ${t('days left')}`
                       : ''}
                   </span>
-                ) : (
-                  <span className='text-muted-foreground'>
-                    {t('No Active')}
-                  </span>
-                )}
-              </span>
-            </div>
-            <p className='text-muted-foreground text-xs'>
-              {hasActive
-                ? t('Your active plans are marked below')
-                : t('Subscribe to a plan for model access')}
-            </p>
-          </CardContent>
-        </Card>
+                </span>
+              </div>
+              <p className='text-muted-foreground text-xs'>
+                {t('Your active plans are marked below')}
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {loading ? (
           <div className={gridClass(3)}>
