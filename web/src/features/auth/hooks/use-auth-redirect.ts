@@ -24,6 +24,7 @@ import {
   getSavedLanguage,
   sanitizeAuthRedirect,
 } from '@/features/auth/lib/auth-redirect'
+import { normalizeInterfaceLanguage } from '@/i18n/languages'
 import { applyAuthBundle, isAuthBundle } from '@/lib/api'
 import { AuthOperationError } from '@/lib/secure-verification'
 import { useAuthStore, type AuthBundle } from '@/stores/auth-store'
@@ -56,8 +57,13 @@ export function useAuthRedirect() {
         return
       }
       applyAuthBundle(bundle)
-      const savedLang = getSavedLanguage(bundle.user)
-      if (savedLang && savedLang !== i18n.language) {
+      // 账号里存的语言可能是 "zh" 或 "zh-CN"，直接交给 i18next 会匹配不上
+      // 内部代号 "zhCN"：语言包按未知语言回退到英文，界面于是「设置是中文、
+      // 显示却是英文」，手动切一次语言才恢复。这里先归一到内部代号。
+      const savedLang = normalizeInterfaceLanguage(
+        getSavedLanguage(bundle.user)
+      )
+      if (savedLang !== i18n.language) {
         await i18n.changeLanguage(savedLang)
       }
 

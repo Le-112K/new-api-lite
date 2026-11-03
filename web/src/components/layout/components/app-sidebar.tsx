@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { Sidebar, SidebarContent, SidebarRail } from '@/components/ui/sidebar'
 import { useLayout } from '@/context/layout-provider'
@@ -48,6 +49,7 @@ import { SidebarViewHeader } from './sidebar-view-header'
  * in the registry; this component requires no changes.
  */
 export function AppSidebar() {
+  const { t } = useTranslation()
   const { collapsible, variant } = useLayout()
   const { key, view, navGroups } = useSidebarView()
   const shouldReduce = useReducedMotion()
@@ -55,7 +57,7 @@ export function AppSidebar() {
   // 站点入口：订阅被丢弃，首页变返回箭头，模型/文档并进「常规」。
   // 规则在 lib/sidebar-site-links.ts 里，那里有测试锁行为。
   const topLinks = useTopNavLinks()
-  const siteItems = useMemo(() => toSiteNavItems(topLinks), [topLinks])
+  const siteItems = useMemo(() => toSiteNavItems(topLinks, t), [topLinks, t])
   const groups = useMemo<NavGroupProps[]>(
     () => withSiteItems(navGroups, siteItems, Boolean(view)),
     [navGroups, siteItems, view]

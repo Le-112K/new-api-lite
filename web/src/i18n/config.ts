@@ -20,7 +20,10 @@ import i18n from 'i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 import { initReactI18next } from 'react-i18next'
 
-import { convertDetectedLanguage } from './languages'
+import {
+  convertDetectedLanguage,
+  normalizeInterfaceLanguage,
+} from './languages'
 
 // Locales load through a backend instead of inline `resources`: en.json and
 // zh.json together are over half a megabyte of JSON and used to make up more
@@ -37,7 +40,10 @@ export const lazyLocaleBackend = {
     callback: (err: unknown, data?: unknown) => void
   ) {
     void (async () => {
-      const file = language === 'zhCN' ? 'zh' : 'en'
+      // 归一后再选文件：调用方可能传来 "zh" / "zh-CN"（账号设置、旧缓存），
+      // 直接字符串比较只认 "zhCN"，其余一律落到 en.json——表现为「语言是中文、
+      // 界面却是英文」，正是这套懒加载最容易踩的坑。
+      const file = normalizeInterfaceLanguage(language) === 'zhCN' ? 'zh' : 'en'
       try {
         const module = await import(`./locales/${file}.json`)
         // i18next's addResourceBundle(lng, ns, data) stores `data` as the

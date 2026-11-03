@@ -21,9 +21,7 @@ import { describe, expect, it } from 'vitest'
 
 import { lazyLocaleBackend } from './config'
 
-function readNamespace(
-  language: string
-): Promise<Record<string, unknown>> {
+function readNamespace(language: string): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
     lazyLocaleBackend.read(language, 'translation', (err, data) => {
       if (err) reject(err as Error)
@@ -52,6 +50,16 @@ describe('lazy locale backend', () => {
     // Keys are English source strings, so a failed lookup silently looks like
     // correct English — assert a value that differs from its key.
     expect(zh['Password Login']).not.toBe('Password Login')
+  })
+
+  // 账号里存的语言、旧缓存里的写法可能是 zh / zh-CN / zh_CN。以前这里用
+  // 严格字符串比较，非 "zhCN" 一律落到 en.json —— 界面「设置是中文、显示是
+  // 英文」，手动切一次语言才恢复。回归用例锁住：中文的任何写法都要出中文。
+  it('treats every Chinese spelling as the Chinese bundle', async () => {
+    for (const language of ['zh', 'zh-CN', 'zh_CN', 'zh-TW', 'zhcn']) {
+      const data = await readNamespace(language)
+      expect(data['Password Login'], language).toBe('密码登录')
+    }
   })
 })
 

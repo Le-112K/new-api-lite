@@ -1,4 +1,5 @@
-import { ArrowLeft, BookOpen, Boxes, Link2 } from 'lucide-react'
+import type { TFunction } from 'i18next'
+import { BookOpen, Boxes, ChevronLeft, Link2 } from 'lucide-react'
 
 import type { TopNavLink } from '@/hooks/use-top-nav-links'
 
@@ -18,7 +19,7 @@ import type { NavGroup, NavLink } from '../types'
  */
 const DROPPED_HREFS = new Set(['/subscribe'])
 
-/** 站点入口用哪个图标。首页固定用返回箭头，其余按路径判断。 */
+/** 站点入口用哪个图标。首页固定用返回箭头（"<" 样式），其余按路径判断。 */
 function iconForLink(href: string, external?: boolean) {
   if (external) return BookOpen
   if (href.startsWith('/pricing') || href.startsWith('/models')) return Boxes
@@ -26,15 +27,23 @@ function iconForLink(href: string, external?: boolean) {
   return Link2
 }
 
-export function toSiteNavItems(links: TopNavLink[]): NavLink[] {
+export function toSiteNavItems(links: TopNavLink[], t: TFunction): NavLink[] {
   return links
     .filter((link) => !DROPPED_HREFS.has(link.href))
     .map<NavLink>((link) => ({
-      title: link.title,
+      // 控制台里的叫法与前台不同：首页是「回到站点」的动作，叫「返回首页」；
+      // 模型指向对外模型广场，叫「模型广场」。只改措辞，数据源仍与前台顶栏
+      // 共用，前台导航的文字不受影响。
+      title:
+        link.href === '/'
+          ? t('Back to home')
+          : link.href === '/pricing'
+            ? t('Model plaza')
+            : link.title,
       url: link.href,
       external: link.external,
       icon:
-        link.href === '/' ? ArrowLeft : iconForLink(link.href, link.external),
+        link.href === '/' ? ChevronLeft : iconForLink(link.href, link.external),
       activeUrls: [link.href],
     }))
 }
