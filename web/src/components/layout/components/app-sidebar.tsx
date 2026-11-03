@@ -102,7 +102,10 @@ export function AppSidebar() {
             transition={MOTION_TRANSITION.fast}
             className='flex flex-col'
           >
-            {siteNavGroup && (
+            {/* 站点入口只属于根视图。设置这类「钻入式」工作区是独立上下文，
+                这里再挂一份首页/模型/订阅/文档，会让侧边栏同时出现两套导航，
+                用户以为设置页里能直接跳产品页，实际点走就离开了当前工作区。 */}
+            {!view && siteNavGroup && (
               <NavGroup
                 key={siteNavGroup.id || siteNavGroup.title}
                 {...siteNavGroup}
