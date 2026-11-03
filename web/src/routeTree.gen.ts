@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as authRouteRouteImport } from './routes/(auth)/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
+import { Route as SubscribeRouteImport } from './routes/subscribe'
 import { Route as UserAgreementRouteImport } from './routes/user-agreement'
 import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
@@ -79,6 +80,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
   id: '/privacy-policy',
   path: '/privacy-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SubscribeRoute = SubscribeRouteImport.update({
+  id: '/subscribe',
+  path: '/subscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UserAgreementRoute = UserAgreementRouteImport.update({
@@ -360,6 +366,7 @@ const AuthenticatedSystemSettingsSiteSectionRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
+  '/subscribe': typeof SubscribeRoute
   '/user-agreement': typeof UserAgreementRoute
   '/verify': typeof VerifyRoute
   '/system-settings': typeof AuthenticatedSystemSettingsRouteRouteWithChildren
@@ -413,6 +420,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
+  '/subscribe': typeof SubscribeRoute
   '/user-agreement': typeof UserAgreementRoute
   '/verify': typeof VerifyRoute
   '/forgot-password': typeof authForgotPasswordRoute
@@ -468,6 +476,7 @@ export interface FileRoutesById {
   '/(auth)': typeof authRouteRouteWithChildren
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/privacy-policy': typeof PrivacyPolicyRoute
+  '/subscribe': typeof SubscribeRoute
   '/user-agreement': typeof UserAgreementRoute
   '/verify': typeof VerifyRoute
   '/_authenticated/system-settings': typeof AuthenticatedSystemSettingsRouteRouteWithChildren
@@ -523,6 +532,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/privacy-policy'
+    | '/subscribe'
     | '/user-agreement'
     | '/verify'
     | '/system-settings'
@@ -576,6 +586,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/privacy-policy'
+    | '/subscribe'
     | '/user-agreement'
     | '/verify'
     | '/forgot-password'
@@ -630,6 +641,7 @@ export interface FileRouteTypes {
     | '/(auth)'
     | '/_authenticated'
     | '/privacy-policy'
+    | '/subscribe'
     | '/user-agreement'
     | '/verify'
     | '/_authenticated/system-settings'
@@ -686,6 +698,7 @@ export interface RootRouteChildren {
   authRouteRoute: typeof authRouteRouteWithChildren
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
+  SubscribeRoute: typeof SubscribeRoute
   UserAgreementRoute: typeof UserAgreementRoute
   VerifyRoute: typeof VerifyRoute
   errors401Route: typeof errors401Route
@@ -726,6 +739,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy-policy'
       fullPath: '/privacy-policy'
       preLoaderRoute: typeof PrivacyPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/subscribe': {
+      id: '/subscribe'
+      path: '/subscribe'
+      fullPath: '/subscribe'
+      preLoaderRoute: typeof SubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/user-agreement': {
@@ -1205,6 +1225,7 @@ const rootRouteChildren: RootRouteChildren = {
   authRouteRoute: authRouteRouteWithChildren,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
+  SubscribeRoute: SubscribeRoute,
   UserAgreementRoute: UserAgreementRoute,
   VerifyRoute: VerifyRoute,
   errors401Route: errors401Route,

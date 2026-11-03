@@ -3,12 +3,20 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { SectionPageLayout } from '@/components/layout'
-import { StatusBadge, dotColorMap, textColorMap } from '@/components/status-badge'
+import {
+  StatusBadge,
+  dotColorMap,
+  textColorMap,
+} from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import {
   getPublicPlans,
   getSelfSubscriptionFull,
@@ -36,7 +44,7 @@ import { useAuthStore } from '@/stores/auth-store'
  * 数据来源与购买流程完全复用原有实现（/api/subscription/plans、/api/subscription/self、
  * SubscriptionPurchaseDialog），这里只负责呈现。
  */
-export function Plans() {
+export function PlansContent() {
   const { t } = useTranslation()
   const user = useAuthStore((state) => state.auth.user)
   const { topupInfo } = useTopupInfo()
@@ -111,7 +119,9 @@ export function Plans() {
       .sort((a, b) => {
         const orderDiff = (a.plan.sort_order ?? 0) - (b.plan.sort_order ?? 0)
         if (orderDiff !== 0) return orderDiff
-        return Number(a.plan.price_amount || 0) - Number(b.plan.price_amount || 0)
+        return (
+          Number(a.plan.price_amount || 0) - Number(b.plan.price_amount || 0)
+        )
       })
   }, [plans])
 
@@ -142,87 +152,82 @@ export function Plans() {
   const currentPlanTitle = useMemo(() => {
     const planId = primarySubscription?.subscription?.plan_id
     if (!planId) return ''
-    return (
-      plans.find((record) => record.plan?.id === planId)?.plan?.title ?? ''
-    )
+    return plans.find((record) => record.plan?.id === planId)?.plan?.title ?? ''
   }, [primarySubscription, plans])
 
   return (
-    <SectionPageLayout>
-      <SectionPageLayout.Title>{t('Subscription Plans')}</SectionPageLayout.Title>
-      <SectionPageLayout.Content>
-        <div className='mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5'>
-          {/* 当前订阅概览：没有生效订阅时给一句引导，而不是留一块空白 */}
-          <Card data-card-hover='false' className='gap-0 overflow-hidden py-0'>
-            <CardContent className='flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5'>
-              <div className='flex min-w-0 items-center gap-2.5'>
-                <Crown className='text-muted-foreground size-4 shrink-0' />
-                <span className='text-sm font-medium'>
-                  {t('My Subscriptions')}
-                </span>
-                <span className='flex items-center gap-1.5 text-xs font-medium'>
-                  <span
-                    className={cn(
-                      'size-1.5 shrink-0 rounded-full',
-                      hasActive ? dotColorMap.success : dotColorMap.neutral
-                    )}
-                    aria-hidden='true'
-                  />
-                  {hasActive ? (
-                    <span className={textColorMap.success}>
-                      {currentPlanTitle || t('Active')}
-                      {remainingDays > 0
-                        ? ` · ${remainingDays} ${t('days left')}`
-                        : ''}
-                    </span>
-                  ) : (
-                    <span className='text-muted-foreground'>
-                      {t('No Active')}
-                    </span>
+    <>
+      <div className='mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5'>
+        {/* 当前订阅概览：没有生效订阅时给一句引导，而不是留一块空白 */}
+        <Card data-card-hover='false' className='gap-0 overflow-hidden py-0'>
+          <CardContent className='flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5'>
+            <div className='flex min-w-0 items-center gap-2.5'>
+              <Crown className='text-muted-foreground size-4 shrink-0' />
+              <span className='text-sm font-medium'>
+                {t('My Subscriptions')}
+              </span>
+              <span className='flex items-center gap-1.5 text-xs font-medium'>
+                <span
+                  className={cn(
+                    'size-1.5 shrink-0 rounded-full',
+                    hasActive ? dotColorMap.success : dotColorMap.neutral
                   )}
-                </span>
-              </div>
-              <p className='text-muted-foreground text-xs'>
-                {hasActive
-                  ? t('Your active plans are marked below')
-                  : t('Subscribe to a plan for model access')}
-              </p>
+                  aria-hidden='true'
+                />
+                {hasActive ? (
+                  <span className={textColorMap.success}>
+                    {currentPlanTitle || t('Active')}
+                    {remainingDays > 0
+                      ? ` · ${remainingDays} ${t('days left')}`
+                      : ''}
+                  </span>
+                ) : (
+                  <span className='text-muted-foreground'>
+                    {t('No Active')}
+                  </span>
+                )}
+              </span>
+            </div>
+            <p className='text-muted-foreground text-xs'>
+              {hasActive
+                ? t('Your active plans are marked below')
+                : t('Subscribe to a plan for model access')}
+            </p>
+          </CardContent>
+        </Card>
+
+        {loading ? (
+          <div className={gridClass(3)}>
+            {['first', 'second', 'third'].map((key) => (
+              <Skeleton key={key} className='h-[560px] w-full rounded-xl' />
+            ))}
+          </div>
+        ) : orderedPlans.length === 0 ? (
+          <Card data-card-hover='false'>
+            <CardContent className='text-muted-foreground flex flex-col items-center gap-2 py-12 text-sm'>
+              <Info className='size-5' />
+              {t('No plans available')}
             </CardContent>
           </Card>
-
-          {loading ? (
-            <div className={gridClass(3)}>
-              {['first', 'second', 'third'].map((key) => (
-                <Skeleton key={key} className='h-[560px] w-full rounded-xl' />
-              ))}
-            </div>
-          ) : orderedPlans.length === 0 ? (
-            <Card data-card-hover='false'>
-              <CardContent className='text-muted-foreground flex flex-col items-center gap-2 py-12 text-sm'>
-                <Info className='size-5' />
-                {t('No plans available')}
-              </CardContent>
-            </Card>
-          ) : (
-            <div className={gridClass(orderedPlans.length)}>
-              {orderedPlans.map((record) => (
-                <PlanCard
-                  key={record.plan.id}
-                  plan={record.plan}
-                  isCurrent={activePlanIds.has(record.plan.id)}
-                  isRecommended={record.plan.id === recommendedPlanId}
-                  tall={orderedPlans.length === 1}
-                  purchaseCount={purchaseCountByPlan.get(record.plan.id) ?? 0}
-                  onSubscribe={() => {
-                    setSelectedPlan(record)
-                    setPurchaseOpen(true)
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </SectionPageLayout.Content>
+        ) : (
+          <div className={gridClass(orderedPlans.length)}>
+            {orderedPlans.map((record) => (
+              <PlanCard
+                key={record.plan.id}
+                plan={record.plan}
+                isCurrent={activePlanIds.has(record.plan.id)}
+                isRecommended={record.plan.id === recommendedPlanId}
+                tall={orderedPlans.length === 1}
+                purchaseCount={purchaseCountByPlan.get(record.plan.id) ?? 0}
+                onSubscribe={() => {
+                  setSelectedPlan(record)
+                  setPurchaseOpen(true)
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       <SubscriptionPurchaseDialog
         open={purchaseOpen}
@@ -236,6 +241,27 @@ export function Plans() {
         userQuota={user?.quota}
         onPurchaseSuccess={loadSubscription}
       />
+    </>
+  )
+}
+
+/**
+ * 控制台内的订阅页外壳。
+ *
+ * 内容体（{@link PlansContent}）与前台独立页共用，这里只负责套上控制台的
+ * 页面骨架与标题，所以两个入口看到的是同一份数据与同一套卡片。
+ */
+export function Plans() {
+  const { t } = useTranslation()
+
+  return (
+    <SectionPageLayout>
+      <SectionPageLayout.Title>
+        {t('Subscription Plans')}
+      </SectionPageLayout.Title>
+      <SectionPageLayout.Content>
+        <PlansContent />
+      </SectionPageLayout.Content>
     </SectionPageLayout>
   )
 }
@@ -328,7 +354,11 @@ function PlanCard({
             )}
           </div>
           {isCurrent ? (
-            <StatusBadge variant='success' copyable={false} className='shrink-0'>
+            <StatusBadge
+              variant='success'
+              copyable={false}
+              className='shrink-0'
+            >
               {t('Current Plan')}
             </StatusBadge>
           ) : isRecommended ? (
