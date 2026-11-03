@@ -248,14 +248,14 @@ export function Plans() {
  * 免得一张卡被拉成一整行的横幅。
  */
 function gridClass(count: number): string {
-  // 轨道宽度限制在 280~360px 且容器居中：
-  //   用 1fr 会让轨道吃掉全部剩余空间，auto-fit 折叠空轨后再二次分配，
-  //   结果是「2 张卡比 3 张卡更宽」，同一组件的比例随数据量漂移。
-  //   给出上限后每张卡宽度恒定，数量只影响排布位置，不影响尺寸。
-  if (count <= 1) {
-    return 'mx-auto grid w-full max-w-[360px] grid-cols-1 gap-4'
-  }
-  return 'grid grid-cols-1 justify-center gap-4 md:[grid-template-columns:repeat(auto-fit,minmax(280px,360px))]'
+  // 列数固定，不交给 auto-fit 决定：auto-fit 在窗口变窄时会先把 3 列拆成
+  // 2+1，第三张卡孤零零换到第二行，比挤一点更难看。
+  //   手机（<768px，Tailwind 的 md 断点）→ 单列纵向堆叠
+  //   ≥768px → 恒定列数，卡片等宽自适应，窗口怎么缩放都不换行
+  // 只有一档时单独收窄居中，避免一张卡被拉成整行横幅。
+  if (count <= 1) return 'mx-auto grid w-full max-w-[360px] grid-cols-1 gap-4'
+  if (count === 2) return 'grid grid-cols-1 gap-4 md:grid-cols-2'
+  return 'grid grid-cols-1 gap-4 md:grid-cols-3'
 }
 
 type PlanCardProps = {
@@ -307,16 +307,16 @@ function PlanCard({
       data-card-hover='false'
       className={cn(
         // min-h 保证只有三行权益时卡片也不塌陷；h-full 让同一行的卡片等高。
-        'flex h-full flex-col py-0',
+        'flex h-full min-w-0 flex-col py-0',
         tall ? 'min-h-[560px]' : 'min-h-[480px]',
         isCurrent
           ? 'ring-primary/70 ring-2'
           : isRecommended && 'border-primary/50'
       )}
     >
-      <CardContent className='flex h-full flex-col p-6'>
+      <CardContent className='flex h-full flex-col p-4 sm:p-5 lg:p-6'>
         {/* 标题区：固定最小高度，避免不同标题长度把下面的价格推歪 */}
-        <div className='flex min-h-[68px] items-start justify-between gap-3'>
+        <div className='flex min-h-[60px] items-start justify-between gap-2 sm:min-h-[68px] sm:gap-3'>
           <div className='min-w-0'>
             <h3 className='truncate text-base font-semibold'>
               {plan.title || t('Subscription Plans')}
@@ -340,11 +340,11 @@ function PlanCard({
         </div>
 
         {/* 价格区：固定高度，保证三张卡的数字在同一基线 */}
-        <div className='flex min-h-[104px] items-end gap-2 py-4'>
-          <span className='text-primary text-4xl leading-none font-bold'>
+        <div className='flex min-h-[88px] items-end gap-2 py-3 sm:min-h-[104px] sm:py-4'>
+          <span className='text-primary text-3xl leading-none font-bold whitespace-nowrap sm:text-4xl'>
             ${price}
           </span>
-          <span className='text-muted-foreground pb-0.5 text-xs'>
+          <span className='text-muted-foreground shrink-0 pb-0.5 text-xs whitespace-nowrap'>
             / {formatDuration(plan, t)}
           </span>
         </div>
@@ -359,7 +359,7 @@ function PlanCard({
               className='text-muted-foreground flex items-start gap-2.5 text-xs leading-relaxed'
             >
               <Check className='text-primary mt-0.5 size-3.5 shrink-0' />
-              <span className='min-w-0'>{label}</span>
+              <span className='min-w-0 break-words'>{label}</span>
             </li>
           ))}
         </ul>
