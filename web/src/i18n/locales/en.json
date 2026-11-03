@@ -4166,6 +4166,7 @@
     "The upstream provider returned a broken or unexpected response.": "The upstream provider returned a broken or unexpected response.",
     "Retry once; if it repeats, switch to another model.": "Retry once; if it repeats, switch to another model.",
     "The model timed out or is offline for maintenance.": "The model timed out or is offline for maintenance.",
-    "Retry later or pick another model.": "Retry later or pick another model."
+    "Retry later or pick another model.": "Retry later or pick another model.",
+    "Online payment": "Online payment"
   }
 }

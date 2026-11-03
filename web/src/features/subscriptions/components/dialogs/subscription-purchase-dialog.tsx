@@ -16,19 +16,19 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Crown, CalendarClock, Package } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { Crown, CalendarClock, Package, CreditCard, Wallet } from 'lucide-react'
+import { useState, useEffect, type ElementType } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { Dialog } from '@/components/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Combobox } from '@/components/ui/combobox'
 import { Separator } from '@/components/ui/separator'
 import { useSystemConfig } from '@/hooks/use-system-config'
 import { formatQuota } from '@/lib/format'
 import { handleServerError } from '@/lib/handle-server-error'
+import { cn } from '@/lib/utils'
 import { DEFAULT_CURRENCY_CONFIG } from '@/stores/system-config-store'
 
 import { paySubscriptionEpay, paySubscriptionBalance } from '../../api'
@@ -52,26 +52,80 @@ interface Props {
   onPurchaseSuccess?: () => void | Promise<void>
 }
 
+/** 在线渠道的展示名：后台只给了 type 时用本地化名称兜底。 */
+function epayLabel(method: PaymentMethod, t: (key: string) => string): string {
+  if (method.name) return method.name
+  const type = method.type.toLowerCase()
+  if (type.includes('wx') || type.includes('wechat')) return t('WeChat Pay')
+  if (type.includes('ali')) return t('Alipay')
+  return method.type
+}
+
+/** 一行可选的支付方式：左边图标+名称，右边补充信息（余额 / 渠道说明）。 */
+function PaymentOption(props: {
+  selected: boolean
+  disabled?: boolean
+  onSelect: () => void
+  icon: ElementType
+  label: string
+  hint?: string
+}) {
+  const Icon = props.icon
+  return (
+    <button
+      type='button'
+      onClick={props.onSelect}
+      disabled={props.disabled}
+      aria-pressed={props.selected}
+      className={cn(
+        'flex items-center justify-between gap-3 rounded-md border px-3 py-2.5 text-left text-sm transition-colors',
+        props.selected
+          ? 'border-foreground bg-muted/60'
+          : 'border-border hover:bg-muted/40',
+        props.disabled && 'pointer-events-none opacity-50'
+      )}
+    >
+      <span className='flex min-w-0 items-center gap-2'>
+        <Icon className='size-4 shrink-0' />
+        <span className='truncate font-medium'>{props.label}</span>
+      </span>
+      {props.hint ? (
+        <span className='text-muted-foreground shrink-0 text-[11px]'>
+          {props.hint}
+        </span>
+      ) : null}
+    </button>
+  )
+}
+
 export function SubscriptionPurchaseDialog(props: Props) {
   const { t } = useTranslation()
   const { currency } = useSystemConfig()
   const [paying, setPaying] = useState(false)
-  const [selectedEpayMethod, setSelectedEpayMethod] = useState('')
+  // 选中的支付方式：'balance' 或某个在线支付渠道的 type（wxpay / alipay …）。
+  const [method, setMethod] = useState('')
 
   useEffect(() => {
-    if (props.open && props.epayMethods && props.epayMethods.length > 0) {
-      setSelectedEpayMethod(props.epayMethods[0].type)
-    } else if (!props.open) {
-      setSelectedEpayMethod('')
+    if (!props.open) {
+      setMethod('')
+      return
     }
-  }, [props.open, props.epayMethods])
+    // 默认选中余额；余额被该套餐禁用时退到第一个在线渠道。
+    setMethod((current) => {
+      if (current) return current
+      const epay = props.enableOnlineTopUp ? (props.epayMethods ?? []) : []
+      if (props.plan?.plan?.allow_balance_pay === false && epay.length > 0) {
+        return epay[0].type
+      }
+      return 'balance'
+    })
+  }, [props.open, props.epayMethods, props.enableOnlineTopUp, props.plan])
 
   const plan = props.plan?.plan
   if (!plan) return null
 
   const hasEpay =
     props.enableOnlineTopUp && (props.epayMethods || []).length > 0
-  const hasAnyPayment = hasEpay
   const totalAmount = Number(plan.total_amount || 0)
   const price = Number(plan.price_amount || 0).toFixed(2)
   const quotaPerUnit =
@@ -93,8 +147,8 @@ export function SubscriptionPurchaseDialog(props: Props) {
     typeof navigator !== 'undefined' &&
     /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
 
-  const handlePayEpay = async () => {
-    if (!selectedEpayMethod) {
+  const handlePayEpay = async (paymentMethod: string) => {
+    if (!paymentMethod) {
       toast.error(t('Please select a payment method'))
       return
     }
@@ -102,7 +156,7 @@ export function SubscriptionPurchaseDialog(props: Props) {
     try {
       const res = await paySubscriptionEpay({
         plan_id: plan.id,
-        payment_method: selectedEpayMethod,
+        payment_method: paymentMethod,
       })
       if (res.message === 'success' && res.url) {
         const form = document.createElement('form')
@@ -153,6 +207,14 @@ export function SubscriptionPurchaseDialog(props: Props) {
     } finally {
       setPaying(false)
     }
+  }
+
+  const handlePay = () => {
+    if (method === 'balance') {
+      void handlePayBalance()
+      return
+    }
+    void handlePayEpay(method)
   }
 
   return (
@@ -222,66 +284,60 @@ export function SubscriptionPurchaseDialog(props: Props) {
           </Alert>
         )}
 
-        <div className='flex flex-col gap-2 rounded-md border p-3'>
-          <div className='flex items-center justify-between gap-2 text-xs'>
-            <span className='text-muted-foreground'>{t('Required')}</span>
-            <span>{formatQuota(balanceCost)}</span>
+        <div className='space-y-2'>
+          <p className='text-muted-foreground text-xs'>
+            {t('Select payment method')}
+          </p>
+          <div className='grid gap-2'>
+            {allowBalancePay && (
+              <PaymentOption
+                selected={method === 'balance'}
+                disabled={limitReached}
+                onSelect={() => setMethod('balance')}
+                icon={Wallet}
+                label={t('Pay with Balance')}
+                hint={`${formatQuota(userQuota)} / ${formatQuota(balanceCost)}`}
+              />
+            )}
+            {hasEpay &&
+              (props.epayMethods ?? []).map((epay) => (
+                <PaymentOption
+                  key={epay.type}
+                  selected={method === epay.type}
+                  disabled={limitReached}
+                  onSelect={() => setMethod(epay.type)}
+                  icon={CreditCard}
+                  label={epayLabel(epay, t)}
+                  hint={t('Online payment')}
+                />
+              ))}
           </div>
-          <div className='flex items-center justify-between gap-2 text-xs'>
-            <span className='text-muted-foreground'>{t('Available')}</span>
-            <span>{formatQuota(userQuota)}</span>
-          </div>
-          {!allowBalancePay ? (
+          {!allowBalancePay && !hasEpay && (
             <Alert variant='destructive'>
               <AlertDescription>
                 {t('This plan does not allow balance redemption')}
               </AlertDescription>
             </Alert>
-          ) : (
-            insufficientBalance && (
-              <Alert variant='destructive'>
-                <AlertDescription>{t('Insufficient balance')}</AlertDescription>
-              </Alert>
-            )
           )}
-          <Button
-            variant='outline'
-            onClick={handlePayBalance}
-            disabled={
-              paying || limitReached || !allowBalancePay || insufficientBalance
-            }
-          >
-            {t('Pay with Balance')}
-          </Button>
+          {method === 'balance' && allowBalancePay && insufficientBalance && (
+            <Alert variant='destructive'>
+              <AlertDescription>{t('Insufficient balance')}</AlertDescription>
+            </Alert>
+          )}
         </div>
 
-        {hasAnyPayment && (
-          <div className='space-y-3'>
-            <p className='text-muted-foreground text-xs'>
-              {t('Select payment method')}
-            </p>
-            {hasEpay && (
-              <div className='grid grid-cols-[minmax(0,1fr)_auto] gap-2'>
-                <Combobox
-                  options={(props.epayMethods || []).map((m) => ({
-                    value: m.type,
-                    label: m.name || m.type,
-                  }))}
-                  value={selectedEpayMethod}
-                  onValueChange={(v) => v !== null && setSelectedEpayMethod(v)}
-                  disabled={limitReached}
-                  className='flex-1'
-                />
-                <Button
-                  onClick={handlePayEpay}
-                  disabled={paying || !selectedEpayMethod || limitReached}
-                >
-                  {t('Pay')}
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
+        <Button
+          className='w-full'
+          onClick={handlePay}
+          disabled={
+            paying ||
+            limitReached ||
+            !method ||
+            (method === 'balance' && (!allowBalancePay || insufficientBalance))
+          }
+        >
+          {t('Pay')} ${price}
+        </Button>
       </div>
     </Dialog>
   )

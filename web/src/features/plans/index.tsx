@@ -441,7 +441,9 @@ function PlanCard({
           </Tooltip>
         ) : (
           <Button
-            variant={isCurrent || !isRecommended ? 'outline' : 'default'}
+            // 三张卡的主行动点统一为实心黑：之前只有推荐档有颜色，两侧是白底
+            // 描边，看起来像次要操作，也把视觉重心全压在中间那张卡上。
+            variant='default'
             className='h-10 w-full'
             onClick={onSubscribe}
           >
