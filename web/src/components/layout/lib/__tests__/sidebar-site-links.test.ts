@@ -28,7 +28,11 @@ describe('站点入口并进控制台侧边栏', () => {
   it('丢弃「订阅」——控制台已有「订阅套餐」，顶部再来一条是重复', () => {
     const items = toSiteNavItems(LINKS, t)
 
-    expect(items.map((item) => item.url)).toEqual(['/', '/pricing', '/docs'])
+    expect(items.map((item) => item.url)).toEqual([
+      '/',
+      '/pricing',
+      '/config-docs',
+    ])
     expect(items.some((item) => item.url === '/subscribe')).toBe(false)
   })
 
@@ -48,10 +52,14 @@ describe('站点入口并进控制台侧边栏', () => {
     expect(models?.icon).toBe(Boxes)
   })
 
-  it('文档在控制台叫「配置文档」，仍用书图标', () => {
-    const docs = toSiteNavItems(LINKS, t).find((item) => item.url === '/docs')
+  it('文档在控制台叫「配置文档」，并落到控制台内的页面', () => {
+    const docs = toSiteNavItems(LINKS, t).find(
+      (item) => item.title === 'Configuration docs'
+    )
 
-    expect(docs?.title).toBe('Configuration docs')
+    // 不能指向前台 /docs：那会套上公开导航与页脚，等于离开控制台。
+    expect(docs?.url).toBe('/config-docs')
+    expect(docs?.external).toBe(false)
     expect(docs?.icon).toBe(BookOpen)
   })
 

@@ -30,24 +30,33 @@ function iconForLink(href: string, external?: boolean) {
 export function toSiteNavItems(links: TopNavLink[], t: TFunction): NavLink[] {
   return links
     .filter((link) => !DROPPED_HREFS.has(link.href))
-    .map<NavLink>((link) => ({
-      // 控制台里的叫法与前台不同：首页是「回到站点」的动作，叫「返回首页」；
-      // 模型指向对外模型广场，叫「模型广场」；文档在控制台是配置说明，
-      // 叫「配置文档」。只改措辞，数据源仍与前台顶栏共用。
-      title:
-        link.href === '/'
-          ? t('Back to home')
-          : link.href === '/pricing'
-            ? t('Model plaza')
-            : link.href === '/docs'
-              ? t('Configuration docs')
-              : link.title,
-      url: link.href,
-      external: link.external,
-      icon:
-        link.href === '/' ? ChevronLeft : iconForLink(link.href, link.external),
-      activeUrls: [link.href],
-    }))
+    .map<NavLink>((link) => {
+      // 文档在控制台里是「就地查看」，不走前台的公开文档页：前台页会套上
+      // 公开导航和页脚，等于离开了控制台。这里改指向控制台内的同内容页面。
+      const isDocs = link.href === '/docs'
+      const url = isDocs ? '/config-docs' : link.href
+
+      return {
+        // 控制台里的叫法与前台不同：首页是「回到站点」的动作，叫「返回首页」；
+        // 模型指向对外模型广场，叫「模型广场」；文档在控制台是配置说明，
+        // 叫「配置文档」。只改措辞与落点，数据源仍与前台顶栏共用。
+        title:
+          link.href === '/'
+            ? t('Back to home')
+            : link.href === '/pricing'
+              ? t('Model plaza')
+              : isDocs
+                ? t('Configuration docs')
+                : link.title,
+        url,
+        external: isDocs ? false : link.external,
+        icon:
+          link.href === '/'
+            ? ChevronLeft
+            : iconForLink(link.href, link.external),
+        activeUrls: [url],
+      }
+    })
 }
 
 /**
