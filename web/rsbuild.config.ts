@@ -10,6 +10,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig(({ envMode }) => {
   const env = loadEnv({ mode: envMode, prefixes: ['VITE_'] })
+  // 开发测试环境（dev-preview，localhost:3000）的接口目标。
+  //
+  // 这里的前端只负责界面，后端永远在远端：把 VITE_REACT_APP_SERVER_URL 指向
+  // 本地代理 http://localhost:3199，由代理转发到上游（默认 = 生产测试环境
+  // http://186.241.72.161:3000）。不设这个变量时代理会指向 dev server 自己，
+  // 请求绕回自己，表现为 502。
+  //
+  // 术语与环境边界见 docs/environments.md，不要写成「本地环境/线上」。
   const serverUrl =
     process.env.VITE_REACT_APP_SERVER_URL ||
     env.rawPublicVars.VITE_REACT_APP_SERVER_URL ||

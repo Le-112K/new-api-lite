@@ -23,6 +23,20 @@ This is an AI API gateway/proxy built with Go. It aggregates 40+ upstream AI pro
 - `relaykit/` is an independent Go module for protocol DTOs and conversions; transport, authentication, database access, and billing stay in the host.
 - `web/` is the React frontend (see `web/AGENTS.md`); `electron/` is the desktop wrapper.
 
+## Environments
+
+Two environments only. Use these names verbatim in code comments, docs, commits, and replies — never "production", "online", or "local", which are ambiguous in this project.
+
+| Name | Code | Access | What it is |
+| --- | --- | --- | --- |
+| **Production Test Environment** | `staging` | `http://186.241.72.161:3000` | VPS-hosted test site for validating changes. Real database, but **not** the live production site. |
+| **Development Test Environment** | `dev-preview` | `http://localhost:3000` | Frontend on the developer machine; backend stays remote and is reached through the local proxy on `:3199`. |
+
+- Frontend and backend ship in one image. There is no frontend-only or backend-only deployment.
+- Both environments share the same PostgreSQL database (`new-api`), so writes in one are visible in the other.
+- `:3999` (`new-api-preview` container) is an alternate upstream for the development proxy, not the production test environment.
+- Full definitions, access commands, version probing, deploy and rollback steps: [`docs/environments.md`](docs/environments.md).
+
 ## Internationalization (i18n)
 
 ### Backend (`i18n/`)
