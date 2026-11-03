@@ -75,6 +75,15 @@ export function useTopNavLinks(): TopNavLink[] {
     links.push({ title: t('Models'), href: '/pricing', requiresAuth })
   }
 
+  // 订阅：紧跟在模型之后、文档之前 —— 与「看产品」的两个入口相邻，
+  // 文档作为辅助说明留在最后。未登录时由 header 的 requiresAuth 分支
+  // 先弹登录提示，登录成功后回跳到该页（路由守卫会带 redirect）。
+  links.push({
+    title: t('Subscription'),
+    href: '/plans',
+    requiresAuth: !isAuthed,
+  })
+
   // Docs (supports external links)
   if (modules?.docs !== false) {
     if (docsLink) {
