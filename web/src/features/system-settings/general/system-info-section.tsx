@@ -51,9 +51,6 @@ const _systemInfoSchema = z.object({
   TaskPublicAddress: z.string().refine(isValidTaskPublicAddress),
   Footer: z.string().optional(),
   HomePageContent: z.string().optional(),
-  general_setting: z.object({
-    docs_link: z.string(),
-  }),
   legal: z.object({
     user_agreement: z.string().optional(),
     privacy_policy: z.string().optional(),
@@ -79,9 +76,6 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
     TaskPublicAddress: normalizeValue(defaultValues.TaskPublicAddress),
     Footer: normalizeValue(defaultValues.Footer),
     HomePageContent: normalizeValue(defaultValues.HomePageContent),
-    general_setting: {
-      docs_link: normalizeValue(defaultValues.general_setting?.docs_link),
-    },
     legal: {
       user_agreement: normalizeValue(defaultValues.legal?.user_agreement),
       privacy_policy: normalizeValue(defaultValues.legal?.privacy_policy),
@@ -98,9 +92,6 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
     }),
     Footer: z.string().optional(),
     HomePageContent: z.string().optional(),
-    general_setting: z.object({
-      docs_link: z.string(),
-    }),
     legal: z.object({
       user_agreement: z.string().optional(),
       privacy_policy: z.string().optional(),
@@ -179,26 +170,6 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
                       {t(
                         'Public base URL for async task media. Supports a dedicated media domain, port, or Nginx path prefix; falls back to Server Address when empty.'
                       )}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name='general_setting.docs_link'
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('Documentation Link')}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={t('https://docs.example.com')}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      {t('Link to your documentation site')}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

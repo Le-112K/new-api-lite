@@ -20,7 +20,6 @@ import { ArrowRight, Check, Copy, SquareTerminal } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { useStatus } from '@/hooks/use-status'
 import { getLobeIcon } from '@/lib/lobe-icon'
 
 import { SectionShell } from '../section-shell'
@@ -63,25 +62,18 @@ const SYNTAX = {
  * URLs are derived from `location.origin` because the gateway is self-hosted; a
  * hardcoded demo domain would produce copy that never works.
  *
- * Every guide row is a link. The destination is whatever the operator configured
- * as `docs_link` (production points at the public docs site), with `?tool=<slug>`
- * appended so the docs side can show that tool's settings. The docs page itself
- * is out of scope here — only the entry point and the slug contract are.
+ * Every guide row is a link into the in-app docs page, with `?tool=<slug>`
+ * so the docs side opens that tool's steps directly.
  */
 export function Connect() {
   const { t } = useTranslation()
-  const { status } = useStatus()
   const origin =
     typeof window === 'undefined'
       ? 'https://your-gateway.com'
       : window.location.origin
 
-  /* Same destination the header's Docs link uses; falls back to the in-app path
-     when the operator has not set one. */
-  const docsBase = (status?.docs_link as string | undefined) || '/docs'
-  const isExternalDocs = /^https?:\/\//i.test(docsBase)
-  const guideHref = (slug: string) =>
-    `${docsBase}${docsBase.includes('?') ? '&' : '?'}tool=${slug}`
+  // 文档是站内页面：接入指南带着工具 slug 过去，由文档页定位到对应标签。
+  const guideHref = (slug: string) => `/docs?tool=${slug}`
 
   const snippets = [
     {
@@ -109,34 +101,31 @@ export function Connect() {
   return (
     <SectionShell
       id='connect'
-      className='border-b border-black/[0.11] bg-secondary dark:border-white/10'
+      className='bg-secondary border-b border-black/[0.11] dark:border-white/10'
     >
       <div className='grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-14'>
         <div className='lg:col-span-5'>
-          <h2 className='lp-display text-[32px] leading-[1.08] font-semibold tracking-[-0.025em] text-foreground md:text-[44px]'>
+          <h2 className='lp-display text-foreground text-[32px] leading-[1.08] font-semibold tracking-[-0.025em] md:text-[44px]'>
             {t('Keep your tools. Change two settings.')}
           </h2>
-          <p className='mt-4 max-w-[30rem] text-[16px] leading-[1.62] text-muted-foreground'>
+          <p className='text-muted-foreground mt-4 max-w-[30rem] text-[16px] leading-[1.62]'>
             {t(
               'Claude Code, Codex, Cursor and the official SDKs all read a base URL and an API key. Point them at this gateway, and every model answers on the same key.'
             )}
           </p>
 
-          <p className='mt-10 text-[14px] font-semibold text-foreground'>
+          <p className='text-foreground mt-10 text-[14px] font-semibold'>
             {t('Step-by-step guides')}
           </p>
           <ul className='mt-2 grid grid-cols-2 gap-x-8'>
             {GUIDES.map((guide) => (
-              <li key={guide.slug} className='border-b border-border'>
+              <li key={guide.slug} className='border-border border-b'>
                 <a
                   href={guideHref(guide.slug)}
-                  {...(isExternalDocs
-                    ? { target: '_blank', rel: 'noopener noreferrer' }
-                    : {})}
-                  className='group flex h-12 items-center gap-3 text-foreground'
+                  className='group text-foreground flex h-12 items-center gap-3'
                 >
                   <span
-                    className='flex size-[18px] shrink-0 items-center justify-center text-foreground/80'
+                    className='text-foreground/80 flex size-[18px] shrink-0 items-center justify-center'
                     aria-hidden
                   >
                     {guide.icon ? (
@@ -145,7 +134,7 @@ export function Connect() {
                       <SquareTerminal className='size-[18px]' />
                     )}
                   </span>
-                  <span className='text-[15px] font-medium transition-colors group-hover:text-foreground/70'>
+                  <span className='group-hover:text-foreground/70 text-[15px] font-medium transition-colors'>
                     {guide.name}
                   </span>
                   <ArrowRight
@@ -164,7 +153,7 @@ export function Connect() {
               <Snippet key={snippet.label} {...snippet} />
             ))}
           </div>
-          <p className='mt-4 text-[14px] leading-[1.62] text-muted-foreground'>
+          <p className='text-muted-foreground mt-4 text-[14px] leading-[1.62]'>
             {t(
               'Replace sk-your-key with a key from your console. Each guide has the exact file and setting for its tool, and the model to start with.'
             )}
@@ -234,9 +223,13 @@ function Snippet(props: {
             <span key={line.key}>
               {index > 0 ? '\n' : null}
               <span className={SYNTAX.keyword}>export</span>
-              <span className={SYNTAX.plain}>{' '}{line.key}</span>
+              <span className={SYNTAX.plain}> {line.key}</span>
               <span className={SYNTAX.plain}>=</span>
-              <span className={SYNTAX.string}>{'"'}{line.value}{'"'}</span>
+              <span className={SYNTAX.string}>
+                {'"'}
+                {line.value}
+                {'"'}
+              </span>
             </span>
           ))}
         </code>

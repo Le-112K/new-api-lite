@@ -48,10 +48,10 @@ describe('站点入口并进控制台侧边栏', () => {
     expect(models?.icon).toBe(Boxes)
   })
 
-  it('文档保持原样，仍用书图标', () => {
+  it('文档在控制台叫「配置文档」，仍用书图标', () => {
     const docs = toSiteNavItems(LINKS, t).find((item) => item.url === '/docs')
 
-    expect(docs?.title).toBe('文档')
+    expect(docs?.title).toBe('Configuration docs')
     expect(docs?.icon).toBe(BookOpen)
   })
 
@@ -70,7 +70,7 @@ describe('站点入口并进控制台侧边栏', () => {
     expect(merged[0].items.map((item) => item.title)).toEqual([
       'Back to home',
       'Model plaza',
-      '文档',
+      'Configuration docs',
       '概览',
     ])
     expect(merged[1]).toBe(groups[1])

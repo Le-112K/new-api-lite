@@ -52,9 +52,6 @@ export function useTopNavLinks(): TopNavLink[] {
     )
   }, [status])
 
-  // Documentation link (may be external)
-  const docsLink: string | undefined = status?.docs_link as string | undefined
-
   const isAuthed = !!auth?.user
 
   const links: TopNavLink[] = []
@@ -88,13 +85,9 @@ export function useTopNavLinks(): TopNavLink[] {
     href: '/subscribe',
   })
 
-  // Docs (supports external links)
+  // 文档是站内页面：不再读后台配置的外链，也不再标 external。
   if (modules?.docs !== false) {
-    if (docsLink) {
-      links.push({ title: t('Docs'), href: docsLink, external: true })
-    } else {
-      links.push({ title: t('Docs'), href: '/docs' })
-    }
+    links.push({ title: t('Docs'), href: '/docs' })
   }
 
   return links

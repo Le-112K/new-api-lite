@@ -32,14 +32,16 @@ export function toSiteNavItems(links: TopNavLink[], t: TFunction): NavLink[] {
     .filter((link) => !DROPPED_HREFS.has(link.href))
     .map<NavLink>((link) => ({
       // 控制台里的叫法与前台不同：首页是「回到站点」的动作，叫「返回首页」；
-      // 模型指向对外模型广场，叫「模型广场」。只改措辞，数据源仍与前台顶栏
-      // 共用，前台导航的文字不受影响。
+      // 模型指向对外模型广场，叫「模型广场」；文档在控制台是配置说明，
+      // 叫「配置文档」。只改措辞，数据源仍与前台顶栏共用。
       title:
         link.href === '/'
           ? t('Back to home')
           : link.href === '/pricing'
             ? t('Model plaza')
-            : link.title,
+            : link.href === '/docs'
+              ? t('Configuration docs')
+              : link.title,
       url: link.href,
       external: link.external,
       icon:
