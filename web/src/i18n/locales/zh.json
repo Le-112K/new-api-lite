@@ -4167,6 +4167,8 @@
     "Retry once; if it repeats, switch to another model.": "重试一次；若再次出现，换一个模型。",
     "The model timed out or is offline for maintenance.": "模型超时或因维护下线。",
     "Retry later or pick another model.": "稍后重试，或换一个模型。",
-    "Online payment": "在线支付"
+    "Online payment": "在线支付",
+    "Show password": "显示密码",
+    "Hide password": "隐藏密码"
   }
 }
